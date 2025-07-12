@@ -2276,4 +2276,401 @@
             });
             
             const allDates = [...new Set([...Object.keys(dailySales), ...Object.keys(dailyPayments)])].sort();
-            const labels = allDates.map(date => new Date(date).toLocaleDateString
+            const labels = allDates.map(date => new Date(date).toLocaleDateString('fr-FR'));
+            const salesDataChart = allDates.map(date => dailySales[date] || 0);
+            const paymentsDataChart = allDates.map(date => dailyPayments[date] || 0);
+            
+            charts.evolution = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'CA Journalier',
+                        data: salesDataChart,
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderColor: '#667eea',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4
+                    }, {
+                        label: 'Encaissements',
+                        data: paymentsDataChart,
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        borderColor: '#2ecc71',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: window.innerWidth < 768 ? 10 : 12
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: window.innerWidth < 768 ? 8 : 10
+                                },
+                                maxRotation: 45
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                font: {
+                                    size: window.innerWidth < 768 ? 8 : 10
+                                },
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateClientChart() {
+            const ctx = document.getElementById('clientChart');
+            if (!ctx) return;
+            
+            if (charts.client) {
+                charts.client.destroy();
+            }
+            
+            const clientData = {};
+            filteredData.forEach(sale => {
+                if (sale.client) {
+                    clientData[sale.client] = (clientData[sale.client] || 0) + sale.valeur;
+                }
+            });
+            
+            const sortedClients = Object.entries(clientData)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 8);
+            
+            const labels = sortedClients.map(([name]) => name);
+            const data = sortedClients.map(([,value]) => value);
+            
+            charts.client = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#667eea', '#764ba2', '#f093fb', '#f5576c',
+                            '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    size: window.innerWidth < 768 ? 9 : 11
+                                },
+                                padding: 10
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateArticleChart() {
+            const ctx = document.getElementById('articleChart');
+            if (!ctx) return;
+            
+            if (charts.article) {
+                charts.article.destroy();
+            }
+            
+            const articleData = {};
+            filteredData.forEach(sale => {
+                const article = sale.product || 'Article non spécifié';
+                articleData[article] = (articleData[article] || 0) + sale.valeur;
+            });
+            
+            const sortedArticles = Object.entries(articleData)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 8);
+            
+            const labels = sortedArticles.map(([name]) => name);
+            const data = sortedArticles.map(([,value]) => value);
+            
+            charts.article = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#667eea', '#764ba2', '#f093fb', '#f5576c',
+                            '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    size: window.innerWidth < 768 ? 9 : 11
+                                },
+                                padding: 10
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function resetFilters() {
+            setDefaultDates();
+            document.getElementById('clientFilter').value = '';
+            applyFilters();
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('fr-FR', {
+                style: 'currency',
+                currency: 'XOF',
+                minimumFractionDigits: 0
+            }).format(value);
+        }
+
+        function refreshData() {
+            updateLastUpdateTime();
+            populateFilters();
+            applyFilters();
+            updateClientsOverview();
+            updateProductsDisplay();
+            updatePaymentsDisplay();
+            updateRecapDisplay();
+            showAlert('Données actualisées', 'success');
+        }
+
+        // Export
+        function exportToCSV() {
+            const headers = ['Client', 'Date', 'N° Facture', 'Produit', 'Quantité', 'Prix Unitaire', 'Valeur Total'];
+            const csvContent = [
+                headers.join(','),
+                ...salesData.map(sale => [
+                    `"${sale.client}"`,
+                    sale.date,
+                    `"${sale.invoice || ''}"`,
+                    `"${sale.product || ''}"`,
+                    sale.quantity || '',
+                    sale.unitPrice || '',
+                    sale.valeur
+                ].join(','))
+            ].join('\n');
+            
+            downloadFile(csvContent, `kamlac_ventes_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+            showAlert('Export ventes CSV terminé', 'success');
+        }
+
+        function exportPaymentsToCSV() {
+            const headers = ['Date', 'Client', 'Montant', 'Mode', 'Référence', 'Notes'];
+            const csvContent = [
+                headers.join(','),
+                ...paymentsData.map(payment => [
+                    payment.date,
+                    `"${payment.client}"`,
+                    payment.amount,
+                    `"${payment.method}"`,
+                    `"${payment.reference || ''}"`,
+                    `"${payment.notes || ''}"`
+                ].join(','))
+            ].join('\n');
+            
+            downloadFile(csvContent, `kamlac_encaissements_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+            showAlert('Export encaissements CSV terminé', 'success');
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function clearAllData() {
+            if (confirm('⚠️ ATTENTION : Cette action supprimera TOUTES vos données. Êtes-vous sûr ?')) {
+                if (confirm('Dernière confirmation : Supprimer toutes les données ?')) {
+                    salesData = [];
+                    paymentsData = [];
+                    productsData = [];
+                    saveToLocalStorage();
+                    populateFilters();
+                    applyFilters();
+                    updateClientsOverview();
+                    updateProductsDisplay();
+                    updatePaymentsDisplay();
+                    updateRecapDisplay();
+                    showAlert('Toutes les données ont été supprimées', 'warning');
+                }
+            }
+        }
+
+        function showAlert(message, type = 'success') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            const container = document.getElementById('importStatus') || document.querySelector('.section.active .card');
+            if (container) {
+                container.insertBefore(alertDiv, container.firstChild);
+                
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 4000);
+            }
+        }
+
+        // Gestion des clics modaux
+        window.onclick = function(event) {
+            const productModal = document.getElementById('productModal');
+            const productsPasteModal = document.getElementById('productsPasteModal');
+            
+            if (event.target === productModal) {
+                closeProductModal();
+            }
+            if (event.target === productsPasteModal) {
+                closeProductsPasteModal();
+            }
+        }
+
+        // Gestion responsive des graphiques
+        window.addEventListener('resize', function() {
+            setTimeout(() => {
+                Object.values(charts).forEach(chart => {
+                    if (chart && typeof chart.resize === 'function') {
+                        chart.resize();
+                    }
+                });
+            }, 100);
+        });
+
+        // Gestion de l'orientation mobile
+        window.addEventListener('orientationchange', function() {
+            setTimeout(() => {
+                Object.values(charts).forEach(chart => {
+                    if (chart && typeof chart.resize === 'function') {
+                        chart.resize();
+                    }
+                });
+                
+                // Forcer le redimensionnement après changement d'orientation
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('resize'));
+                }, 500);
+            }, 100);
+        });
+
+        // Prévention du zoom sur les inputs sur iOS
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            const meta = document.querySelector('meta[name="viewport"]');
+            if (meta) {
+                meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+            }
+        }
+
+        // Gestion du focus pour les appareils mobiles
+        document.addEventListener('focusin', function(e) {
+            if (window.innerWidth <= 768 && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) {
+                setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            }
+        });
+
+        // Optimisation des performances pour mobile
+        let resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                // Redimensionnement des graphiques seulement après un délai
+                Object.values(charts).forEach(chart => {
+                    if (chart && typeof chart.resize === 'function') {
+                        chart.resize();
+                    }
+                });
+            }, 250);
+        });
+
+        // Détection du support tactile
+        function isTouchDevice() {
+            return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        }
+
+        // Amélioration des interactions tactiles
+        if (isTouchDevice()) {
+            document.body.classList.add('touch-device');
+            
+            // Ajout d'un style CSS pour les appareils tactiles
+            const style = document.createElement('style');
+            style.textContent = `
+                .touch-device .btn:hover {
+                    transform: none;
+                }
+                .touch-device .btn:active {
+                    transform: scale(0.98);
+                }
+                .touch-device .nav-tab:active,
+                .touch-device .sub-nav-tab:active {
+                    transform: scale(0.95);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Gestion améliorée de la saisie sur mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                // Amélioration de la saisie numérique sur mobile
+                input.addEventListener('focus', function() {
+                    if (window.innerWidth <= 768) {
+                        this.setAttribute('inputmode', 'numeric');
+                        this.setAttribute('pattern', '[0-9]*');
+                    }
+                });
+            });
+        });
+
+        // Optimisation de la mémoire
+        window.addEventListener('beforeunload', function() {
+            // Nettoyage des graphiques avant déchargement
+            Object.values(charts).forEach(chart => {
+                if (chart && typeof chart.destroy === 'function') {
+                    chart.destroy();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
