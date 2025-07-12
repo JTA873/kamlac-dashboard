@@ -2546,11 +2546,14 @@
         }
 
         function formatCurrency(value) {
-            return new Intl.NumberFormat('fr-FR', {
+            const formatted = new Intl.NumberFormat('fr-FR', {
                 style: 'currency',
                 currency: 'XOF',
                 minimumFractionDigits: 0
             }).format(value);
+            
+            // Remplacer FCFA par CFA
+            return formatted.replace('FCFA', 'CFA').replace('XOF', 'CFA');
         }
 
         function refreshData() {
