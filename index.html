@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📊 KAMLAC Dashboard - Suivi des Ventes</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    
+
     <style>
         * {
             margin: 0;
@@ -416,21 +416,21 @@
             .header h1 {
                 font-size: 2rem;
             }
-            
+
             .nav-tabs {
                 flex-direction: column;
                 align-items: center;
             }
-            
+
             .nav-tab {
                 width: 100%;
                 max-width: 300px;
             }
-            
+
             .charts-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .chart-card.wide {
                 grid-column: 1;
             }
@@ -560,7 +560,7 @@
         <div id="sales" class="section">
             <div class="card">
                 <h2 style="margin-bottom: 25px;">💼 Nouvelle Vente</h2>
-                
+
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="newCommercial">Commercial *</label>
@@ -609,7 +609,7 @@
         <div id="data" class="section">
             <div class="card">
                 <h2 style="margin-bottom: 25px;">📋 Données des Ventes</h2>
-                
+
                 <div class="stats-row">
                     <div class="stat-item">
                         <div class="stat-value" id="dataCount">0</div>
@@ -653,7 +653,7 @@
         <div id="settings" class="section">
             <div class="card">
                 <h2 style="margin-bottom: 25px;">⚙️ Paramètres et Synchronisation Cloud</h2>
-                
+
                 <!-- Configuration Firebase -->
                 <div class="firebase-config">
                     <h4>🔥 Configuration Firebase</h4>
@@ -674,10 +674,10 @@
                         <button class="btn btn-success" onclick="testFirebaseConnection()">🔗 Tester Connexion</button>
                     </div>
                 </div>
-                
+
                 <div class="import-section">
                     <h3 style="margin-bottom: 20px;">📁 Importer des données de ventes</h3>
-                    
+
                     <div class="form-grid">
                         <div class="form-group">
                             <label>📊 Import Excel/CSV</label>
@@ -697,7 +697,7 @@
                 </div>
                 <div class="import-section">
                     <h3 style="margin-bottom: 20px;">☁️ Synchronisation Cloud</h3>
-                    
+
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Synchroniser avec le Cloud</label>
@@ -716,7 +716,7 @@
                 </div>
                 <div class="import-section">
                     <h3 style="margin-bottom: 20px;">💾 Gestion des données</h3>
-                    
+
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Réinitialiser</label>
@@ -754,35 +754,41 @@
         const salesDetailLimit = 50;
         let db = null;
         let isFirebaseInitialized = false;
+
+        // Configuration Firebase par défaut
+        const defaultFirebaseConfig = {
+            apiKey: "AIzaSyBuR-B_bOyMtN1xnSQCCsxfJWydzg9mvs",
+            authDomain: "kamlac-dashboard.firebaseapp.com",
+            projectId: "kamlac-dashboard",
+            storageBucket: "kamlac-dashboard.appspot.com",
+            messagingSenderId: "220610836736",
+            appId: "1:220610836736:web:1d1cee05aef8066a725be5",
+            measurementId: "G-Q8DKW4YL0L"
+        };
+
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
         });
+
         function initializeApp() {
             console.log('Initialisation de l\'application...');
             setDefaultDates();
             updateLastUpdateTime();
-            
+
             // Charger d'abord depuis localStorage comme fallback
             loadFromLocalStorage();
-            
-            // Tenter d'initialiser Firebase automatiquement si config existe
-            const savedConfig = localStorage.getItem('firebaseConfig');
-            if (savedConfig) {
-                try {
-                    const config = JSON.parse(savedConfig);
-                    initializeFirebaseWithConfig(config);
-                } catch (error) {
-                    console.log('Config Firebase invalide dans localStorage');
-                }
-            }
-            
+
+            // Initialiser Firebase avec la configuration par défaut
+            initializeFirebaseWithConfig(defaultFirebaseConfig);
+
             populateFilters();
             applyFilters();
             updateDataTable();
             updateDataStats();
             setTodayForNewSale();
         }
+
         function loadFromLocalStorage() {
             const localData = localStorage.getItem('kamlacSalesData');
             if (localData) {
@@ -790,17 +796,20 @@
                 console.log(`Chargé ${salesData.length} ventes depuis localStorage`);
             }
         }
+
         function saveToLocalStorage() {
             localStorage.setItem('kamlacSalesData', JSON.stringify(salesData));
         }
+
         function updateCloudStatus(status, message) {
             const statusElement = document.getElementById('cloudStatus');
             statusElement.className = `cloud-status cloud-${status}`;
             statusElement.textContent = message;
         }
+
         function initializeFirebase() {
             const configText = document.getElementById('firebaseConfig').value.trim();
-            
+
             if (!configText) {
                 showAlert('Veuillez coller votre configuration Firebase', 'error');
                 return;
@@ -814,61 +823,63 @@
                 if (cleanConfig.includes('export default ')) {
                     cleanConfig = cleanConfig.split('export default ')[1];
                 }
-                
+
                 // Enlever les points-virgules finaux
                 cleanConfig = cleanConfig.replace(/;$/, '');
-                
+
                 const config = JSON.parse(cleanConfig);
-                
+
                 // Valider la config
                 const requiredFields = ['apiKey', 'authDomain', 'projectId'];
                 const missingFields = requiredFields.filter(field => !config[field]);
-                
+
                 if (missingFields.length > 0) {
                     showAlert(`Configuration incomplète. Champs manquants: ${missingFields.join(', ')}`, 'error');
                     return;
                 }
                 // Sauvegarder la config
                 localStorage.setItem('firebaseConfig', JSON.stringify(config));
-                
+
                 // Initialiser Firebase
                 initializeFirebaseWithConfig(config);
-                
+
             } catch (error) {
                 console.error('Erreur de parsing de la config Firebase:', error);
                 showAlert('Configuration Firebase invalide. Vérifiez le format JSON.', 'error');
             }
         }
+
         function initializeFirebaseWithConfig(config) {
             try {
                 updateCloudStatus('offline', '🔄 Connexion à Firebase...');
-                
+
                 // Initialiser Firebase
                 firebase.initializeApp(config);
                 db = firebase.firestore();
-                
+
                 console.log('Firebase initialisé avec succès');
                 isFirebaseInitialized = true;
                 updateCloudStatus('online', '☁️ Cloud Connecté');
-                
+
                 // Synchroniser automatiquement
                 syncFromCloud();
-                
+
                 showAlert('Firebase connecté avec succès ! Synchronisation activée.', 'success');
-                
+
             } catch (error) {
                 console.error('Erreur d\'initialisation Firebase:', error);
                 updateCloudStatus('offline', '❌ Erreur Firebase');
                 showAlert(`Erreur Firebase: ${error.message}`, 'error');
             }
         }
+
         function testFirebaseConnection() {
             if (!isFirebaseInitialized) {
                 showAlert('Firebase n\'est pas initialisé', 'error');
                 return;
             }
             updateCloudStatus('offline', '🔄 Test connexion...');
-            
+
             db.collection('sales').limit(1).get()
                 .then((querySnapshot) => {
                     updateCloudStatus('online', '✅ Test réussi');
@@ -879,6 +890,7 @@
                     showAlert(`Test échoué: ${error.message}`, 'error');
                 });
         }
+
         async function syncToCloud() {
             if (!isFirebaseInitialized) {
                 showAlert('Firebase n\'est pas configuré', 'error');
@@ -890,9 +902,9 @@
             }
             try {
                 updateCloudStatus('offline', '⬆️ Upload en cours...');
-                
+
                 const batch = db.batch();
-                
+
                 for (const sale of salesData) {
                     const docRef = db.collection('sales').doc(sale.id.toString());
                     batch.set(docRef, {
@@ -900,18 +912,19 @@
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 }
-                
+
                 await batch.commit();
-                
+
                 updateCloudStatus('online', '✅ Sync terminée');
                 showAlert(`${salesData.length} ventes synchronisées vers le cloud`, 'success');
-                
+
             } catch (error) {
                 updateCloudStatus('offline', '❌ Sync échouée');
                 showAlert(`Erreur de synchronisation: ${error.message}`, 'error');
                 console.error('Erreur sync vers cloud:', error);
             }
         }
+
         async function syncFromCloud() {
             if (!isFirebaseInitialized) {
                 showAlert('Firebase n\'est pas configuré', 'error');
@@ -919,80 +932,84 @@
             }
             try {
                 updateCloudStatus('offline', '⬇️ Download en cours...');
-                
+
                 const querySnapshot = await db.collection('sales').get();
                 const cloudData = [];
-                
+
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     delete data.lastUpdated; // Enlever le timestamp Firestore
                     cloudData.push(data);
                 });
-                
+
                 if (cloudData.length > 0) {
                     // Merger avec les données locales
                     const existingIds = new Set(salesData.map(sale => sale.id));
                     let importedCount = 0;
-                    
+
                     cloudData.forEach(sale => {
                         if (!existingIds.has(sale.id)) {
                             salesData.push(sale);
                             importedCount++;
                         }
                     });
-                    
+
                     saveToLocalStorage();
                     populateFilters();
                     applyFilters();
                     updateDataTable();
                     updateDataStats();
-                    
+
                     updateCloudStatus('online', '✅ Sync OK');
                     showAlert(`${importedCount} nouvelles ventes récupérées du cloud`, 'success');
                 } else {
                     updateCloudStatus('online', '☁️ Cloud vide');
                     showAlert('Aucune donnée dans le cloud', 'warning');
                 }
-                
+
             } catch (error) {
                 updateCloudStatus('offline', '❌ Sync échouée');
                 showAlert(`Erreur de récupération: ${error.message}`, 'error');
                 console.error('Erreur sync depuis cloud:', error);
             }
         }
-        // Le reste du code reste identique...
+
         function setDefaultDates() {
             const today = new Date();
             const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-            
+
             document.getElementById('dateStart').value = formatDate(firstDayOfMonth);
             document.getElementById('dateEnd').value = formatDate(today);
         }
+
         function setTodayForNewSale() {
             document.getElementById('newDate').value = formatDate(new Date());
         }
+
         function formatDate(date) {
             return date.toISOString().split('T')[0];
         }
+
         function updateLastUpdateTime() {
-            document.getElementById('lastUpdate').textContent = 
+            document.getElementById('lastUpdate').textContent =
                 'Dernière mise à jour: ' + new Date().toLocaleString('fr-FR');
         }
+
         function showSection(sectionName) {
             // Cacher toutes les sections
             document.querySelectorAll('.section').forEach(section => {
                 section.classList.remove('active');
             });
-            
+
             // Enlever active de tous les boutons
             document.querySelectorAll('.nav-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
+
             // Afficher la section sélectionnée
             document.getElementById(sectionName).classList.add('active');
             event.target.classList.add('active');
-            
+
             // Actions spécifiques par section
             if (sectionName === 'dashboard') {
                 applyFilters();
@@ -1001,29 +1018,32 @@
                 updateDataStats();
             }
         }
+
         function populateFilters() {
             const commercials = [...new Set(salesData.map(sale => sale.commercial))].sort();
             const clients = [...new Set(salesData.map(sale => sale.client))].sort();
             populateSelect('commercialFilter', commercials, 'Tous les commerciaux');
             populateSelect('clientFilter', clients, 'Tous les clients');
         }
+
         function populateSelect(selectId, options, defaultText) {
             const select = document.getElementById(selectId);
             const currentValue = select.value;
-            
+
             select.innerHTML = `<option value="">${defaultText}</option>`;
-            
+
             options.forEach(option => {
                 const optionElement = document.createElement('option');
                 optionElement.value = option;
                 optionElement.textContent = option;
                 select.appendChild(optionElement);
             });
-            
+
             if (currentValue && options.includes(currentValue)) {
                 select.value = currentValue;
             }
         }
+
         function applyFilters() {
             const dateStart = document.getElementById('dateStart').value;
             const dateEnd = document.getElementById('dateEnd').value;
@@ -1047,9 +1067,10 @@
             updateKPIs();
             updateCharts();
         }
+
         function parseDate(dateStr) {
             if (!dateStr) return null;
-            
+
             // Format: dd/MM/yyyy
             if (dateStr.includes('/')) {
                 const parts = dateStr.split('/');
@@ -1057,36 +1078,38 @@
                     return new Date(parts[2], parts[1] - 1, parts[0]);
                 }
             }
-            
+
             return new Date(dateStr);
         }
+
         function updateKPIs() {
             const totalRevenue = filteredData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
             const totalSales = filteredData.length;
-            
+
             // Top analyses
             const clientsMap = {};
-            
+
             filteredData.forEach(sale => {
                 if (sale.client) clientsMap[sale.client] = (clientsMap[sale.client] || 0) + sale.valeur;
             });
-            
+
             const topClient = Object.keys(clientsMap).reduce((a, b) => clientsMap[a] > clientsMap[b] ? a : b, '');
-            
+
             const avgSale = totalSales > 0 ? totalRevenue / totalSales : 0;
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
             document.getElementById('totalSales').textContent = totalSales;
             document.getElementById('topClient').textContent = topClient || '-';
             document.getElementById('avgSale').textContent = formatCurrency(avgSale);
         }
+
         function updateCharts() {
             updateEvolutionChart();
             updateCommercialChart();
             updateClientChart();
             updateArticleChart();
-            updateProductChart();
             updateSalesDetailTable();
         }
+
         function updateEvolutionChart() {
             const ctx = document.getElementById('evolutionChart');
             if (!ctx) return;
@@ -1141,6 +1164,7 @@
                 }
             });
         }
+
         function updateCommercialChart() {
             const ctx = document.getElementById('commercialChart');
             if (!ctx) return;
@@ -1196,6 +1220,7 @@
                 }
             });
         }
+
         function updateClientChart() {
             const ctx = document.getElementById('clientChart');
             if (!ctx) return;
@@ -1236,6 +1261,7 @@
                 }
             });
         }
+
         function updateArticleChart() {
             const ctx = document.getElementById('articleChart');
             if (!ctx) return;
@@ -1275,74 +1301,14 @@
                 }
             });
         }
-        function updateProductChart() {
-            const ctx = document.getElementById('productChart');
-            if (!ctx) return;
-            if (charts.product) {
-                charts.product.destroy();
-            }
-            const productData = {};
-            filteredData.forEach(sale => {
-                // Essayer différents noms de champs pour les produits
-                const productName = sale.product || sale.details || sale.DETAILS || 'Produit non spécifié';
-                if (productName && productName !== 'Produit non spécifié') {
-                    productData[productName] = (productData[productName] || 0) + (sale.valeur || 0);
-                }
-            });
-            if (Object.keys(productData).length === 0) {
-                // Afficher un message si aucun produit trouvé
-                ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
-                const parent = ctx.parentElement;
-                parent.innerHTML = '<div style="text-align: center; padding: 50px; color: #999;">Aucune donnée de produits disponible<br><small>Vérifiez que vos données contiennent une colonne "produit" ou "details"</small></div>';
-                return;
-            }
-            const sortedProducts = Object.entries(productData)
-                .sort(([,a], [,b]) => b - a)
-                .slice(0, 10);
-            const labels = sortedProducts.map(([name]) => {
-                // Raccourcir les noms trop longs
-                return name.length > 25 ? name.substring(0, 25) + '...' : name;
-            });
-            const data = sortedProducts.map(([,value]) => value);
-            charts.product = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: '#764ba2',
-                        borderColor: '#5a4a7c',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return formatCurrency(value);
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
+
         function updateSalesDetailTable() {
             salesDetailOffset = 0;
             const tbody = document.getElementById('salesDetailBody');
             tbody.innerHTML = '';
             loadMoreSalesDetail();
         }
+
         function loadMoreSalesDetail() {
             const tbody = document.getElementById('salesDetailBody');
             const endIndex = salesDetailOffset + salesDetailLimit;
@@ -1375,12 +1341,14 @@
                 `;
             }
         }
+
         function resetFilters() {
             setDefaultDates();
             document.getElementById('commercialFilter').value = '';
             document.getElementById('clientFilter').value = '';
             applyFilters();
         }
+
         function formatCurrency(value) {
             return new Intl.NumberFormat('fr-FR', {
                 style: 'currency',
@@ -1388,6 +1356,7 @@
                 minimumFractionDigits: 0
             }).format(value);
         }
+
         function refreshData() {
             updateLastUpdateTime();
             populateFilters();
@@ -1396,6 +1365,7 @@
             updateDataStats();
             showAlert('Données actualisées', 'success');
         }
+
         // Nouvelle vente
         async function addSale() {
             const commercial = document.getElementById('newCommercial').value.trim();
@@ -1444,6 +1414,7 @@
             updateDataTable();
             updateDataStats();
         }
+
         function clearSaleForm() {
             document.getElementById('newCommercial').value = '';
             document.getElementById('newClient').value = '';
@@ -1455,6 +1426,7 @@
             document.getElementById('newValue').value = '';
             setTodayForNewSale();
         }
+
         // Gestion des données
         function updateDataTable() {
             const tbody = document.getElementById('dataTableBody');
@@ -1476,6 +1448,7 @@
                 `;
             });
         }
+
         function updateDataStats() {
             const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
             const uniqueCommercials = new Set(salesData.map(sale => sale.commercial)).size;
@@ -1485,11 +1458,12 @@
             document.getElementById('dataCommercials').textContent = uniqueCommercials;
             document.getElementById('dataClients').textContent = uniqueClients;
         }
+
         async function deleteSale(id) {
             if (confirm('Supprimer cette vente ?')) {
                 salesData = salesData.filter(sale => sale.id !== id);
                 saveToLocalStorage();
-                
+
                 // Supprimer de Firebase si disponible
                 if (isFirebaseInitialized) {
                     try {
@@ -1499,7 +1473,7 @@
                         console.error('Erreur suppression Firebase:', error);
                     }
                 }
-                
+
                 updateDataTable();
                 updateDataStats();
                 populateFilters();
@@ -1507,37 +1481,41 @@
                 showAlert('Vente supprimée', 'success');
             }
         }
-        // Import/Export (garde les fonctions existantes)
+
+        // Import/Export
         function handleFileImport() {
             const fileInput = document.getElementById('importFile');
             const file = fileInput.files[0];
-            
+
             if (!file) return;
             showAlert('Import en cours...', 'warning');
             const reader = new FileReader();
             reader.onload = function(e) {
                 const data = e.target.result;
-                
+
                 if (file.name.endsWith('.csv')) {
                     parseCSVData(data);
                 } else {
                     showAlert('Format Excel non supporté actuellement. Utilisez CSV ou copier-coller.', 'error');
                 }
             };
-            
+
             reader.readAsText(file);
         }
+
         function showPasteModal() {
             document.getElementById('pasteModal').style.display = 'block';
             document.getElementById('pasteArea').focus();
         }
+
         function closePasteModal() {
             document.getElementById('pasteModal').style.display = 'none';
             document.getElementById('pasteArea').value = '';
         }
+
         function processPastedData() {
             const data = document.getElementById('pasteArea').value.trim();
-            
+
             if (!data) {
                 showAlert('Aucune donnée à importer', 'error');
                 return;
@@ -1545,6 +1523,7 @@
             parseTabDelimitedData(data);
             closePasteModal();
         }
+
         function parseTabDelimitedData(data) {
             const lines = data.split('\n');
             let imported = 0;
@@ -1554,7 +1533,7 @@
                 const line = lines[i].trim();
                 if (!line) continue;
                 const columns = line.split('\t');
-                
+
                 if (columns.length >= 9) {
                     try {
                         // Mapping selon le format: Commercial, Numéro client, DATE, DETAILS, INV NO., qtyOUT, Format, Marque, Valeur (CFA)
@@ -1589,20 +1568,21 @@
                 }
             }
             saveToLocalStorage();
-            
+
             // Sync vers Firebase si disponible
             if (isFirebaseInitialized && imported > 0) {
                 syncToCloud();
             }
-            
-            showAlert(`Import terminé: ${imported} lignes importées, ${errors} erreurs`, 
+
+            showAlert(`Import terminé: ${imported} lignes importées, ${errors} erreurs`,
                      errors > 0 ? 'warning' : 'success');
-            
+
             populateFilters();
             applyFilters();
             updateDataTable();
             updateDataStats();
         }
+
         function parseCSVData(data) {
             const lines = data.split('\n');
             let imported = 0;
@@ -1611,7 +1591,7 @@
                 const line = lines[i].trim();
                 if (!line) continue;
                 const columns = line.split(',');
-                
+
                 if (columns.length >= 9) {
                     try {
                         const sale = {
@@ -1640,15 +1620,16 @@
                 }
             }
             saveToLocalStorage();
-            
-            showAlert(`Import CSV terminé: ${imported} lignes importées, ${errors} erreurs`, 
+
+            showAlert(`Import CSV terminé: ${imported} lignes importées, ${errors} erreurs`,
                      errors > 0 ? 'warning' : 'success');
-            
+
             populateFilters();
             applyFilters();
             updateDataTable();
             updateDataStats();
         }
+
         function exportToCSV() {
             const headers = ['Commercial', 'Client', 'Date', 'Produit', 'Facture', 'Quantité', 'Format', 'Marque', 'Valeur'];
             const csvContent = [
@@ -1665,15 +1646,17 @@
                     sale.valeur
                 ].join(','))
             ].join('\n');
-            
+
             downloadFile(csvContent, `kamlac_ventes_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
             showAlert('Export CSV terminé', 'success');
         }
+
         function exportToJSON() {
             const jsonContent = JSON.stringify(salesData, null, 2);
             downloadFile(jsonContent, `kamlac_ventes_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
             showAlert('Export JSON terminé', 'success');
         }
+
         function downloadFile(content, filename, mimeType) {
             const blob = new Blob([content], { type: mimeType });
             const url = URL.createObjectURL(blob);
@@ -1685,6 +1668,7 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
+
         function clearAllData() {
             if (confirm('⚠️ ATTENTION : Cette action supprimera TOUTES vos données de façon définitive. Êtes-vous sûr ?')) {
                 if (confirm('Dernière confirmation : Supprimer toutes les données ?')) {
@@ -1698,14 +1682,15 @@
                 }
             }
         }
+
         function showAlert(message, type = 'success') {
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
             alertDiv.textContent = message;
-            
+
             const container = document.getElementById('importStatus') || document.querySelector('.section.active .card');
             container.insertBefore(alertDiv, container.firstChild);
-            
+
             setTimeout(() => {
                 alertDiv.remove();
             }, 4000);
