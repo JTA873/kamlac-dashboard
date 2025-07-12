@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📊 KAMLAC Dashboard - Suivi des Ventes</title>
+    <title>📊 KAMLAC Dashboard - Gestion Clients</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 
     <!-- Firebase SDKs -->
@@ -394,10 +394,6 @@
             border: 1px solid #e9ecef;
             position: relative;
         }
-        .sale-line.editing {
-            border-color: #667eea;
-            background: rgba(102, 126, 234, 0.05);
-        }
         .line-header {
             display: flex;
             justify-content: space-between;
@@ -444,7 +440,7 @@
             background: rgba(102, 126, 234, 0.05);
             border-style: solid;
         }
-        .edit-modal {
+        .edit-modal, .product-modal {
             display: none;
             position: fixed;
             top: 0;
@@ -455,7 +451,7 @@
             z-index: 1000;
             backdrop-filter: blur(5px);
         }
-        .edit-modal-content {
+        .edit-modal-content, .product-modal-content {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -467,6 +463,96 @@
             max-width: 800px;
             max-height: 80%;
             overflow-y: auto;
+        }
+        .client-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        .client-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .client-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .client-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+        }
+        .client-balance {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .balance-positive {
+            color: #27ae60;
+        }
+        .balance-negative {
+            color: #e74c3c;
+        }
+        .balance-zero {
+            color: #666;
+        }
+        .client-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .client-stat {
+            text-align: center;
+            padding: 10px;
+            background: rgba(248, 249, 250, 0.8);
+            border-radius: 8px;
+        }
+        .client-stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #667eea;
+        }
+        .client-stat-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .product-card {
+            background: rgba(248, 249, 250, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        .product-card:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+        .product-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .product-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .product-price {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-top: 8px;
         }
         @media (max-width: 768px) {
             .header h1 {
@@ -498,8 +584,10 @@
         </div>
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showSection('dashboard')">📈 Dashboard</button>
-            <button class="nav-tab" onclick="showSection('sales')">💼 Nouvelle Facture</button>
-            <button class="nav-tab" onclick="showSection('data')">📋 Données</button>
+            <button class="nav-tab" onclick="showSection('clients')">👥 En-cours Clients</button>
+            <button class="nav-tab" onclick="showSection('products')">📦 Produits</button>
+            <button class="nav-tab" onclick="showSection('sales')">💼 Factures</button>
+            <button class="nav-tab" onclick="showSection('payments')">💰 Encaissements</button>
             <button class="nav-tab" onclick="showSection('settings')">⚙️ Paramètres</button>
         </div>
         
@@ -514,12 +602,6 @@
                     <div class="filter-group">
                         <label for="dateEnd">Date fin</label>
                         <input type="date" id="dateEnd" onchange="applyFilters()">
-                    </div>
-                    <div class="filter-group">
-                        <label for="commercialFilter">Commercial</label>
-                        <select id="commercialFilter" onchange="applyFilters()">
-                            <option value="">Tous les commerciaux</option>
-                        </select>
                     </div>
                     <div class="filter-group">
                         <label for="clientFilter">Client</label>
@@ -547,9 +629,19 @@
                     <div class="kpi-label">Ventes Totales</div>
                 </div>
                 <div class="kpi-card">
+                    <div class="kpi-icon">💳</div>
+                    <div class="kpi-value" id="totalPayments">0 CFA</div>
+                    <div class="kpi-label">Encaissements</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon">⚠️</div>
+                    <div class="kpi-value" id="totalOutstanding">0 CFA</div>
+                    <div class="kpi-label">En-cours Total</div>
+                </div>
+                <div class="kpi-card">
                     <div class="kpi-icon">👤</div>
-                    <div class="kpi-value" id="topClient">-</div>
-                    <div class="kpi-label">Top Client</div>
+                    <div class="kpi-value" id="totalClients">0</div>
+                    <div class="kpi-label">Clients Actifs</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon">📊</div>
@@ -559,15 +651,9 @@
             </div>
             <div class="charts-grid">
                 <div class="chart-card wide">
-                    <h3 class="chart-title">📈 Évolution du CA</h3>
+                    <h3 class="chart-title">📈 Évolution CA vs Encaissements</h3>
                     <div class="chart-container tall">
                         <canvas id="evolutionChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <h3 class="chart-title">👥 CA par Commercial</h3>
-                    <div class="chart-container">
-                        <canvas id="commercialChart"></canvas>
                     </div>
                 </div>
                 <div class="chart-card">
@@ -583,31 +669,65 @@
                     </div>
                 </div>
             </div>
-            <!-- Tableau détail des ventes -->
+        </div>
+
+        <!-- En-cours Clients Section -->
+        <div id="clients" class="section">
             <div class="card">
-                <h3 class="chart-title">📋 Détail des Ventes</h3>
-                <div id="salesDetailContainer">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Commercial</th>
-                                <th>Client</th>
-                                <th>N° Facture</th>
-                                <th>Produit</th>
-                                <th>Quantité</th>
-                                <th>Format</th>
-                                <th>Marque</th>
-                                <th>Valeur (CFA)</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="salesDetailBody">
-                        </tbody>
-                    </table>
-                    <div id="salesDetailPagination" style="text-align: center; margin-top: 15px;">
-                        <button class="btn btn-primary" onclick="loadMoreSalesDetail()">Voir plus</button>
+                <h2 style="margin-bottom: 25px;">👥 Tableau de Bord Clients</h2>
+                <div id="clientsOverview">
+                    <!-- Les cartes clients seront générées dynamiquement -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Section -->
+        <div id="products" class="section">
+            <div class="card">
+                <h2 style="margin-bottom: 25px;">📦 Gestion des Produits</h2>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h3 style="color: #667eea;">Catalogue Produits</h3>
+                        <p style="color: #666; margin-top: 5px;">Gérez votre catalogue de produits avec prix et informations</p>
                     </div>
+                    <button class="btn btn-primary" onclick="showProductModal()">➕ Nouveau Produit</button>
+                </div>
+
+                <div class="import-section">
+                    <h4 style="margin-bottom: 15px;">📁 Import Produits</h4>
+                    <p style="margin-bottom: 15px; color: #666;">
+                        Format attendu: <strong>Référence produit, Prix de vente CFA, Format, Marge, Marque</strong>
+                    </p>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>📊 Import Excel/CSV</label>
+                            <input type="file" id="importProductsFile" accept=".xlsx,.xls,.csv" onchange="handleProductsImport()">
+                        </div>
+                        <div class="form-group">
+                            <label>📋 Copier-Coller</label>
+                            <button class="btn btn-primary" onclick="showProductsPasteModal()">📋 Coller Produits</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-value" id="productsCount">0</div>
+                        <div class="stat-label">Produits</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="avgProductPrice">0 CFA</div>
+                        <div class="stat-label">Prix Moyen</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="brandsCount">0</div>
+                        <div class="stat-label">Marques</div>
+                    </div>
+                </div>
+
+                <div id="productsGrid" class="product-grid">
+                    <!-- Les produits seront affichés ici -->
                 </div>
             </div>
         </div>
@@ -621,10 +741,6 @@
                 <div class="invoice-section">
                     <h3 style="margin-bottom: 20px; color: #667eea;">📋 Informations Facture</h3>
                     <div class="form-grid">
-                        <div class="form-group">
-                            <label for="invoiceCommercial">Commercial *</label>
-                            <input type="text" id="invoiceCommercial" placeholder="Nom du commercial" required>
-                        </div>
                         <div class="form-group">
                             <label for="invoiceClient">Client *</label>
                             <input type="text" id="invoiceClient" placeholder="Nom du client" required>
@@ -674,47 +790,89 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Data Section -->
-        <div id="data" class="section">
+
+        <!-- Payments Section -->
+        <div id="payments" class="section">
             <div class="card">
-                <h2 style="margin-bottom: 25px;">📋 Données des Ventes</h2>
+                <h2 style="margin-bottom: 25px;">💰 Gestion des Encaissements</h2>
                 
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <div class="stat-value" id="dataCount">0</div>
-                        <div class="stat-label">Lignes de données</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                    <!-- Nouveau Encaissement -->
+                    <div class="invoice-section">
+                        <h3 style="margin-bottom: 20px; color: #27ae60;">💳 Nouvel Encaissement</h3>
+                        <div class="form-grid" style="grid-template-columns: 1fr;">
+                            <div class="form-group">
+                                <label for="paymentClient">Client *</label>
+                                <input type="text" id="paymentClient" placeholder="Nom du client" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="paymentDate">Date *</label>
+                                <input type="date" id="paymentDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="paymentAmount">Montant (CFA) *</label>
+                                <input type="number" id="paymentAmount" min="0" placeholder="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="paymentMethod">Mode de Paiement</label>
+                                <select id="paymentMethod">
+                                    <option value="Espèces">Espèces</option>
+                                    <option value="Chèque">Chèque</option>
+                                    <option value="Virement">Virement</option>
+                                    <option value="Mobile Money">Mobile Money</option>
+                                    <option value="Autre">Autre</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="paymentReference">Référence</label>
+                                <input type="text" id="paymentReference" placeholder="N° chèque, référence virement...">
+                            </div>
+                            <div class="form-group">
+                                <label for="paymentNotes">Notes</label>
+                                <textarea id="paymentNotes" placeholder="Commentaires..." rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button class="btn btn-success" onclick="savePayment()">💾 Enregistrer Encaissement</button>
+                        </div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="dataRevenue">0 CFA</div>
-                        <div class="stat-label">CA Total</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="dataCommercials">0</div>
-                        <div class="stat-label">Commerciaux</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="dataClients">0</div>
-                        <div class="stat-label">Clients</div>
+
+                    <!-- Statistiques Encaissements -->
+                    <div class="invoice-section">
+                        <h3 style="margin-bottom: 20px; color: #667eea;">📊 Statistiques</h3>
+                        <div class="stats-row">
+                            <div class="stat-item">
+                                <div class="stat-value" id="paymentsCount">0</div>
+                                <div class="stat-label">Encaissements</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="paymentsTotal">0 CFA</div>
+                                <div class="stat-label">Total Encaissé</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="paymentsAvg">0 CFA</div>
+                                <div class="stat-label">Encaissement Moyen</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div id="dataTableContainer">
+
+                <!-- Tableau des encaissements -->
+                <div>
+                    <h3 style="margin-bottom: 20px;">📋 Historique des Encaissements</h3>
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Commercial</th>
                                 <th>Client</th>
-                                <th>N° Facture</th>
-                                <th>Produit</th>
-                                <th>Quantité</th>
-                                <th>Format</th>
-                                <th>Marque</th>
-                                <th>Valeur</th>
+                                <th>Montant</th>
+                                <th>Mode</th>
+                                <th>Référence</th>
+                                <th>Notes</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="dataTableBody">
+                        <tbody id="paymentsTableBody">
                         </tbody>
                     </table>
                 </div>
@@ -724,35 +882,15 @@
         <!-- Settings Section -->
         <div id="settings" class="section">
             <div class="card">
-                <h2 style="margin-bottom: 25px;">⚙️ Paramètres et Import</h2>
-                
-                <div class="import-section">
-                    <h3 style="margin-bottom: 20px;">📁 Importer des données de ventes</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>📊 Import Excel/CSV</label>
-                            <input type="file" id="importFile" accept=".xlsx,.xls,.csv" onchange="handleFileImport()">
-                            <small style="color: #666; margin-top: 5px; display: block;">
-                                Formats supportés: Excel (.xlsx, .xls) et CSV
-                            </small>
-                        </div>
-                        <div class="form-group">
-                            <label>📋 Copier-Coller</label>
-                            <button class="btn btn-primary" onclick="showPasteModal()">📋 Coller Données</button>
-                            <small style="color: #666; margin-top: 5px; display: block;">
-                                Copiez vos données depuis Excel et collez-les ici
-                            </small>
-                        </div>
-                    </div>
-                </div>
+                <h2 style="margin-bottom: 25px;">⚙️ Paramètres et Export</h2>
                 
                 <div class="import-section">
                     <h3 style="margin-bottom: 20px;">💾 Gestion des données</h3>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>Sauvegardes Locales</label>
-                            <button class="btn btn-success" onclick="exportToCSV()">📊 Exporter CSV</button>
-                            <button class="btn btn-primary" onclick="exportToJSON()">💾 Exporter JSON</button>
+                            <label>Sauvegardes</label>
+                            <button class="btn btn-success" onclick="exportToCSV()">📊 Exporter Ventes CSV</button>
+                            <button class="btn btn-primary" onclick="exportPaymentsToCSV()">💰 Exporter Encaissements CSV</button>
                         </div>
                         <div class="form-group">
                             <label>Réinitialiser</label>
@@ -768,66 +906,51 @@
         </div>
     </div>
     
-    <!-- Modal pour copier-coller -->
-    <div id="pasteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; backdrop-filter: blur(5px);">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 600px; max-height: 80%; overflow-y: auto;">
-            <h3 style="margin-bottom: 20px;">📋 Coller vos données Excel</h3>
-            <p style="margin-bottom: 15px; color: #666;">
-                Sélectionnez et copiez vos données dans Excel (Ctrl+C), puis collez-les dans la zone ci-dessous (Ctrl+V):
-            </p>
-            <textarea id="pasteArea" placeholder="Collez vos données ici..." style="width: 100%; height: 300px; padding: 15px; border: 2px solid #e1e8ed; border-radius: 8px; font-family: monospace; font-size: 12px;"></textarea>
-            <div style="text-align: center; margin-top: 20px;">
-                <button class="btn btn-primary" onclick="processPastedData()">✅ Importer</button>
-                <button class="btn btn-warning" onclick="closePasteModal()">❌ Annuler</button>
+    <!-- Modal Produit -->
+    <div id="productModal" class="product-modal">
+        <div class="product-modal-content">
+            <h3 style="margin-bottom: 20px;">📦 Ajouter/Modifier Produit</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="productReference">Référence Produit</label>
+                    <input type="text" id="productReference" placeholder="Référence du produit">
+                </div>
+                <div class="form-group">
+                    <label for="productPrice">Prix de Vente (CFA)</label>
+                    <input type="number" id="productPrice" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="productFormat">Format</label>
+                    <input type="text" id="productFormat" placeholder="Format du produit">
+                </div>
+                <div class="form-group">
+                    <label for="productMargin">Marge</label>
+                    <input type="text" id="productMargin" placeholder="Marge">
+                </div>
+                <div class="form-group">
+                    <label for="productBrand">Marque</label>
+                    <input type="text" id="productBrand" placeholder="Marque">
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn btn-primary" onclick="saveProduct()">💾 Sauvegarder</button>
+                <button class="btn btn-secondary" onclick="closeProductModal()">❌ Annuler</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal d'édition -->
-    <div id="editModal" class="edit-modal">
-        <div class="edit-modal-content">
-            <h3 style="margin-bottom: 20px;">✏️ Modifier la Vente</h3>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="editCommercial">Commercial *</label>
-                    <input type="text" id="editCommercial" required>
-                </div>
-                <div class="form-group">
-                    <label for="editClient">Client *</label>
-                    <input type="text" id="editClient" required>
-                </div>
-                <div class="form-group">
-                    <label for="editDate">Date *</label>
-                    <input type="date" id="editDate" required>
-                </div>
-                <div class="form-group">
-                    <label for="editInvoice">N° Facture</label>
-                    <input type="text" id="editInvoice">
-                </div>
-                <div class="form-group">
-                    <label for="editProduct">Produit *</label>
-                    <input type="text" id="editProduct" required>
-                </div>
-                <div class="form-group">
-                    <label for="editQuantity">Quantité *</label>
-                    <input type="number" id="editQuantity" min="1" required>
-                </div>
-                <div class="form-group">
-                    <label for="editFormat">Format</label>
-                    <input type="text" id="editFormat">
-                </div>
-                <div class="form-group">
-                    <label for="editMarque">Marque</label>
-                    <input type="text" id="editMarque">
-                </div>
-                <div class="form-group">
-                    <label for="editValue">Valeur (CFA) *</label>
-                    <input type="number" id="editValue" min="0" required>
-                </div>
-            </div>
-            <div style="text-align: center; margin-top: 30px;">
-                <button class="btn btn-primary" onclick="saveEdit()">💾 Sauvegarder</button>
-                <button class="btn btn-secondary" onclick="closeEditModal()">❌ Annuler</button>
+    <!-- Modal pour copier-coller produits -->
+    <div id="productsPasteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; backdrop-filter: blur(5px);">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 600px; max-height: 80%; overflow-y: auto;">
+            <h3 style="margin-bottom: 20px;">📋 Importer Produits</h3>
+            <p style="margin-bottom: 15px; color: #666;">
+                Format: <strong>Référence produit, Prix de vente CFA, Format, Marge, Marque</strong><br>
+                Copiez vos données depuis Excel et collez-les ci-dessous:
+            </p>
+            <textarea id="productsPasteArea" placeholder="Collez vos données ici..." style="width: 100%; height: 300px; padding: 15px; border: 2px solid #e1e8ed; border-radius: 8px; font-family: monospace; font-size: 12px;"></textarea>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="processProductsPastedData()">✅ Importer</button>
+                <button class="btn btn-warning" onclick="closeProductsPasteModal()">❌ Annuler</button>
             </div>
         </div>
     </div>
@@ -835,17 +958,16 @@
     <script>
         // Variables globales
         let salesData = [];
+        let paymentsData = [];
+        let productsData = [];
         let filteredData = [];
         let charts = {};
-        let salesDetailOffset = 0;
-        const salesDetailLimit = 50;
         let db = null;
         let isFirebaseInitialized = false;
         let salesLines = [];
-        let editingSaleId = null;
-        let realtimeListener = null;
+        let editingProductId = null;
 
-        // Configuration Firebase intégrée directement
+        // Configuration Firebase intégrée
         const firebaseConfig = {
             apiKey: "AIzaSyBuR-B_bOyMtN1xnSQCCsxfJWydzg9mvs",
             authDomain: "kamlac-dashboard.firebaseapp.com",
@@ -866,32 +988,29 @@
             setDefaultDates();
             updateLastUpdateTime();
             
-            // Charger d'abord depuis localStorage comme fallback
             loadFromLocalStorage();
-            
-            // Initialiser Firebase automatiquement
             initializeFirebase();
-            
-            // Ajouter une première ligne de vente
             addSaleLine();
             
             populateFilters();
             applyFilters();
-            updateDataTable();
-            updateDataStats();
+            updateClientsOverview();
+            updateProductsDisplay();
+            updatePaymentsDisplay();
             setTodayForNewInvoice();
         }
 
         function loadFromLocalStorage() {
-            const localData = localStorage.getItem('kamlacSalesData');
-            if (localData) {
-                salesData = JSON.parse(localData);
-                console.log(`Chargé ${salesData.length} ventes depuis localStorage`);
-            }
+            salesData = JSON.parse(localStorage.getItem('kamlacSalesData') || '[]');
+            paymentsData = JSON.parse(localStorage.getItem('kamlacPaymentsData') || '[]');
+            productsData = JSON.parse(localStorage.getItem('kamlacProductsData') || '[]');
+            console.log(`Chargé ${salesData.length} ventes, ${paymentsData.length} encaissements, ${productsData.length} produits`);
         }
 
         function saveToLocalStorage() {
             localStorage.setItem('kamlacSalesData', JSON.stringify(salesData));
+            localStorage.setItem('kamlacPaymentsData', JSON.stringify(paymentsData));
+            localStorage.setItem('kamlacProductsData', JSON.stringify(productsData));
         }
 
         function updateCloudStatus(status, message) {
@@ -902,61 +1021,46 @@
 
         function initializeFirebase() {
             try {
-                updateCloudStatus('syncing', '🔄 Connexion à Firebase...');
-                
-                // Initialiser Firebase
+                updateCloudStatus('syncing', '🔄 Connexion Firebase...');
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.firestore();
-                
-                console.log('Firebase initialisé avec succès');
                 isFirebaseInitialized = true;
-                
-                // Configurer la synchronisation en temps réel
                 setupRealtimeSync();
-                
                 updateCloudStatus('online', '☁️ Sync Auto Active');
                 showAlert('Synchronisation automatique activée !', 'success');
-                
             } catch (error) {
-                console.error('Erreur d\'initialisation Firebase:', error);
+                console.error('Erreur Firebase:', error);
                 updateCloudStatus('offline', '❌ Erreur Firebase');
-                showAlert(`Erreur Firebase: ${error.message}`, 'error');
             }
         }
 
         function setupRealtimeSync() {
             if (!isFirebaseInitialized) return;
             
-            // Écouter les changements en temps réel
-            realtimeListener = db.collection('sales').onSnapshot((snapshot) => {
-                updateCloudStatus('syncing', '⬇️ Sync en cours...');
-                
+            // Sync ventes
+            db.collection('sales').onSnapshot((snapshot) => {
+                updateCloudStatus('syncing', '⬇️ Sync ventes...');
                 let hasChanges = false;
                 const existingIds = new Set(salesData.map(sale => sale.id));
                 
                 snapshot.docChanges().forEach((change) => {
-                    const saleData = change.doc.data();
-                    delete saleData.lastUpdated; // Enlever le timestamp Firestore
+                    const data = change.doc.data();
+                    delete data.lastUpdated;
                     
-                    if (change.type === 'added' && !existingIds.has(saleData.id)) {
-                        salesData.push(saleData);
+                    if (change.type === 'added' && !existingIds.has(data.id)) {
+                        salesData.push(data);
                         hasChanges = true;
-                        console.log('Nouvelle vente reçue:', saleData.id);
                     }
-                    
                     if (change.type === 'modified') {
-                        const index = salesData.findIndex(sale => sale.id === saleData.id);
+                        const index = salesData.findIndex(s => s.id === data.id);
                         if (index !== -1) {
-                            salesData[index] = saleData;
+                            salesData[index] = data;
                             hasChanges = true;
-                            console.log('Vente modifiée:', saleData.id);
                         }
                     }
-                    
                     if (change.type === 'removed') {
-                        salesData = salesData.filter(sale => sale.id !== saleData.id);
+                        salesData = salesData.filter(s => s.id !== data.id);
                         hasChanges = true;
-                        console.log('Vente supprimée:', saleData.id);
                     }
                 });
                 
@@ -964,27 +1068,320 @@
                     saveToLocalStorage();
                     populateFilters();
                     applyFilters();
-                    updateDataTable();
-                    updateDataStats();
+                    updateClientsOverview();
                 }
-                
                 updateCloudStatus('online', '☁️ Sync Auto Active');
-            }, (error) => {
-                console.error('Erreur sync temps réel:', error);
-                updateCloudStatus('offline', '❌ Sync échouée');
+            });
+
+            // Sync encaissements
+            db.collection('payments').onSnapshot((snapshot) => {
+                let hasChanges = false;
+                const existingIds = new Set(paymentsData.map(p => p.id));
+                
+                snapshot.docChanges().forEach((change) => {
+                    const data = change.doc.data();
+                    delete data.lastUpdated;
+                    
+                    if (change.type === 'added' && !existingIds.has(data.id)) {
+                        paymentsData.push(data);
+                        hasChanges = true;
+                    }
+                    if (change.type === 'modified') {
+                        const index = paymentsData.findIndex(p => p.id === data.id);
+                        if (index !== -1) {
+                            paymentsData[index] = data;
+                            hasChanges = true;
+                        }
+                    }
+                    if (change.type === 'removed') {
+                        paymentsData = paymentsData.filter(p => p.id !== data.id);
+                        hasChanges = true;
+                    }
+                });
+                
+                if (hasChanges) {
+                    saveToLocalStorage();
+                    updatePaymentsDisplay();
+                    updateClientsOverview();
+                }
+            });
+
+            // Sync produits
+            db.collection('products').onSnapshot((snapshot) => {
+                let hasChanges = false;
+                const existingIds = new Set(productsData.map(p => p.id));
+                
+                snapshot.docChanges().forEach((change) => {
+                    const data = change.doc.data();
+                    delete data.lastUpdated;
+                    
+                    if (change.type === 'added' && !existingIds.has(data.id)) {
+                        productsData.push(data);
+                        hasChanges = true;
+                    }
+                    if (change.type === 'modified') {
+                        const index = productsData.findIndex(p => p.id === data.id);
+                        if (index !== -1) {
+                            productsData[index] = data;
+                            hasChanges = true;
+                        }
+                    }
+                    if (change.type === 'removed') {
+                        productsData = productsData.filter(p => p.id !== data.id);
+                        hasChanges = true;
+                    }
+                });
+                
+                if (hasChanges) {
+                    saveToLocalStorage();
+                    updateProductsDisplay();
+                    updateProductSelects();
+                }
             });
         }
 
-        // Gestion des lignes de vente multi-lignes
+        // Gestion des produits
+        function showProductModal(productId = null) {
+            editingProductId = productId;
+            
+            if (productId) {
+                const product = productsData.find(p => p.id === productId);
+                if (product) {
+                    document.getElementById('productReference').value = product.reference || '';
+                    document.getElementById('productPrice').value = product.price || '';
+                    document.getElementById('productFormat').value = product.format || '';
+                    document.getElementById('productMargin').value = product.margin || '';
+                    document.getElementById('productBrand').value = product.brand || '';
+                }
+            } else {
+                document.getElementById('productReference').value = '';
+                document.getElementById('productPrice').value = '';
+                document.getElementById('productFormat').value = '';
+                document.getElementById('productMargin').value = '';
+                document.getElementById('productBrand').value = '';
+            }
+            
+            document.getElementById('productModal').style.display = 'block';
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').style.display = 'none';
+            editingProductId = null;
+        }
+
+        async function saveProduct() {
+            const reference = document.getElementById('productReference').value.trim();
+            const price = parseFloat(document.getElementById('productPrice').value) || 0;
+            const format = document.getElementById('productFormat').value.trim();
+            const margin = document.getElementById('productMargin').value.trim();
+            const brand = document.getElementById('productBrand').value.trim();
+            
+            const product = {
+                id: editingProductId || Date.now() + Math.random(),
+                reference: reference,
+                price: price,
+                format: format,
+                margin: margin,
+                brand: brand
+            };
+            
+            if (editingProductId) {
+                const index = productsData.findIndex(p => p.id === editingProductId);
+                if (index !== -1) {
+                    productsData[index] = product;
+                }
+            } else {
+                productsData.push(product);
+            }
+            
+            saveToLocalStorage();
+            
+            // Sync Firebase
+            if (isFirebaseInitialized) {
+                try {
+                    await db.collection('products').doc(product.id.toString()).set({
+                        ...product,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error('Erreur sync produit:', error);
+                }
+            }
+            
+            updateProductsDisplay();
+            updateProductSelects();
+            closeProductModal();
+            showAlert(editingProductId ? 'Produit modifié' : 'Produit ajouté', 'success');
+        }
+
+        async function deleteProduct(productId) {
+            if (confirm('Supprimer ce produit ?')) {
+                productsData = productsData.filter(p => p.id !== productId);
+                saveToLocalStorage();
+                
+                if (isFirebaseInitialized) {
+                    try {
+                        await db.collection('products').doc(productId.toString()).delete();
+                    } catch (error) {
+                        console.error('Erreur suppression produit:', error);
+                    }
+                }
+                
+                updateProductsDisplay();
+                updateProductSelects();
+                showAlert('Produit supprimé', 'success');
+            }
+        }
+
+        function updateProductsDisplay() {
+            const container = document.getElementById('productsGrid');
+            container.innerHTML = '';
+            
+            // Stats produits
+            document.getElementById('productsCount').textContent = productsData.length;
+            const avgPrice = productsData.length > 0 ? 
+                productsData.reduce((sum, p) => sum + (p.price || 0), 0) / productsData.length : 0;
+            document.getElementById('avgProductPrice').textContent = formatCurrency(avgPrice);
+            const uniqueBrands = new Set(productsData.map(p => p.brand).filter(b => b));
+            document.getElementById('brandsCount').textContent = uniqueBrands.size;
+            
+            // Afficher les produits
+            productsData.forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.className = 'product-card';
+                productCard.innerHTML = `
+                    <div class="product-name">${product.reference || 'Sans référence'}</div>
+                    <div class="product-details">
+                        ${product.brand ? `<strong>Marque:</strong> ${product.brand}<br>` : ''}
+                        ${product.format ? `<strong>Format:</strong> ${product.format}<br>` : ''}
+                        ${product.margin ? `<strong>Marge:</strong> ${product.margin}` : ''}
+                    </div>
+                    <div class="product-price">${formatCurrency(product.price || 0)}</div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-warning" onclick="showProductModal(${product.id})" style="padding: 6px 12px; font-size: 12px;">✏️</button>
+                        <button class="btn btn-danger" onclick="deleteProduct(${product.id})" style="padding: 6px 12px; font-size: 12px;">🗑️</button>
+                    </div>
+                `;
+                container.appendChild(productCard);
+            });
+        }
+
+        function updateProductSelects() {
+            // Mettre à jour les sélecteurs de produits dans les lignes de vente
+            const selects = document.querySelectorAll('select[data-field="product"]');
+            selects.forEach(select => {
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">Sélectionner un produit</option>';
+                
+                productsData.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product.id;
+                    option.textContent = `${product.reference || 'Sans ref'} - ${formatCurrency(product.price || 0)}`;
+                    option.dataset.price = product.price || 0;
+                    select.appendChild(option);
+                });
+                
+                if (currentValue) {
+                    select.value = currentValue;
+                }
+            });
+        }
+
+        // Import produits
+        function showProductsPasteModal() {
+            document.getElementById('productsPasteModal').style.display = 'block';
+        }
+
+        function closeProductsPasteModal() {
+            document.getElementById('productsPasteModal').style.display = 'none';
+            document.getElementById('productsPasteArea').value = '';
+        }
+
+        function processProductsPastedData() {
+            const data = document.getElementById('productsPasteArea').value.trim();
+            if (!data) {
+                showAlert('Aucune donnée à importer', 'error');
+                return;
+            }
+            parseProductsData(data);
+            closeProductsPasteModal();
+        }
+
+        async function parseProductsData(data) {
+            const lines = data.split('\n');
+            let imported = 0;
+            let errors = 0;
+            
+            try {
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const columns = line.split('\t');
+                    
+                    if (columns.length >= 2) {
+                        const product = {
+                            id: Date.now() + i + Math.random(),
+                            reference: columns[0] || '',
+                            price: parseFloat(columns[1]) || 0,
+                            format: columns[2] || '',
+                            margin: columns[3] || '',
+                            brand: columns[4] || ''
+                        };
+                        
+                        productsData.push(product);
+                        imported++;
+                    } else {
+                        errors++;
+                    }
+                }
+                
+                saveToLocalStorage();
+                
+                if (isFirebaseInitialized && imported > 0) {
+                    const batch = db.batch();
+                    productsData.slice(-imported).forEach(product => {
+                        const docRef = db.collection('products').doc(product.id.toString());
+                        batch.set(docRef, {
+                            ...product,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+                    await batch.commit();
+                }
+                
+                updateProductsDisplay();
+                updateProductSelects();
+                showAlert(`Import produits: ${imported} importés, ${errors} erreurs`, 
+                         errors > 0 ? 'warning' : 'success');
+                
+            } catch (error) {
+                showAlert(`Erreur import produits: ${error.message}`, 'error');
+            }
+        }
+
+        function handleProductsImport() {
+            const fileInput = document.getElementById('importProductsFile');
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                parseProductsData(e.target.result);
+            };
+            reader.readAsText(file);
+        }
+
+        // Gestion des lignes de vente avec produits
         function addSaleLine() {
             const lineId = Date.now() + Math.random();
             const line = {
                 id: lineId,
+                productId: '',
                 product: '',
                 quantity: 1,
-                format: '',
-                marque: '',
-                valeur: 0
+                unitPrice: 0,
+                totalPrice: 0
             };
             
             salesLines.push(line);
@@ -1009,28 +1406,27 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Produit *</label>
-                            <input type="text" data-field="product" data-line-id="${line.id}" placeholder="Nom du produit" value="${line.product}" onchange="updateSaleLine(${line.id}, 'product', this.value)" required>
+                            <select data-field="product" data-line-id="${line.id}" onchange="selectProduct(${line.id}, this)" required>
+                                <option value="">Sélectionner un produit</option>
+                                ${productsData.map(p => `
+                                    <option value="${p.id}" data-price="${p.price || 0}" ${line.productId == p.id ? 'selected' : ''}>
+                                        ${p.reference || 'Sans ref'} - ${formatCurrency(p.price || 0)}
+                                    </option>
+                                `).join('')}
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Quantité *</label>
                             <input type="number" data-field="quantity" data-line-id="${line.id}" min="1" value="${line.quantity}" onchange="updateSaleLine(${line.id}, 'quantity', this.value)" required>
                         </div>
                         <div class="form-group">
-                            <label>Format</label>
-                            <input type="text" data-field="format" data-line-id="${line.id}" placeholder="Format du produit" value="${line.format}" onchange="updateSaleLine(${line.id}, 'format', this.value)">
-                        </div>
-                        <div class="form-group">
-                            <label>Marque</label>
-                            <input type="text" data-field="marque" data-line-id="${line.id}" placeholder="Marque" value="${line.marque}" onchange="updateSaleLine(${line.id}, 'marque', this.value)">
-                        </div>
-                        <div class="form-group">
-                            <label>Valeur Unitaire (CFA) *</label>
-                            <input type="number" data-field="valeur" data-line-id="${line.id}" min="0" value="${line.valeur}" onchange="updateSaleLine(${line.id}, 'valeur', this.value)" required>
+                            <label>Prix Unitaire (CFA)</label>
+                            <input type="number" data-field="unitPrice" data-line-id="${line.id}" min="0" value="${line.unitPrice}" onchange="updateSaleLine(${line.id}, 'unitPrice', this.value)" readonly style="background: #f8f9fa;">
                         </div>
                         <div class="form-group">
                             <label>Total Ligne</label>
                             <div style="padding: 12px; background: #f8f9fa; border-radius: 8px; font-weight: 600; color: #667eea;">
-                                ${formatCurrency(line.quantity * line.valeur)}
+                                ${formatCurrency(line.totalPrice)}
                             </div>
                         </div>
                     </div>
@@ -1039,17 +1435,44 @@
             });
         }
 
+        function selectProduct(lineId, select) {
+            const line = salesLines.find(l => l.id === lineId);
+            if (!line) return;
+            
+            const selectedOption = select.selectedOptions[0];
+            if (selectedOption && selectedOption.value) {
+                const product = productsData.find(p => p.id == selectedOption.value);
+                if (product) {
+                    line.productId = product.id;
+                    line.product = product.reference || '';
+                    line.unitPrice = product.price || 0;
+                    line.totalPrice = line.quantity * line.unitPrice;
+                }
+            } else {
+                line.productId = '';
+                line.product = '';
+                line.unitPrice = 0;
+                line.totalPrice = 0;
+            }
+            
+            renderSalesLines();
+            updateInvoiceTotals();
+        }
+
         function updateSaleLine(lineId, field, value) {
             const line = salesLines.find(l => l.id === lineId);
-            if (line) {
-                if (field === 'quantity' || field === 'valeur') {
-                    line[field] = parseFloat(value) || 0;
-                } else {
-                    line[field] = value;
-                }
-                renderSalesLines();
-                updateInvoiceTotals();
+            if (!line) return;
+            
+            if (field === 'quantity') {
+                line.quantity = parseFloat(value) || 1;
+                line.totalPrice = line.quantity * line.unitPrice;
+            } else if (field === 'unitPrice') {
+                line.unitPrice = parseFloat(value) || 0;
+                line.totalPrice = line.quantity * line.unitPrice;
             }
+            
+            renderSalesLines();
+            updateInvoiceTotals();
         }
 
         function removeSaleLine(lineId) {
@@ -1062,58 +1485,50 @@
 
         function updateInvoiceTotals() {
             const totalLines = salesLines.length;
-            const totalValue = salesLines.reduce((sum, line) => sum + (line.quantity * line.valeur), 0);
+            const totalValue = salesLines.reduce((sum, line) => sum + line.totalPrice, 0);
             
             document.getElementById('totalLines').textContent = totalLines;
             document.getElementById('totalInvoice').textContent = formatCurrency(totalValue);
         }
 
         async function saveInvoice() {
-            const commercial = document.getElementById('invoiceCommercial').value.trim();
             const client = document.getElementById('invoiceClient').value.trim();
             const date = document.getElementById('invoiceDate').value;
             const invoiceNumber = document.getElementById('invoiceNumber').value.trim();
             
-            // Validation
-            if (!commercial || !client || !date) {
-                showAlert('Veuillez remplir les informations obligatoires de la facture', 'error');
+            if (!client || !date) {
+                showAlert('Veuillez remplir les informations obligatoires', 'error');
                 return;
             }
             
             const validLines = salesLines.filter(line => 
-                line.product.trim() && line.quantity > 0 && line.valeur > 0
+                line.productId && line.quantity > 0 && line.unitPrice > 0
             );
             
             if (validLines.length === 0) {
-                showAlert('Veuillez remplir au moins une ligne de vente valide', 'error');
+                showAlert('Veuillez ajouter au moins une ligne de vente valide', 'error');
                 return;
             }
             
             updateCloudStatus('syncing', '⬆️ Sauvegarde...');
             
             try {
-                // Créer les ventes pour chaque ligne
                 const newSales = validLines.map(line => ({
                     id: Date.now() + Math.random(),
-                    commercial: commercial,
                     client: client,
                     date: new Date(date).toLocaleDateString('fr-FR'),
                     invoice: invoiceNumber || `FAC-${Date.now()}`,
                     product: line.product,
                     quantity: line.quantity,
-                    format: line.format,
-                    marque: line.marque,
-                    valeur: line.quantity * line.valeur // Total de la ligne
+                    unitPrice: line.unitPrice,
+                    valeur: line.totalPrice
                 }));
                 
-                // Ajouter aux données locales
                 salesData.push(...newSales);
                 saveToLocalStorage();
                 
-                // Synchroniser avec Firebase automatiquement
                 if (isFirebaseInitialized) {
                     const batch = db.batch();
-                    
                     newSales.forEach(sale => {
                         const docRef = db.collection('sales').doc(sale.id.toString());
                         batch.set(docRef, {
@@ -1121,185 +1536,239 @@
                             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                         });
                     });
-                    
                     await batch.commit();
                 }
                 
                 const totalValue = newSales.reduce((sum, sale) => sum + sale.valeur, 0);
                 showAlert(`Facture sauvegardée ! ${validLines.length} lignes, Total: ${formatCurrency(totalValue)}`, 'success');
                 
-                // Réinitialiser le formulaire
                 clearInvoice();
-                
-                // Mettre à jour l'interface
                 populateFilters();
                 applyFilters();
-                updateDataTable();
-                updateDataStats();
-                
+                updateClientsOverview();
                 updateCloudStatus('online', '☁️ Sync Auto Active');
                 
             } catch (error) {
                 console.error('Erreur sauvegarde:', error);
-                updateCloudStatus('offline', '❌ Erreur Sync');
                 showAlert(`Erreur de sauvegarde: ${error.message}`, 'error');
             }
         }
 
         function clearInvoice() {
-            document.getElementById('invoiceCommercial').value = '';
             document.getElementById('invoiceClient').value = '';
             document.getElementById('invoiceNumber').value = '';
             setTodayForNewInvoice();
-            
             salesLines = [];
             addSaleLine();
         }
 
-        function setTodayForNewInvoice() {
-            document.getElementById('invoiceDate').value = formatDate(new Date());
-        }
-
-        // Édition de ventes
-        function editSale(id) {
-            const sale = salesData.find(s => s.id === id);
-            if (!sale) return;
+        // Gestion des encaissements
+        async function savePayment() {
+            const client = document.getElementById('paymentClient').value.trim();
+            const date = document.getElementById('paymentDate').value;
+            const amount = parseFloat(document.getElementById('paymentAmount').value) || 0;
+            const method = document.getElementById('paymentMethod').value;
+            const reference = document.getElementById('paymentReference').value.trim();
+            const notes = document.getElementById('paymentNotes').value.trim();
             
-            editingSaleId = id;
-            
-            // Remplir le formulaire d'édition
-            document.getElementById('editCommercial').value = sale.commercial || '';
-            document.getElementById('editClient').value = sale.client || '';
-            document.getElementById('editDate').value = sale.date ? formatDateForInput(sale.date) : '';
-            document.getElementById('editInvoice').value = sale.invoice || '';
-            document.getElementById('editProduct').value = sale.product || '';
-            document.getElementById('editQuantity').value = sale.quantity || 1;
-            document.getElementById('editFormat').value = sale.format || '';
-            document.getElementById('editMarque').value = sale.marque || '';
-            document.getElementById('editValue').value = sale.valeur || 0;
-            
-            // Afficher le modal
-            document.getElementById('editModal').style.display = 'block';
-        }
-
-        function formatDateForInput(dateStr) {
-            try {
-                if (dateStr.includes('/')) {
-                    const parts = dateStr.split('/');
-                    if (parts.length === 3) {
-                        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                    }
-                }
-                return dateStr;
-            } catch (error) {
-                return '';
-            }
-        }
-
-        async function saveEdit() {
-            if (!editingSaleId) return;
-            
-            const commercial = document.getElementById('editCommercial').value.trim();
-            const client = document.getElementById('editClient').value.trim();
-            const date = document.getElementById('editDate').value;
-            const product = document.getElementById('editProduct').value.trim();
-            const quantity = parseInt(document.getElementById('editQuantity').value) || 0;
-            const valeur = parseInt(document.getElementById('editValue').value) || 0;
-            
-            if (!commercial || !client || !date || !product || quantity <= 0 || valeur <= 0) {
-                showAlert('Veuillez remplir tous les champs obligatoires', 'error');
+            if (!client || !date || amount <= 0) {
+                showAlert('Veuillez remplir les champs obligatoires', 'error');
                 return;
             }
             
-            updateCloudStatus('syncing', '⬆️ Modification...');
+            const payment = {
+                id: Date.now() + Math.random(),
+                client: client,
+                date: new Date(date).toLocaleDateString('fr-FR'),
+                amount: amount,
+                method: method,
+                reference: reference,
+                notes: notes
+            };
             
-            try {
-                const saleIndex = salesData.findIndex(s => s.id === editingSaleId);
-                if (saleIndex !== -1) {
-                    // Mettre à jour la vente
-                    salesData[saleIndex] = {
-                        ...salesData[saleIndex],
-                        commercial: commercial,
-                        client: client,
-                        date: new Date(date).toLocaleDateString('fr-FR'),
-                        invoice: document.getElementById('editInvoice').value.trim(),
-                        product: product,
-                        quantity: quantity,
-                        format: document.getElementById('editFormat').value.trim(),
-                        marque: document.getElementById('editMarque').value.trim(),
-                        valeur: valeur
-                    };
-                    
-                    saveToLocalStorage();
-                    
-                    // Synchroniser avec Firebase
-                    if (isFirebaseInitialized) {
-                        await db.collection('sales').doc(editingSaleId.toString()).set({
-                            ...salesData[saleIndex],
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    }
-                    
-                    showAlert('Vente modifiée avec succès !', 'success');
-                    closeEditModal();
-                    
-                    // Mettre à jour l'interface
-                    populateFilters();
-                    applyFilters();
-                    updateDataTable();
-                    updateDataStats();
-                    
-                    updateCloudStatus('online', '☁️ Sync Auto Active');
-                }
-            } catch (error) {
-                console.error('Erreur modification:', error);
-                updateCloudStatus('offline', '❌ Erreur Sync');
-                showAlert(`Erreur de modification: ${error.message}`, 'error');
-            }
-        }
-
-        function closeEditModal() {
-            document.getElementById('editModal').style.display = 'none';
-            editingSaleId = null;
-        }
-
-        // Suppression améliorée
-        async function deleteSale(id) {
-            if (confirm('Supprimer cette vente ?')) {
-                updateCloudStatus('syncing', '🗑️ Suppression...');
-                
+            paymentsData.push(payment);
+            saveToLocalStorage();
+            
+            if (isFirebaseInitialized) {
                 try {
-                    salesData = salesData.filter(sale => sale.id !== id);
-                    saveToLocalStorage();
-                    
-                    // Supprimer de Firebase
-                    if (isFirebaseInitialized) {
-                        await db.collection('sales').doc(id.toString()).delete();
-                    }
-                    
-                    updateDataTable();
-                    updateDataStats();
-                    populateFilters();
-                    applyFilters();
-                    showAlert('Vente supprimée', 'success');
-                    
-                    updateCloudStatus('online', '☁️ Sync Auto Active');
-                    
+                    await db.collection('payments').doc(payment.id.toString()).set({
+                        ...payment,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                 } catch (error) {
-                    console.error('Erreur suppression:', error);
-                    updateCloudStatus('offline', '❌ Erreur Sync');
-                    showAlert(`Erreur de suppression: ${error.message}`, 'error');
+                    console.error('Erreur sync encaissement:', error);
                 }
+            }
+            
+            showAlert(`Encaissement enregistré: ${formatCurrency(amount)}`, 'success');
+            clearPaymentForm();
+            updatePaymentsDisplay();
+            updateClientsOverview();
+        }
+
+        function clearPaymentForm() {
+            document.getElementById('paymentClient').value = '';
+            document.getElementById('paymentAmount').value = '';
+            document.getElementById('paymentReference').value = '';
+            document.getElementById('paymentNotes').value = '';
+            document.getElementById('paymentDate').value = formatDate(new Date());
+        }
+
+        function updatePaymentsDisplay() {
+            // Stats encaissements
+            document.getElementById('paymentsCount').textContent = paymentsData.length;
+            const totalPayments = paymentsData.reduce((sum, p) => sum + (p.amount || 0), 0);
+            document.getElementById('paymentsTotal').textContent = formatCurrency(totalPayments);
+            const avgPayment = paymentsData.length > 0 ? totalPayments / paymentsData.length : 0;
+            document.getElementById('paymentsAvg').textContent = formatCurrency(avgPayment);
+            
+            // Tableau encaissements
+            const tbody = document.getElementById('paymentsTableBody');
+            tbody.innerHTML = '';
+            
+            paymentsData.slice(-50).reverse().forEach(payment => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${payment.date}</td>
+                    <td>${payment.client}</td>
+                    <td>${formatCurrency(payment.amount)}</td>
+                    <td>${payment.method}</td>
+                    <td>${payment.reference || '-'}</td>
+                    <td>${payment.notes || '-'}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deletePayment(${payment.id})" style="padding: 6px 12px; font-size: 12px;">🗑️</button>
+                    </td>
+                `;
+            });
+        }
+
+        async function deletePayment(paymentId) {
+            if (confirm('Supprimer cet encaissement ?')) {
+                paymentsData = paymentsData.filter(p => p.id !== paymentId);
+                saveToLocalStorage();
+                
+                if (isFirebaseInitialized) {
+                    try {
+                        await db.collection('payments').doc(paymentId.toString()).delete();
+                    } catch (error) {
+                        console.error('Erreur suppression encaissement:', error);
+                    }
+                }
+                
+                updatePaymentsDisplay();
+                updateClientsOverview();
+                showAlert('Encaissement supprimé', 'success');
             }
         }
 
-        // Le reste du code reste identique...
+        // Gestion des clients et en-cours
+        function updateClientsOverview() {
+            const clientsData = {};
+            
+            // Calcul des ventes par client
+            salesData.forEach(sale => {
+                if (!clientsData[sale.client]) {
+                    clientsData[sale.client] = {
+                        name: sale.client,
+                        sales: 0,
+                        payments: 0,
+                        balance: 0,
+                        lastSale: null,
+                        lastPayment: null
+                    };
+                }
+                clientsData[sale.client].sales += sale.valeur || 0;
+                if (!clientsData[sale.client].lastSale || new Date(sale.date) > new Date(clientsData[sale.client].lastSale)) {
+                    clientsData[sale.client].lastSale = sale.date;
+                }
+            });
+            
+            // Calcul des encaissements par client
+            paymentsData.forEach(payment => {
+                if (!clientsData[payment.client]) {
+                    clientsData[payment.client] = {
+                        name: payment.client,
+                        sales: 0,
+                        payments: 0,
+                        balance: 0,
+                        lastSale: null,
+                        lastPayment: null
+                    };
+                }
+                clientsData[payment.client].payments += payment.amount || 0;
+                if (!clientsData[payment.client].lastPayment || new Date(payment.date) > new Date(clientsData[payment.client].lastPayment)) {
+                    clientsData[payment.client].lastPayment = payment.date;
+                }
+            });
+            
+            // Calcul des soldes
+            Object.values(clientsData).forEach(client => {
+                client.balance = client.sales - client.payments;
+            });
+            
+            // Affichage
+            const container = document.getElementById('clientsOverview');
+            container.innerHTML = '';
+            
+            const clients = Object.values(clientsData).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+            
+            clients.forEach(client => {
+                const clientCard = document.createElement('div');
+                clientCard.className = 'client-card';
+                
+                let balanceClass = 'balance-zero';
+                let balanceIcon = '✅';
+                if (client.balance > 0) {
+                    balanceClass = 'balance-negative';
+                    balanceIcon = '⚠️';
+                } else if (client.balance < 0) {
+                    balanceClass = 'balance-positive';
+                    balanceIcon = '💰';
+                }
+                
+                clientCard.innerHTML = `
+                    <div class="client-header">
+                        <div class="client-name">${client.name}</div>
+                        <div class="client-balance ${balanceClass}">
+                            ${balanceIcon} ${formatCurrency(Math.abs(client.balance))}
+                            ${client.balance > 0 ? ' (À recevoir)' : client.balance < 0 ? ' (Crédit)' : ' (Soldé)'}
+                        </div>
+                    </div>
+                    <div class="client-stats">
+                        <div class="client-stat">
+                            <div class="client-stat-value">${formatCurrency(client.sales)}</div>
+                            <div class="client-stat-label">Ventes</div>
+                        </div>
+                        <div class="client-stat">
+                            <div class="client-stat-value">${formatCurrency(client.payments)}</div>
+                            <div class="client-stat-label">Encaissements</div>
+                        </div>
+                        <div class="client-stat">
+                            <div class="client-stat-value">${client.lastSale || '-'}</div>
+                            <div class="client-stat-label">Dernière Vente</div>
+                        </div>
+                        <div class="client-stat">
+                            <div class="client-stat-value">${client.lastPayment || '-'}</div>
+                            <div class="client-stat-label">Dernier Paiement</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(clientCard);
+            });
+        }
+
+        // Fonctions utilitaires
         function setDefaultDates() {
             const today = new Date();
             const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
             
             document.getElementById('dateStart').value = formatDate(firstDayOfMonth);
             document.getElementById('dateEnd').value = formatDate(today);
+        }
+
+        function setTodayForNewInvoice() {
+            document.getElementById('invoiceDate').value = formatDate(new Date());
+            document.getElementById('paymentDate').value = formatDate(new Date());
         }
 
         function formatDate(date) {
@@ -1312,34 +1781,30 @@
         }
 
         function showSection(sectionName) {
-            // Cacher toutes les sections
             document.querySelectorAll('.section').forEach(section => {
                 section.classList.remove('active');
             });
             
-            // Enlever active de tous les boutons
             document.querySelectorAll('.nav-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             
-            // Afficher la section sélectionnée
             document.getElementById(sectionName).classList.add('active');
             event.target.classList.add('active');
             
-            // Actions spécifiques par section
             if (sectionName === 'dashboard') {
                 applyFilters();
-            } else if (sectionName === 'data') {
-                updateDataTable();
-                updateDataStats();
+            } else if (sectionName === 'clients') {
+                updateClientsOverview();
+            } else if (sectionName === 'products') {
+                updateProductsDisplay();
+            } else if (sectionName === 'payments') {
+                updatePaymentsDisplay();
             }
         }
 
         function populateFilters() {
-            const commercials = [...new Set(salesData.map(sale => sale.commercial))].sort();
             const clients = [...new Set(salesData.map(sale => sale.client))].sort();
-            
-            populateSelect('commercialFilter', commercials, 'Tous les commerciaux');
             populateSelect('clientFilter', clients, 'Tous les clients');
         }
 
@@ -1364,13 +1829,11 @@
         function applyFilters() {
             const dateStart = document.getElementById('dateStart').value;
             const dateEnd = document.getElementById('dateEnd').value;
-            const commercialFilter = document.getElementById('commercialFilter').value;
             const clientFilter = document.getElementById('clientFilter').value;
             
             filteredData = salesData.filter(sale => {
                 let include = true;
                 
-                // Filtre par date
                 if (dateStart || dateEnd) {
                     const saleDate = parseDate(sale.date);
                     if (saleDate) {
@@ -1379,8 +1842,6 @@
                     }
                 }
                 
-                // Filtres par valeurs
-                if (commercialFilter && sale.commercial !== commercialFilter) include = false;
                 if (clientFilter && sale.client !== clientFilter) include = false;
                 
                 return include;
@@ -1393,7 +1854,6 @@
         function parseDate(dateStr) {
             if (!dateStr) return null;
             
-            // Format: dd/MM/yyyy
             if (dateStr.includes('/')) {
                 const parts = dateStr.split('/');
                 if (parts.length === 3) {
@@ -1407,54 +1867,57 @@
         function updateKPIs() {
             const totalRevenue = filteredData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
             const totalSales = filteredData.length;
-            
-            // Top analyses
-            const clientsMap = {};
-            
-            filteredData.forEach(sale => {
-                if (sale.client) clientsMap[sale.client] = (clientsMap[sale.client] || 0) + sale.valeur;
-            });
-            
-            const topClient = Object.keys(clientsMap).reduce((a, b) => clientsMap[a] > clientsMap[b] ? a : b, '');
-            
+            const totalPayments = paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const totalOutstanding = totalRevenue - totalPayments;
+            const uniqueClients = new Set(filteredData.map(sale => sale.client)).size;
             const avgSale = totalSales > 0 ? totalRevenue / totalSales : 0;
             
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
             document.getElementById('totalSales').textContent = totalSales;
-            document.getElementById('topClient').textContent = topClient || '-';
+            document.getElementById('totalPayments').textContent = formatCurrency(totalPayments);
+            document.getElementById('totalOutstanding').textContent = formatCurrency(totalOutstanding);
+            document.getElementById('totalClients').textContent = uniqueClients;
             document.getElementById('avgSale').textContent = formatCurrency(avgSale);
         }
 
         function updateCharts() {
             updateEvolutionChart();
-            updateCommercialChart();
             updateClientChart();
             updateArticleChart();
-            updateSalesDetailTable();
         }
 
         function updateEvolutionChart() {
             const ctx = document.getElementById('evolutionChart');
             if (!ctx) return;
             
-            // Détruire le graphique existant
             if (charts.evolution) {
                 charts.evolution.destroy();
             }
             
-            // Grouper par date
-            const dailyData = {};
+            // Données CA par date
+            const dailySales = {};
             filteredData.forEach(sale => {
                 const date = parseDate(sale.date);
                 if (date) {
                     const dateKey = date.toISOString().split('T')[0];
-                    dailyData[dateKey] = (dailyData[dateKey] || 0) + sale.valeur;
+                    dailySales[dateKey] = (dailySales[dateKey] || 0) + sale.valeur;
                 }
             });
             
-            const sortedDates = Object.keys(dailyData).sort();
-            const labels = sortedDates.map(date => new Date(date).toLocaleDateString('fr-FR'));
-            const data = sortedDates.map(date => dailyData[date]);
+            // Données encaissements par date
+            const dailyPayments = {};
+            paymentsData.forEach(payment => {
+                const date = parseDate(payment.date);
+                if (date) {
+                    const dateKey = date.toISOString().split('T')[0];
+                    dailyPayments[dateKey] = (dailyPayments[dateKey] || 0) + payment.amount;
+                }
+            });
+            
+            const allDates = [...new Set([...Object.keys(dailySales), ...Object.keys(dailyPayments)])].sort();
+            const labels = allDates.map(date => new Date(date).toLocaleDateString('fr-FR'));
+            const salesData = allDates.map(date => dailySales[date] || 0);
+            const paymentsDataChart = allDates.map(date => dailyPayments[date] || 0);
             
             charts.evolution = new Chart(ctx, {
                 type: 'line',
@@ -1462,11 +1925,19 @@
                     labels: labels,
                     datasets: [{
                         label: 'CA Journalier',
-                        data: data,
+                        data: salesData,
                         backgroundColor: 'rgba(102, 126, 234, 0.1)',
                         borderColor: '#667eea',
                         borderWidth: 2,
-                        fill: true,
+                        fill: false,
+                        tension: 0.4
+                    }, {
+                        label: 'Encaissements',
+                        data: paymentsDataChart,
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        borderColor: '#2ecc71',
+                        borderWidth: 2,
+                        fill: false,
                         tension: 0.4
                     }]
                 },
@@ -1476,67 +1947,6 @@
                     plugins: {
                         legend: {
                             position: 'top'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return formatCurrency(value);
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function updateCommercialChart() {
-            const ctx = document.getElementById('commercialChart');
-            if (!ctx) return;
-            
-            if (charts.commercial) {
-                charts.commercial.destroy();
-            }
-            
-            const commercialData = {};
-            filteredData.forEach(sale => {
-                if (sale.commercial) {
-                    commercialData[sale.commercial] = (commercialData[sale.commercial] || 0) + sale.valeur;
-                }
-            });
-            
-            const sortedCommercials = Object.entries(commercialData)
-                .sort(([,a], [,b]) => b - a)
-                .slice(0, 10);
-            
-            const labels = sortedCommercials.map(([name]) => name);
-            const data = sortedCommercials.map(([,value]) => value);
-            
-            const colors = [
-                '#667eea', '#764ba2', '#f093fb', '#f5576c',
-                '#4facfe', '#00f2fe', '#43e97b', '#38f9d7',
-                '#ffecd2', '#fcb69f'
-            ];
-            
-            charts.commercial = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: colors.slice(0, labels.length),
-                        borderColor: colors.slice(0, labels.length),
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
                         }
                     },
                     scales: {
@@ -1609,7 +2019,7 @@
             
             const articleData = {};
             filteredData.forEach(sale => {
-                const article = sale.product || sale.details || sale.DETAILS || 'Article non spécifié';
+                const article = sale.product || 'Article non spécifié';
                 articleData[article] = (articleData[article] || 0) + sale.valeur;
             });
             
@@ -1644,57 +2054,8 @@
             });
         }
 
-        function updateSalesDetailTable() {
-            salesDetailOffset = 0;
-            const tbody = document.getElementById('salesDetailBody');
-            tbody.innerHTML = '';
-            loadMoreSalesDetail();
-        }
-
-        function loadMoreSalesDetail() {
-            const tbody = document.getElementById('salesDetailBody');
-            const endIndex = salesDetailOffset + salesDetailLimit;
-            const salesSlice = filteredData.slice(salesDetailOffset, endIndex);
-            
-            salesSlice.forEach(sale => {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>${sale.date || 'N/A'}</td>
-                    <td>${sale.commercial || 'N/A'}</td>
-                    <td>${sale.client || 'N/A'}</td>
-                    <td>${sale.invoice || 'N/A'}</td>
-                    <td>${sale.product || sale.details || sale.DETAILS || 'N/A'}</td>
-                    <td>${sale.quantity || sale.qtyOUT || 'N/A'}</td>
-                    <td>${sale.format || sale.Format || 'N/A'}</td>
-                    <td>${sale.marque || sale.Marque || 'N/A'}</td>
-                    <td>${formatCurrency(sale.valeur || 0)}</td>
-                    <td>
-                        <button class="btn btn-warning" onclick="editSale(${sale.id})" style="padding: 6px 12px; font-size: 12px;">✏️</button>
-                        <button class="btn btn-danger" onclick="deleteSale(${sale.id})" style="padding: 6px 12px; font-size: 12px;">🗑️</button>
-                    </td>
-                `;
-            });
-            
-            salesDetailOffset = endIndex;
-            
-            // Cacher le bouton "Voir plus" s'il n'y a plus de données
-            const paginationDiv = document.getElementById('salesDetailPagination');
-            if (salesDetailOffset >= filteredData.length) {
-                paginationDiv.style.display = 'none';
-            } else {
-                paginationDiv.style.display = 'block';
-                const remainingCount = filteredData.length - salesDetailOffset;
-                paginationDiv.innerHTML = `
-                    <button class="btn btn-primary" onclick="loadMoreSalesDetail()">
-                        Voir plus (${remainingCount} restantes)
-                    </button>
-                `;
-            }
-        }
-
         function resetFilters() {
             setDefaultDates();
-            document.getElementById('commercialFilter').value = '';
             document.getElementById('clientFilter').value = '';
             applyFilters();
         }
@@ -1711,210 +2072,48 @@
             updateLastUpdateTime();
             populateFilters();
             applyFilters();
-            updateDataTable();
-            updateDataStats();
+            updateClientsOverview();
+            updateProductsDisplay();
+            updatePaymentsDisplay();
             showAlert('Données actualisées', 'success');
         }
 
-        // Gestion des données
-        function updateDataTable() {
-            const tbody = document.getElementById('dataTableBody');
-            tbody.innerHTML = '';
-            
-            salesData.slice(-50).reverse().forEach(sale => {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>${sale.date}</td>
-                    <td>${sale.commercial}</td>
-                    <td>${sale.client}</td>
-                    <td>${sale.invoice || 'N/A'}</td>
-                    <td>${sale.product || 'N/A'}</td>
-                    <td>${sale.quantity || 'N/A'}</td>
-                    <td>${sale.format || 'N/A'}</td>
-                    <td>${sale.marque || 'N/A'}</td>
-                    <td>${formatCurrency(sale.valeur)}</td>
-                    <td>
-                        <button class="btn btn-warning" onclick="editSale(${sale.id})" style="padding: 6px 12px; font-size: 12px;">✏️</button>
-                        <button class="btn btn-danger" onclick="deleteSale(${sale.id})" style="padding: 6px 12px; font-size: 12px;">🗑️</button>
-                    </td>
-                `;
-            });
-        }
-
-        function updateDataStats() {
-            const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
-            const uniqueCommercials = new Set(salesData.map(sale => sale.commercial)).size;
-            const uniqueClients = new Set(salesData.map(sale => sale.client)).size;
-            
-            document.getElementById('dataCount').textContent = salesData.length;
-            document.getElementById('dataRevenue').textContent = formatCurrency(totalRevenue);
-            document.getElementById('dataCommercials').textContent = uniqueCommercials;
-            document.getElementById('dataClients').textContent = uniqueClients;
-        }
-
-        // Import/Export (garde les fonctions existantes)
-        function handleFileImport() {
-            const fileInput = document.getElementById('importFile');
-            const file = fileInput.files[0];
-            
-            if (!file) return;
-            
-            showAlert('Import en cours...', 'warning');
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = e.target.result;
-                
-                if (file.name.endsWith('.csv')) {
-                    parseCSVData(data);
-                } else {
-                    showAlert('Format Excel non supporté actuellement. Utilisez CSV ou copier-coller.', 'error');
-                }
-            };
-            
-            reader.readAsText(file);
-        }
-
-        function showPasteModal() {
-            document.getElementById('pasteModal').style.display = 'block';
-            document.getElementById('pasteArea').focus();
-        }
-
-        function closePasteModal() {
-            document.getElementById('pasteModal').style.display = 'none';
-            document.getElementById('pasteArea').value = '';
-        }
-
-        function processPastedData() {
-            const data = document.getElementById('pasteArea').value.trim();
-            
-            if (!data) {
-                showAlert('Aucune donnée à importer', 'error');
-                return;
-            }
-            
-            parseTabDelimitedData(data);
-            closePasteModal();
-        }
-
-        async function parseTabDelimitedData(data) {
-            const lines = data.split('\n');
-            let imported = 0;
-            let errors = 0;
-            
-            updateCloudStatus('syncing', '⬆️ Import en cours...');
-            
-            try {
-                const newSales = [];
-                
-                // Ignorer la première ligne (en-têtes)
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    
-                    const columns = line.split('\t');
-                    
-                    if (columns.length >= 9) {
-                        try {
-                            const sale = {
-                                id: Date.now() + i + Math.random(),
-                                commercial: columns[0] || '',
-                                client: columns[1] || '',
-                                date: columns[2] || '',
-                                product: columns[3] || '',
-                                details: columns[3] || '',
-                                invoice: columns[4] || '',
-                                quantity: parseInt(columns[5]) || 0,
-                                qtyOUT: parseInt(columns[5]) || 0,
-                                format: columns[6] || '',
-                                Format: columns[6] || '',
-                                marque: columns[7] ? columns[7].trim() : '',
-                                Marque: columns[7] ? columns[7].trim() : '',
-                                valeur: parseInt(columns[8].replace(/\s/g, '').replace(/[^\d]/g, '')) || 0
-                            };
-                            
-                            if (sale.commercial && sale.client && sale.date && sale.valeur > 0) {
-                                newSales.push(sale);
-                                imported++;
-                            } else {
-                                errors++;
-                            }
-                        } catch (error) {
-                            console.error('Erreur parsing ligne:', error, line);
-                            errors++;
-                        }
-                    } else {
-                        errors++;
-                    }
-                }
-                
-                if (newSales.length > 0) {
-                    salesData.push(...newSales);
-                    saveToLocalStorage();
-                    
-                    // Sync vers Firebase automatiquement
-                    if (isFirebaseInitialized) {
-                        const batch = db.batch();
-                        
-                        newSales.forEach(sale => {
-                            const docRef = db.collection('sales').doc(sale.id.toString());
-                            batch.set(docRef, {
-                                ...sale,
-                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        });
-                        
-                        await batch.commit();
-                    }
-                }
-                
-                showAlert(`Import terminé: ${imported} lignes importées, ${errors} erreurs`, 
-                         errors > 0 ? 'warning' : 'success');
-                
-                populateFilters();
-                applyFilters();
-                updateDataTable();
-                updateDataStats();
-                
-                updateCloudStatus('online', '☁️ Sync Auto Active');
-                
-            } catch (error) {
-                console.error('Erreur import:', error);
-                updateCloudStatus('offline', '❌ Erreur Import');
-                showAlert(`Erreur d'import: ${error.message}`, 'error');
-            }
-        }
-
-        function parseCSVData(data) {
-            // Implémentation similaire pour CSV
-            parseTabDelimitedData(data.replace(/,/g, '\t'));
-        }
-
+        // Export
         function exportToCSV() {
-            const headers = ['Commercial', 'Client', 'Date', 'N° Facture', 'Produit', 'Quantité', 'Format', 'Marque', 'Valeur'];
+            const headers = ['Client', 'Date', 'N° Facture', 'Produit', 'Quantité', 'Prix Unitaire', 'Valeur Total'];
             const csvContent = [
                 headers.join(','),
                 ...salesData.map(sale => [
-                    `"${sale.commercial}"`,
                     `"${sale.client}"`,
                     sale.date,
                     `"${sale.invoice || ''}"`,
                     `"${sale.product || ''}"`,
                     sale.quantity || '',
-                    `"${sale.format || ''}"`,
-                    `"${sale.marque || ''}"`,
+                    sale.unitPrice || '',
                     sale.valeur
                 ].join(','))
             ].join('\n');
             
             downloadFile(csvContent, `kamlac_ventes_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
-            showAlert('Export CSV terminé', 'success');
+            showAlert('Export ventes CSV terminé', 'success');
         }
 
-        function exportToJSON() {
-            const jsonContent = JSON.stringify(salesData, null, 2);
-            downloadFile(jsonContent, `kamlac_ventes_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
-            showAlert('Export JSON terminé', 'success');
+        function exportPaymentsToCSV() {
+            const headers = ['Date', 'Client', 'Montant', 'Mode', 'Référence', 'Notes'];
+            const csvContent = [
+                headers.join(','),
+                ...paymentsData.map(payment => [
+                    payment.date,
+                    `"${payment.client}"`,
+                    payment.amount,
+                    `"${payment.method}"`,
+                    `"${payment.reference || ''}"`,
+                    `"${payment.notes || ''}"`
+                ].join(','))
+            ].join('\n');
+            
+            downloadFile(csvContent, `kamlac_encaissements_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+            showAlert('Export encaissements CSV terminé', 'success');
         }
 
         function downloadFile(content, filename, mimeType) {
@@ -1930,14 +2129,17 @@
         }
 
         function clearAllData() {
-            if (confirm('⚠️ ATTENTION : Cette action supprimera TOUTES vos données de façon définitive. Êtes-vous sûr ?')) {
+            if (confirm('⚠️ ATTENTION : Cette action supprimera TOUTES vos données. Êtes-vous sûr ?')) {
                 if (confirm('Dernière confirmation : Supprimer toutes les données ?')) {
                     salesData = [];
+                    paymentsData = [];
+                    productsData = [];
                     saveToLocalStorage();
                     populateFilters();
                     applyFilters();
-                    updateDataTable();
-                    updateDataStats();
+                    updateClientsOverview();
+                    updateProductsDisplay();
+                    updatePaymentsDisplay();
                     showAlert('Toutes les données ont été supprimées', 'warning');
                 }
             }
@@ -1960,9 +2162,9 @@
 
         // Gestion des clics modaux
         window.onclick = function(event) {
-            const editModal = document.getElementById('editModal');
-            if (event.target === editModal) {
-                closeEditModal();
+            const productModal = document.getElementById('productModal');
+            if (event.target === productModal) {
+                closeProductModal();
             }
         }
     </script>
