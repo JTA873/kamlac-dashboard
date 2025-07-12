@@ -976,6 +976,7 @@
                                     <th>Qté</th>
                                     <th>P.U.</th>
                                     <th>Total</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="salesRecapTableBody">
@@ -1258,6 +1259,90 @@
         </div>
     </div>
 
+    <!-- Modal Édition Vente -->
+    <div id="editSaleModal" class="product-modal">
+        <div class="product-modal-content">
+            <h3 style="margin-bottom: 15px;">✏️ Modifier Vente</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="editSaleClient">Client *</label>
+                    <input type="text" id="editSaleClient" placeholder="Nom du client" required>
+                </div>
+                <div class="form-group">
+                    <label for="editSaleDate">Date *</label>
+                    <input type="date" id="editSaleDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="editSaleInvoice">N° Facture</label>
+                    <input type="text" id="editSaleInvoice" placeholder="Numéro de facture">
+                </div>
+                <div class="form-group">
+                    <label for="editSaleProduct">Produit</label>
+                    <input type="text" id="editSaleProduct" placeholder="Nom du produit">
+                </div>
+                <div class="form-group">
+                    <label for="editSaleQuantity">Quantité</label>
+                    <input type="number" id="editSaleQuantity" min="1" placeholder="1">
+                </div>
+                <div class="form-group">
+                    <label for="editSaleUnitPrice">Prix Unitaire (CFA)</label>
+                    <input type="number" id="editSaleUnitPrice" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="editSaleTotal">Total (CFA)</label>
+                    <input type="number" id="editSaleTotal" min="0" placeholder="0">
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="saveSaleEdit()" style="flex: 1;">💾 Sauvegarder</button>
+                <button class="btn btn-secondary" onclick="closeEditSaleModal()" style="flex: 1;">❌ Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Édition Encaissement -->
+    <div id="editPaymentModal" class="product-modal">
+        <div class="product-modal-content">
+            <h3 style="margin-bottom: 15px;">✏️ Modifier Encaissement</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="editPaymentClient">Client *</label>
+                    <input type="text" id="editPaymentClient" placeholder="Nom du client" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPaymentDate">Date *</label>
+                    <input type="date" id="editPaymentDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPaymentAmount">Montant (CFA) *</label>
+                    <input type="number" id="editPaymentAmount" min="0" placeholder="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPaymentMethod">Mode de Paiement</label>
+                    <select id="editPaymentMethod">
+                        <option value="Espèces">Espèces</option>
+                        <option value="Chèque">Chèque</option>
+                        <option value="Virement">Virement</option>
+                        <option value="Mobile Money">Mobile Money</option>
+                        <option value="Autre">Autre</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editPaymentReference">Référence</label>
+                    <input type="text" id="editPaymentReference" placeholder="N° chèque, référence...">
+                </div>
+                <div class="form-group">
+                    <label for="editPaymentNotes">Notes</label>
+                    <textarea id="editPaymentNotes" placeholder="Commentaires..." rows="2"></textarea>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="savePaymentEdit()" style="flex: 1;">💾 Sauvegarder</button>
+                <button class="btn btn-secondary" onclick="closeEditPaymentModal()" style="flex: 1;">❌ Annuler</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Variables globales
         let salesData = [];
@@ -1269,6 +1354,8 @@
         let isFirebaseInitialized = false;
         let salesLines = [];
         let editingProductId = null;
+        let editingSaleId = null;
+        let editingPaymentId = null;
 
         // Configuration Firebase intégrée
         const firebaseConfig = {
@@ -1511,6 +1598,12 @@
                     <td>${sale.quantity || '-'}</td>
                     <td>${formatCurrency(sale.unitPrice || 0)}</td>
                     <td>${formatCurrency(sale.valeur)}</td>
+                    <td>
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                            <button class="btn btn-warning" onclick="editSale(${sale.id})" style="padding: 4px 8px; font-size: 10px;">✏️</button>
+                            <button class="btn btn-danger" onclick="deleteSale(${sale.id})" style="padding: 4px 8px; font-size: 10px;">🗑️</button>
+                        </div>
+                    </td>
                 `;
             });
         }
@@ -1534,7 +1627,10 @@
                     <td>${payment.method}</td>
                     <td>${payment.reference || '-'}</td>
                     <td>
-                        <button class="btn btn-danger" onclick="deletePayment(${payment.id})" style="padding: 4px 8px; font-size: 10px;">🗑️</button>
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                            <button class="btn btn-warning" onclick="editPayment(${payment.id})" style="padding: 4px 8px; font-size: 10px;">✏️</button>
+                            <button class="btn btn-danger" onclick="deletePayment(${payment.id})" style="padding: 4px 8px; font-size: 10px;">🗑️</button>
+                        </div>
                     </td>
                 `;
             });
@@ -2551,16 +2647,219 @@
             }
         }
 
+        // Gestion de l'édition des ventes
+        function editSale(saleId) {
+            const sale = salesData.find(s => s.id === saleId);
+            if (!sale) return;
+            
+            editingSaleId = saleId;
+            
+            // Remplir le formulaire
+            document.getElementById('editSaleClient').value = sale.client || '';
+            document.getElementById('editSaleDate').value = formatDateForInput(sale.date) || '';
+            document.getElementById('editSaleInvoice').value = sale.invoice || '';
+            document.getElementById('editSaleProduct').value = sale.product || '';
+            document.getElementById('editSaleQuantity').value = sale.quantity || '';
+            document.getElementById('editSaleUnitPrice').value = sale.unitPrice || '';
+            document.getElementById('editSaleTotal').value = sale.valeur || '';
+            
+            // Calculer automatiquement le total quand on change quantity ou unitPrice
+            const quantityInput = document.getElementById('editSaleQuantity');
+            const unitPriceInput = document.getElementById('editSaleUnitPrice');
+            const totalInput = document.getElementById('editSaleTotal');
+            
+            function updateTotal() {
+                const qty = parseFloat(quantityInput.value) || 0;
+                const price = parseFloat(unitPriceInput.value) || 0;
+                totalInput.value = qty * price;
+            }
+            
+            quantityInput.addEventListener('input', updateTotal);
+            unitPriceInput.addEventListener('input', updateTotal);
+            
+            document.getElementById('editSaleModal').style.display = 'block';
+        }
+
+        function closeEditSaleModal() {
+            document.getElementById('editSaleModal').style.display = 'none';
+            editingSaleId = null;
+        }
+
+        async function saveSaleEdit() {
+            if (!editingSaleId) return;
+            
+            const client = document.getElementById('editSaleClient').value.trim();
+            const date = document.getElementById('editSaleDate').value;
+            const invoice = document.getElementById('editSaleInvoice').value.trim();
+            const product = document.getElementById('editSaleProduct').value.trim();
+            const quantity = parseFloat(document.getElementById('editSaleQuantity').value) || 0;
+            const unitPrice = parseFloat(document.getElementById('editSaleUnitPrice').value) || 0;
+            const total = parseFloat(document.getElementById('editSaleTotal').value) || 0;
+            
+            if (!client || !date) {
+                showAlert('Veuillez remplir les champs obligatoires', 'error');
+                return;
+            }
+            
+            const saleIndex = salesData.findIndex(s => s.id === editingSaleId);
+            if (saleIndex === -1) return;
+            
+            const updatedSale = {
+                ...salesData[saleIndex],
+                client: client,
+                date: new Date(date).toLocaleDateString('fr-FR'),
+                invoice: invoice,
+                product: product,
+                quantity: quantity,
+                unitPrice: unitPrice,
+                valeur: total
+            };
+            
+            salesData[saleIndex] = updatedSale;
+            saveToLocalStorage();
+            
+            // Sync Firebase
+            if (isFirebaseInitialized) {
+                try {
+                    await db.collection('sales').doc(editingSaleId.toString()).set({
+                        ...updatedSale,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error('Erreur sync vente:', error);
+                }
+            }
+            
+            closeEditSaleModal();
+            updateRecapDisplay();
+            updateClientsOverview();
+            populateFilters();
+            applyFilters();
+            showAlert('Vente modifiée avec succès', 'success');
+        }
+
+        async function deleteSale(saleId) {
+            if (confirm('Supprimer cette vente ?')) {
+                salesData = salesData.filter(s => s.id !== saleId);
+                saveToLocalStorage();
+                
+                if (isFirebaseInitialized) {
+                    try {
+                        await db.collection('sales').doc(saleId.toString()).delete();
+                    } catch (error) {
+                        console.error('Erreur suppression vente:', error);
+                    }
+                }
+                
+                updateRecapDisplay();
+                updateClientsOverview();
+                populateFilters();
+                applyFilters();
+                showAlert('Vente supprimée', 'success');
+            }
+        }
+
+        // Gestion de l'édition des encaissements
+        function editPayment(paymentId) {
+            const payment = paymentsData.find(p => p.id === paymentId);
+            if (!payment) return;
+            
+            editingPaymentId = paymentId;
+            
+            // Remplir le formulaire
+            document.getElementById('editPaymentClient').value = payment.client || '';
+            document.getElementById('editPaymentDate').value = formatDateForInput(payment.date) || '';
+            document.getElementById('editPaymentAmount').value = payment.amount || '';
+            document.getElementById('editPaymentMethod').value = payment.method || 'Espèces';
+            document.getElementById('editPaymentReference').value = payment.reference || '';
+            document.getElementById('editPaymentNotes').value = payment.notes || '';
+            
+            document.getElementById('editPaymentModal').style.display = 'block';
+        }
+
+        function closeEditPaymentModal() {
+            document.getElementById('editPaymentModal').style.display = 'none';
+            editingPaymentId = null;
+        }
+
+        async function savePaymentEdit() {
+            if (!editingPaymentId) return;
+            
+            const client = document.getElementById('editPaymentClient').value.trim();
+            const date = document.getElementById('editPaymentDate').value;
+            const amount = parseFloat(document.getElementById('editPaymentAmount').value) || 0;
+            const method = document.getElementById('editPaymentMethod').value;
+            const reference = document.getElementById('editPaymentReference').value.trim();
+            const notes = document.getElementById('editPaymentNotes').value.trim();
+            
+            if (!client || !date || amount <= 0) {
+                showAlert('Veuillez remplir les champs obligatoires', 'error');
+                return;
+            }
+            
+            const paymentIndex = paymentsData.findIndex(p => p.id === editingPaymentId);
+            if (paymentIndex === -1) return;
+            
+            const updatedPayment = {
+                ...paymentsData[paymentIndex],
+                client: client,
+                date: new Date(date).toLocaleDateString('fr-FR'),
+                amount: amount,
+                method: method,
+                reference: reference,
+                notes: notes
+            };
+            
+            paymentsData[paymentIndex] = updatedPayment;
+            saveToLocalStorage();
+            
+            // Sync Firebase
+            if (isFirebaseInitialized) {
+                try {
+                    await db.collection('payments').doc(editingPaymentId.toString()).set({
+                        ...updatedPayment,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error('Erreur sync encaissement:', error);
+                }
+            }
+            
+            closeEditPaymentModal();
+            updateRecapDisplay();
+            updateClientsOverview();
+            updatePaymentsDisplay();
+            showAlert('Encaissement modifié avec succès', 'success');
+        }
+
+        // Fonction utilitaire pour formater une date pour les inputs
+        function formatDateForInput(dateStr) {
+            if (!dateStr) return '';
+            
+            const date = parseDate(dateStr);
+            if (!date) return '';
+            
+            return date.toISOString().split('T')[0];
+        }
+
         // Gestion des clics modaux
         window.onclick = function(event) {
             const productModal = document.getElementById('productModal');
             const productsPasteModal = document.getElementById('productsPasteModal');
+            const editSaleModal = document.getElementById('editSaleModal');
+            const editPaymentModal = document.getElementById('editPaymentModal');
             
             if (event.target === productModal) {
                 closeProductModal();
             }
             if (event.target === productsPasteModal) {
                 closeProductsPasteModal();
+            }
+            if (event.target === editSaleModal) {
+                closeEditSaleModal();
+            }
+            if (event.target === editPaymentModal) {
+                closeEditPaymentModal();
             }
         }
 
