@@ -8,9 +8,27 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-
     <style>
         /* (Votre CSS existant) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        .dashboard-container {
+            min-height: 100vh;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+        }
+        /* (Le reste de votre CSS) */
     </style>
 </head>
 <body>
@@ -19,6 +37,17 @@
     </div>
 
     <script>
+        // Configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBuR-B_bOyMtNn1xnSQCCsxfJWydzg9mvs",
+            authDomain: "kamlac-dashboard.firebaseapp.com",
+            projectId: "kamlac-dashboard",
+            storageBucket: "kamlac-dashboard.firebasestorage.app",
+            messagingSenderId: "220610836736",
+            appId: "1:220610836736:web:1a1cee05aef8066a725be5",
+            measurementId: "G-Q8DKW4YL0L"
+        };
+
         // Variables globales
         let salesData = [];
         let filteredData = [];
@@ -27,16 +56,6 @@
         const salesDetailLimit = 50;
         let db;
         let isFirebaseInitialized = false;
-
-        // Configuration Firebase
-        const firebaseConfig = {
-            apiKey: "VOTRE_API_KEY",
-            authDomain: "VOTRE_AUTH_DOMAIN",
-            projectId: "VOTRE_PROJECT_ID",
-            storageBucket: "VOTRE_STORAGE_BUCKET",
-            messagingSenderId: "VOTRE_MESSAGING_SENDER_ID",
-            appId: "VOTRE_APP_ID"
-        };
 
         // Initialiser Firebase
         function initializeFirebase() {
@@ -54,10 +73,11 @@
         // Écouteur en temps réel pour la collection 'sales'
         function setupRealtimeListener() {
             db.collection("sales").onSnapshot((querySnapshot) => {
-                salesData = [];
+                const updatedSalesData = [];
                 querySnapshot.forEach((doc) => {
-                    salesData.push({ id: doc.id, ...doc.data() });
+                    updatedSalesData.push({ id: doc.id, ...doc.data() });
                 });
+                salesData = updatedSalesData;
                 saveToLocalStorage();
                 populateFilters();
                 applyFilters();
@@ -84,72 +104,7 @@
             setTodayForNewSale();
         }
 
-        // Fonction pour ajouter une vente
-        async function addSale() {
-            const commercial = document.getElementById('newCommercial').value.trim();
-            const client = document.getElementById('newClient').value.trim();
-            const date = document.getElementById('newDate').value;
-            const invoice = document.getElementById('newInvoice').value.trim();
-            const product = document.getElementById('newProduct').value.trim();
-            const quantity = parseInt(document.getElementById('newQuantity').value) || 0;
-            const format = document.getElementById('newFormat').value.trim();
-            const marque = document.getElementById('newMarque').value.trim();
-            const valeur = parseInt(document.getElementById('newValue').value) || 0;
-
-            if (!commercial || !client || !date || !product || quantity <= 0 || valeur <= 0) {
-                showAlert('Veuillez remplir tous les champs obligatoires', 'error');
-                return;
-            }
-
-            const newSale = {
-                commercial: commercial,
-                client: client,
-                date: new Date(date).toLocaleDateString('fr-FR'),
-                product: product,
-                invoice: invoice,
-                quantity: quantity,
-                format: format,
-                marque: marque,
-                valeur: valeur
-            };
-
-            try {
-                await db.collection("sales").add(newSale);
-                showAlert(`Vente ajoutée avec succès ! Valeur: ${formatCurrency(valeur)}`, 'success');
-                clearSaleForm();
-            } catch (error) {
-                console.error("Erreur lors de l'ajout de la vente: ", error);
-                showAlert("Erreur lors de l'ajout de la vente.", 'error');
-            }
-        }
-
-        // Fonction pour supprimer une vente
-        async function deleteSale(id) {
-            if (confirm('Supprimer cette vente ?')) {
-                try {
-                    await db.collection("sales").doc(id).delete();
-                    showAlert('Vente supprimée', 'success');
-                } catch (error) {
-                    console.error("Erreur lors de la suppression de la vente: ", error);
-                    showAlert("Erreur lors de la suppression de la vente.", 'error');
-                }
-            }
-        }
-
-        // Fonctions existantes pour la gestion locale des données
-        function loadFromLocalStorage() {
-            const localData = localStorage.getItem('kamlacSalesData');
-            if (localData) {
-                salesData = JSON.parse(localData);
-                console.log(`Chargé ${salesData.length} ventes depuis localStorage`);
-            }
-        }
-
-        function saveToLocalStorage() {
-            localStorage.setItem('kamlacSalesData', JSON.stringify(salesData));
-        }
-
-        // (Le reste de vos fonctions existantes)
+        // (Le reste de vos fonctions JavaScript)
     </script>
 </body>
 </html>
