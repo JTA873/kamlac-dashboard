@@ -1,18 +1,414 @@
-{
-  "name": "KAMLAC Dashboard",
-  "short_name": "KAMLAC",
-  "description": "Dashboard professionnel pour le suivi des ventes KAMLAC Food Industry",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#667eea",
-  "orientation": "portrait-primary",
-  "scope": "./",
-  "icons": [
-    {
-      "src": "data:image/svg+xml,%3Csvg width='192' height='192' viewBox='0 0 192 192' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='192' height='192' rx='24' fill='url(%23gradient)'/%3E%3Cdefs%3E%3ClinearGradient id='gradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea'/%3E%3Cstop offset='100%25' style='stop-color:%23764ba2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ctext x='96' y='110' font-family='Arial' font-size='60' fill='white' text-anchor='middle'%3E📊%3C/text%3E%3C/svg%3E",
-      "sizes": "192x192",
-      "type": "image/svg+xml"
-    }
-  ]
-}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 KAMLAC Dashboard - Suivi des Ventes</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KAMLAC Dashboard">
+    <meta name="description" content="Dashboard professionnel pour le suivi des ventes KAMLAC Food Industry">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            min-height: 100vh;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .last-update {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .nav-tab {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            padding: 15px 25px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 2px solid transparent;
+        }
+
+        .nav-tab:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .nav-tab.active {
+            background: rgba(255, 255, 255, 0.95);
+            color: #667eea;
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .section {
+            display: none;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section.active {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 50px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            margin: 20px 0;
+        }
+
+        .welcome-message h2 {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .welcome-message p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            line-height: 1.6;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .feature-desc {
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+            color: white;
+        }
+
+        .getting-started {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .getting-started h3 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .step {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .step h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .step p {
+            color: #666;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .nav-tabs {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .nav-tab {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>📊 KAMLAC Dashboard</h1>
+            <div class="last-update">Plateforme de Suivi des Ventes</div>
+        </div>
+
+        <div class="welcome-message">
+            <h2>🎉 Bienvenue sur votre Dashboard KAMLAC !</h2>
+            <p>
+                Votre plateforme professionnelle pour le suivi et l'analyse de vos ventes est maintenant opérationnelle.
+                Commencez par ajouter vos premières données de vente ou importez vos données existantes.
+            </p>
+            <div style="margin-top: 30px;">
+                <button class="btn btn-primary" onclick="showDemo()">🚀 Voir la Démo</button>
+                <button class="btn btn-success" onclick="loadSampleData()">📊 Charger Données Test</button>
+            </div>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <div class="feature-title">Analytics Avancés</div>
+                <div class="feature-desc">Tableaux de bord interactifs, graphiques en temps réel et KPIs essentiels</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💼</div>
+                <div class="feature-title">Gestion des Ventes</div>
+                <div class="feature-desc">Ajoutez, modifiez et suivez toutes vos transactions commerciales</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <div class="feature-title">Multi-Plateforme</div>
+                <div class="feature-desc">Accessible sur PC, tablette et mobile avec synchronisation</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <div class="feature-title">Import/Export</div>
+                <div class="feature-desc">Importez vos données Excel/CSV et exportez vos rapports</div>
+            </div>
+        </div>
+
+        <div class="getting-started">
+            <h3>🚀 Pour Commencer</h3>
+            <div class="steps">
+                <div class="step">
+                    <h4>1. 📋 Ajoutez vos Données</h4>
+                    <p>Utilisez le formulaire "Nouvelle Vente" ou importez vos données existantes depuis Excel/CSV.</p>
+                </div>
+                <div class="step">
+                    <h4>2. 📊 Visualisez vos Résultats</h4>
+                    <p>Consultez le dashboard pour voir vos KPIs, graphiques et analyses en temps réel.</p>
+                </div>
+                <div class="step">
+                    <h4>3. 📱 Installez l'App</h4>
+                    <p>Installez l'application PWA pour une expérience native sur tous vos appareils.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showDemo() {
+            alert('🎯 Démo KAMLAC Dashboard\n\n' +
+                  '✅ Interface moderne et responsive\n' +
+                  '✅ Graphiques interactifs avec Chart.js\n' +
+                  '✅ Stockage local sécurisé\n' +
+                  '✅ Export CSV/JSON\n' +
+                  '✅ PWA installable\n' +
+                  '✅ Synchronisation multi-appareils\n\n' +
+                  'Chargez des données test pour explorer toutes les fonctionnalités !');
+        }
+
+        function loadSampleData() {
+            const sampleData = [
+                {
+                    id: Date.now() + 1,
+                    commercial: "Jean Kouame",
+                    client: "Supermarché Grand Bassam",
+                    date: "12/07/2025",
+                    product: "Riz Parfumé 25kg",
+                    quantity: 50,
+                    format: "Sac 25kg",
+                    marque: "KAMLAC Premium",
+                    valeur: 750000
+                },
+                {
+                    id: Date.now() + 2,
+                    commercial: "Marie Diabate",
+                    client: "Restaurant Le Plateau",
+                    date: "11/07/2025",
+                    product: "Huile de Palme 20L",
+                    quantity: 20,
+                    format: "Bidon 20L",
+                    marque: "KAMLAC Gold",
+                    valeur: 400000
+                },
+                {
+                    id: Date.now() + 3,
+                    commercial: "Ahmed Traore",
+                    client: "Épicerie Yopougon",
+                    date: "10/07/2025",
+                    product: "Farine de Blé 50kg",
+                    quantity: 30,
+                    format: "Sac 50kg",
+                    marque: "KAMLAC Premium",
+                    valeur: 600000
+                },
+                {
+                    id: Date.now() + 4,
+                    commercial: "Fatou Kone",
+                    client: "Hôtel Ivoire",
+                    date: "09/07/2025",
+                    product: "Riz Brisé 25kg",
+                    quantity: 100,
+                    format: "Sac 25kg",
+                    marque: "KAMLAC Standard",
+                    valeur: 1200000
+                },
+                {
+                    id: Date.now() + 5,
+                    commercial: "Jean Kouame",
+                    client: "Supermarché Cocody",
+                    date: "08/07/2025",
+                    product: "Huile Végétale 5L",
+                    quantity: 80,
+                    format: "Bidon 5L",
+                    marque: "KAMLAC Gold",
+                    valeur: 320000
+                }
+            ];
+
+            localStorage.setItem('kamlacSalesData', JSON.stringify(sampleData));
+            alert('✅ Données test chargées avec succès !\n\n' +
+                  '5 ventes de démonstration ont été ajoutées.\n' +
+                  'Rechargez la page pour voir le dashboard complet avec les graphiques.');
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+
+        // Vérifier s'il y a déjà des données
+        window.addEventListener('DOMContentLoaded', function() {
+            const existingData = localStorage.getItem('kamlacSalesData');
+            if (existingData && JSON.parse(existingData).length > 0) {
+                // Il y a des données, rediriger vers le vrai dashboard
+                window.location.href = 'dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html>
