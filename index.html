@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📊 KAMLAC Dashboard - Suivi des Ventes</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -43,6 +49,27 @@
         .last-update {
             font-size: 0.9rem;
             opacity: 0.8;
+        }
+
+        .cloud-status {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .cloud-online {
+            background: rgba(46, 204, 113, 0.2);
+            color: #27ae60;
+            border: 1px solid #27ae60;
+        }
+
+        .cloud-offline {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+            border: 1px solid #e74c3c;
         }
 
         .nav-tabs {
@@ -428,6 +455,30 @@
             margin-top: 5px;
         }
 
+        .firebase-config {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .firebase-config h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .firebase-config textarea {
+            width: 100%;
+            height: 150px;
+            font-family: monospace;
+            font-size: 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2rem;
@@ -458,6 +509,7 @@
         <div class="header">
             <h1>📊 KAMLAC Dashboard</h1>
             <div class="last-update" id="lastUpdate">Dernière mise à jour: --</div>
+            <span class="cloud-status" id="cloudStatus">🔄 Initialisation...</span>
         </div>
 
         <div class="nav-tabs">
@@ -492,12 +544,6 @@
                         </select>
                     </div>
                     <div class="filter-group">
-                        <label for="marqueFilter">Marque</label>
-                        <select id="marqueFilter" onchange="applyFilters()">
-                            <option value="">Toutes les marques</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
                         <button class="btn btn-primary" onclick="refreshData()">🔄 Actualiser</button>
                     </div>
                     <div class="filter-group">
@@ -521,16 +567,6 @@
                     <div class="kpi-icon">👤</div>
                     <div class="kpi-value" id="topClient">-</div>
                     <div class="kpi-label">Top Client</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-icon">🎯</div>
-                    <div class="kpi-value" id="topCommercial">-</div>
-                    <div class="kpi-label">Top Commercial</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-icon">🏷️</div>
-                    <div class="kpi-value" id="topMarque">-</div>
-                    <div class="kpi-label">Top Marque</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon">📊</div>
@@ -559,15 +595,9 @@
                     </div>
                 </div>
                 <div class="chart-card">
-                    <h3 class="chart-title">🏷️ CA par Marque</h3>
+                    <h3 class="chart-title">📦 CA par Article</h3>
                     <div class="chart-container">
-                        <canvas id="marqueChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <h3 class="chart-title">📦 Top Produits</h3>
-                    <div class="chart-container">
-                        <canvas id="productChart"></canvas>
+                        <canvas id="articleChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -699,7 +729,28 @@
         <!-- Settings Section -->
         <div id="settings" class="section">
             <div class="card">
-                <h2 style="margin-bottom: 25px;">⚙️ Paramètres et Import</h2>
+                <h2 style="margin-bottom: 25px;">⚙️ Paramètres et Synchronisation Cloud</h2>
+                
+                <!-- Configuration Firebase -->
+                <div class="firebase-config">
+                    <h4>🔥 Configuration Firebase</h4>
+                    <p style="margin-bottom: 15px; color: #666;">
+                        Collez votre configuration Firebase ci-dessous pour activer la synchronisation cloud :
+                    </p>
+                    <textarea id="firebaseConfig" placeholder='Collez ici votre config Firebase :
+{
+  apiKey: "votre-api-key",
+  authDomain: "votre-projet.firebaseapp.com",
+  projectId: "votre-projet-id",
+  storageBucket: "votre-projet.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "votre-app-id"
+}'></textarea>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button class="btn btn-primary" onclick="initializeFirebase()">🚀 Activer Firebase</button>
+                        <button class="btn btn-success" onclick="testFirebaseConnection()">🔗 Tester Connexion</button>
+                    </div>
+                </div>
                 
                 <div class="import-section">
                     <h3 style="margin-bottom: 20px;">📁 Importer des données de ventes</h3>
@@ -723,14 +774,29 @@
                 </div>
 
                 <div class="import-section">
-                    <h3 style="margin-bottom: 20px;">💾 Gestion des données</h3>
+                    <h3 style="margin-bottom: 20px;">☁️ Synchronisation Cloud</h3>
                     
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>Exporter</label>
+                            <label>Synchroniser avec le Cloud</label>
+                            <button class="btn btn-primary" onclick="syncToCloud()">☁️ Sync vers Cloud</button>
+                            <button class="btn btn-success" onclick="syncFromCloud()">📥 Sync depuis Cloud</button>
+                            <small style="color: #666; margin-top: 5px; display: block;">
+                                Synchronise automatiquement avec Firebase
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label>Sauvegardes Locales</label>
                             <button class="btn btn-success" onclick="exportToCSV()">📊 Exporter CSV</button>
                             <button class="btn btn-primary" onclick="exportToJSON()">💾 Exporter JSON</button>
                         </div>
+                    </div>
+                </div>
+
+                <div class="import-section">
+                    <h3 style="margin-bottom: 20px;">💾 Gestion des données</h3>
+                    
+                    <div class="form-grid">
                         <div class="form-group">
                             <label>Réinitialiser</label>
                             <button class="btn btn-danger" onclick="clearAllData()">🗑️ Effacer Tout</button>
@@ -763,11 +829,13 @@
 
     <script>
         // Variables globales
-        let salesData = JSON.parse(localStorage.getItem('kamlacSalesData') || '[]');
+        let salesData = [];
         let filteredData = [];
         let charts = {};
         let salesDetailOffset = 0;
         const salesDetailLimit = 50;
+        let db = null;
+        let isFirebaseInitialized = false;
 
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
@@ -778,6 +846,21 @@
             console.log('Initialisation de l\'application...');
             setDefaultDates();
             updateLastUpdateTime();
+            
+            // Charger d'abord depuis localStorage comme fallback
+            loadFromLocalStorage();
+            
+            // Tenter d'initialiser Firebase automatiquement si config existe
+            const savedConfig = localStorage.getItem('firebaseConfig');
+            if (savedConfig) {
+                try {
+                    const config = JSON.parse(savedConfig);
+                    initializeFirebaseWithConfig(config);
+                } catch (error) {
+                    console.log('Config Firebase invalide dans localStorage');
+                }
+            }
+            
             populateFilters();
             applyFilters();
             updateDataTable();
@@ -785,6 +868,198 @@
             setTodayForNewSale();
         }
 
+        function loadFromLocalStorage() {
+            const localData = localStorage.getItem('kamlacSalesData');
+            if (localData) {
+                salesData = JSON.parse(localData);
+                console.log(`Chargé ${salesData.length} ventes depuis localStorage`);
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('kamlacSalesData', JSON.stringify(salesData));
+        }
+
+        function updateCloudStatus(status, message) {
+            const statusElement = document.getElementById('cloudStatus');
+            statusElement.className = `cloud-status cloud-${status}`;
+            statusElement.textContent = message;
+        }
+
+        function initializeFirebase() {
+            const configText = document.getElementById('firebaseConfig').value.trim();
+            
+            if (!configText) {
+                showAlert('Veuillez coller votre configuration Firebase', 'error');
+                return;
+            }
+
+            try {
+                // Nettoyer le texte et extraire la config
+                let cleanConfig = configText;
+                if (cleanConfig.includes('const firebaseConfig = ')) {
+                    cleanConfig = cleanConfig.split('const firebaseConfig = ')[1];
+                }
+                if (cleanConfig.includes('export default ')) {
+                    cleanConfig = cleanConfig.split('export default ')[1];
+                }
+                
+                // Enlever les points-virgules finaux
+                cleanConfig = cleanConfig.replace(/;$/, '');
+                
+                const config = JSON.parse(cleanConfig);
+                
+                // Valider la config
+                const requiredFields = ['apiKey', 'authDomain', 'projectId'];
+                const missingFields = requiredFields.filter(field => !config[field]);
+                
+                if (missingFields.length > 0) {
+                    showAlert(`Configuration incomplète. Champs manquants: ${missingFields.join(', ')}`, 'error');
+                    return;
+                }
+
+                // Sauvegarder la config
+                localStorage.setItem('firebaseConfig', JSON.stringify(config));
+                
+                // Initialiser Firebase
+                initializeFirebaseWithConfig(config);
+                
+            } catch (error) {
+                console.error('Erreur de parsing de la config Firebase:', error);
+                showAlert('Configuration Firebase invalide. Vérifiez le format JSON.', 'error');
+            }
+        }
+
+        function initializeFirebaseWithConfig(config) {
+            try {
+                updateCloudStatus('offline', '🔄 Connexion à Firebase...');
+                
+                // Initialiser Firebase
+                firebase.initializeApp(config);
+                db = firebase.firestore();
+                
+                console.log('Firebase initialisé avec succès');
+                isFirebaseInitialized = true;
+                updateCloudStatus('online', '☁️ Cloud Connecté');
+                
+                // Synchroniser automatiquement
+                syncFromCloud();
+                
+                showAlert('Firebase connecté avec succès ! Synchronisation activée.', 'success');
+                
+            } catch (error) {
+                console.error('Erreur d\'initialisation Firebase:', error);
+                updateCloudStatus('offline', '❌ Erreur Firebase');
+                showAlert(`Erreur Firebase: ${error.message}`, 'error');
+            }
+        }
+
+        function testFirebaseConnection() {
+            if (!isFirebaseInitialized) {
+                showAlert('Firebase n\'est pas initialisé', 'error');
+                return;
+            }
+
+            updateCloudStatus('offline', '🔄 Test connexion...');
+            
+            db.collection('sales').limit(1).get()
+                .then((querySnapshot) => {
+                    updateCloudStatus('online', '✅ Test réussi');
+                    showAlert('Connexion Firebase OK !', 'success');
+                })
+                .catch((error) => {
+                    updateCloudStatus('offline', '❌ Test échoué');
+                    showAlert(`Test échoué: ${error.message}`, 'error');
+                });
+        }
+
+        async function syncToCloud() {
+            if (!isFirebaseInitialized) {
+                showAlert('Firebase n\'est pas configuré', 'error');
+                return;
+            }
+
+            if (salesData.length === 0) {
+                showAlert('Aucune donnée à synchroniser', 'warning');
+                return;
+            }
+
+            try {
+                updateCloudStatus('offline', '⬆️ Upload en cours...');
+                
+                const batch = db.batch();
+                
+                for (const sale of salesData) {
+                    const docRef = db.collection('sales').doc(sale.id.toString());
+                    batch.set(docRef, {
+                        ...sale,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                
+                await batch.commit();
+                
+                updateCloudStatus('online', '✅ Sync terminée');
+                showAlert(`${salesData.length} ventes synchronisées vers le cloud`, 'success');
+                
+            } catch (error) {
+                updateCloudStatus('offline', '❌ Sync échouée');
+                showAlert(`Erreur de synchronisation: ${error.message}`, 'error');
+                console.error('Erreur sync vers cloud:', error);
+            }
+        }
+
+        async function syncFromCloud() {
+            if (!isFirebaseInitialized) {
+                showAlert('Firebase n\'est pas configuré', 'error');
+                return;
+            }
+
+            try {
+                updateCloudStatus('offline', '⬇️ Download en cours...');
+                
+                const querySnapshot = await db.collection('sales').get();
+                const cloudData = [];
+                
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    delete data.lastUpdated; // Enlever le timestamp Firestore
+                    cloudData.push(data);
+                });
+                
+                if (cloudData.length > 0) {
+                    // Merger avec les données locales
+                    const existingIds = new Set(salesData.map(sale => sale.id));
+                    let importedCount = 0;
+                    
+                    cloudData.forEach(sale => {
+                        if (!existingIds.has(sale.id)) {
+                            salesData.push(sale);
+                            importedCount++;
+                        }
+                    });
+                    
+                    saveToLocalStorage();
+                    populateFilters();
+                    applyFilters();
+                    updateDataTable();
+                    updateDataStats();
+                    
+                    updateCloudStatus('online', '✅ Sync OK');
+                    showAlert(`${importedCount} nouvelles ventes récupérées du cloud`, 'success');
+                } else {
+                    updateCloudStatus('online', '☁️ Cloud vide');
+                    showAlert('Aucune donnée dans le cloud', 'warning');
+                }
+                
+            } catch (error) {
+                updateCloudStatus('offline', '❌ Sync échouée');
+                showAlert(`Erreur de récupération: ${error.message}`, 'error');
+                console.error('Erreur sync depuis cloud:', error);
+            }
+        }
+
+        // Le reste du code reste identique...
         function setDefaultDates() {
             const today = new Date();
             const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -833,11 +1108,9 @@
         function populateFilters() {
             const commercials = [...new Set(salesData.map(sale => sale.commercial))].sort();
             const clients = [...new Set(salesData.map(sale => sale.client))].sort();
-            const marques = [...new Set(salesData.map(sale => sale.marque).filter(m => m))].sort();
 
             populateSelect('commercialFilter', commercials, 'Tous les commerciaux');
             populateSelect('clientFilter', clients, 'Tous les clients');
-            populateSelect('marqueFilter', marques, 'Toutes les marques');
         }
 
         function populateSelect(selectId, options, defaultText) {
@@ -863,7 +1136,6 @@
             const dateEnd = document.getElementById('dateEnd').value;
             const commercialFilter = document.getElementById('commercialFilter').value;
             const clientFilter = document.getElementById('clientFilter').value;
-            const marqueFilter = document.getElementById('marqueFilter').value;
 
             filteredData = salesData.filter(sale => {
                 let include = true;
@@ -880,7 +1152,6 @@
                 // Filtres par valeurs
                 if (commercialFilter && sale.commercial !== commercialFilter) include = false;
                 if (clientFilter && sale.client !== clientFilter) include = false;
-                if (marqueFilter && sale.marque !== marqueFilter) include = false;
 
                 return include;
             });
@@ -909,26 +1180,18 @@
             
             // Top analyses
             const clientsMap = {};
-            const commercialsMap = {};
-            const marquesMap = {};
             
             filteredData.forEach(sale => {
                 if (sale.client) clientsMap[sale.client] = (clientsMap[sale.client] || 0) + sale.valeur;
-                if (sale.commercial) commercialsMap[sale.commercial] = (commercialsMap[sale.commercial] || 0) + sale.valeur;
-                if (sale.marque) marquesMap[sale.marque] = (marquesMap[sale.marque] || 0) + sale.valeur;
             });
             
             const topClient = Object.keys(clientsMap).reduce((a, b) => clientsMap[a] > clientsMap[b] ? a : b, '');
-            const topCommercial = Object.keys(commercialsMap).reduce((a, b) => commercialsMap[a] > commercialsMap[b] ? a : b, '');
-            const topMarque = Object.keys(marquesMap).reduce((a, b) => marquesMap[a] > marquesMap[b] ? a : b, '');
             
             const avgSale = totalSales > 0 ? totalRevenue / totalSales : 0;
 
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
             document.getElementById('totalSales').textContent = totalSales;
             document.getElementById('topClient').textContent = topClient || '-';
-            document.getElementById('topCommercial').textContent = topCommercial || '-';
-            document.getElementById('topMarque').textContent = topMarque || '-';
             document.getElementById('avgSale').textContent = formatCurrency(avgSale);
         }
 
@@ -936,7 +1199,7 @@
             updateEvolutionChart();
             updateCommercialChart();
             updateClientChart();
-            updateMarqueChart();
+            updateArticleChart();
             updateProductChart();
             updateSalesDetailTable();
         }
@@ -1108,24 +1371,28 @@
             });
         }
 
-        function updateMarqueChart() {
-            const ctx = document.getElementById('marqueChart');
+        function updateArticleChart() {
+            const ctx = document.getElementById('articleChart');
             if (!ctx) return;
 
-            if (charts.marque) {
-                charts.marque.destroy();
+            if (charts.article) {
+                charts.article.destroy();
             }
 
-            const marqueData = {};
+            const articleData = {};
             filteredData.forEach(sale => {
-                const marque = sale.marque || 'Non spécifiée';
-                marqueData[marque] = (marqueData[marque] || 0) + sale.valeur;
+                const article = sale.product || sale.details || sale.DETAILS || 'Article non spécifié';
+                articleData[article] = (articleData[article] || 0) + sale.valeur;
             });
 
-            const labels = Object.keys(marqueData);
-            const data = Object.values(marqueData);
+            const sortedArticles = Object.entries(articleData)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 8);
 
-            charts.marque = new Chart(ctx, {
+            const labels = sortedArticles.map(([name]) => name);
+            const data = sortedArticles.map(([,value]) => value);
+
+            charts.article = new Chart(ctx, {
                 type: 'pie',
                 data: {
                     labels: labels,
@@ -1265,7 +1532,6 @@
             setDefaultDates();
             document.getElementById('commercialFilter').value = '';
             document.getElementById('clientFilter').value = '';
-            document.getElementById('marqueFilter').value = '';
             applyFilters();
         }
 
@@ -1287,7 +1553,7 @@
         }
 
         // Nouvelle vente
-        function addSale() {
+        async function addSale() {
             const commercial = document.getElementById('newCommercial').value.trim();
             const client = document.getElementById('newClient').value.trim();
             const date = document.getElementById('newDate').value;
@@ -1317,7 +1583,20 @@
             };
 
             salesData.push(newSale);
-            localStorage.setItem('kamlacSalesData', JSON.stringify(salesData));
+            saveToLocalStorage();
+
+            // Sync vers Firebase si disponible
+            if (isFirebaseInitialized) {
+                try {
+                    await db.collection('sales').doc(newSale.id.toString()).set({
+                        ...newSale,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log('Vente synchronisée vers Firebase');
+                } catch (error) {
+                    console.error('Erreur sync Firebase:', error);
+                }
+            }
 
             showAlert(`Vente ajoutée avec succès ! Valeur: ${formatCurrency(valeur)}`, 'success');
             clearSaleForm();
@@ -1373,10 +1652,21 @@
             document.getElementById('dataClients').textContent = uniqueClients;
         }
 
-        function deleteSale(id) {
+        async function deleteSale(id) {
             if (confirm('Supprimer cette vente ?')) {
                 salesData = salesData.filter(sale => sale.id !== id);
-                localStorage.setItem('kamlacSalesData', JSON.stringify(salesData));
+                saveToLocalStorage();
+                
+                // Supprimer de Firebase si disponible
+                if (isFirebaseInitialized) {
+                    try {
+                        await db.collection('sales').doc(id.toString()).delete();
+                        console.log('Vente supprimée de Firebase');
+                    } catch (error) {
+                        console.error('Erreur suppression Firebase:', error);
+                    }
+                }
+                
                 updateDataTable();
                 updateDataStats();
                 populateFilters();
@@ -1385,7 +1675,7 @@
             }
         }
 
-        // Import/Export
+        // Import/Export (garde les fonctions existantes)
         function handleFileImport() {
             const fileInput = document.getElementById('importFile');
             const file = fileInput.files[0];
@@ -1477,7 +1767,12 @@
                 }
             }
 
-            localStorage.setItem('kamlacSalesData', JSON.stringify(salesData));
+            saveToLocalStorage();
+            
+            // Sync vers Firebase si disponible
+            if (isFirebaseInitialized && imported > 0) {
+                syncToCloud();
+            }
             
             showAlert(`Import terminé: ${imported} lignes importées, ${errors} erreurs`, 
                      errors > 0 ? 'warning' : 'success');
@@ -1528,7 +1823,7 @@
                 }
             }
 
-            localStorage.setItem('kamlacSalesData', JSON.stringify(salesData));
+            saveToLocalStorage();
             
             showAlert(`Import CSV terminé: ${imported} lignes importées, ${errors} erreurs`, 
                      errors > 0 ? 'warning' : 'success');
@@ -1582,7 +1877,7 @@
             if (confirm('⚠️ ATTENTION : Cette action supprimera TOUTES vos données de façon définitive. Êtes-vous sûr ?')) {
                 if (confirm('Dernière confirmation : Supprimer toutes les données ?')) {
                     salesData = [];
-                    localStorage.removeItem('kamlacSalesData');
+                    saveToLocalStorage();
                     populateFilters();
                     applyFilters();
                     updateDataTable();
