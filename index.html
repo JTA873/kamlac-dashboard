@@ -402,6 +402,11 @@
             background: #6c757d;
             color: white;
         }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
         
         .charts-grid {
             display: grid;
@@ -798,6 +803,45 @@
         .sub-section.active {
             display: block;
         }
+
+        /* Style pour les inputs avec datalist */
+        .client-input-container {
+            position: relative;
+        }
+
+        .client-input-container input {
+            width: 100%;
+        }
+
+        .client-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .client-option {
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .client-option:hover {
+            background: #f8f9fa;
+        }
+
+        .client-option.selected {
+            background: #667eea;
+            color: white;
+        }
         
         /* Optimisations mobile */
         @media (max-width: 768px) {
@@ -966,6 +1010,9 @@
                         <button class="btn btn-primary" onclick="refreshData()">🔄</button>
                     </div>
                     <div class="filter-group">
+                        <button class="btn btn-info" onclick="setAllTimeFilters()">📅 Toutes périodes</button>
+                    </div>
+                    <div class="filter-group">
                         <button class="btn btn-warning" onclick="resetFilters()">🗑️</button>
                     </div>
                 </div>
@@ -998,9 +1045,9 @@
                 </div>
             </div>
             
-            <!-- Nouvelle card En-cours clients -->
+            <!-- Card En-cours clients (non filtrée) -->
             <div class="clients-summary-card">
-                <h3 style="margin-bottom: 15px; color: #667eea;">👥 En-cours Clients</h3>
+                <h3 style="margin-bottom: 15px; color: #667eea;">👥 En-cours Clients (Toutes données)</h3>
                 <div class="clients-summary-table">
                     <table>
                         <thead>
@@ -1052,6 +1099,35 @@
         <div id="recap" class="section">
             <div class="card">
                 <h2 style="margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.5rem);">📋 Récapitulatif</h2>
+                
+                <!-- Filtres pour récapitulatif -->
+                <div class="filters-section">
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label for="recapClientFilter">Client</label>
+                            <select id="recapClientFilter" onchange="applyRecapFilters()">
+                                <option value="">Tous les clients</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="recapProductFilter">Produit</label>
+                            <select id="recapProductFilter" onchange="applyRecapFilters()">
+                                <option value="">Tous les produits</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="recapDateStart">Date début</label>
+                            <input type="date" id="recapDateStart" onchange="applyRecapFilters()">
+                        </div>
+                        <div class="filter-group">
+                            <label for="recapDateEnd">Date fin</label>
+                            <input type="date" id="recapDateEnd" onchange="applyRecapFilters()">
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn btn-warning" onclick="resetRecapFilters()">🗑️ Reset</button>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="sub-nav-tabs">
                     <button class="sub-nav-tab active" onclick="showSubSection('recap-sales')">📦 Ventes</button>
@@ -1114,7 +1190,10 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="invoiceClient">Client *</label>
-                            <input type="text" id="invoiceClient" placeholder="Nom du client" required>
+                            <div class="client-input-container">
+                                <input type="text" id="invoiceClient" placeholder="Nom du client" required autocomplete="off" oninput="showClientDropdown(this)" onblur="hideClientDropdown(this)" onkeydown="handleClientKeydown(event, this)">
+                                <div class="client-dropdown" id="invoiceClientDropdown"></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="invoiceDate">Date *</label>
@@ -1172,7 +1251,10 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="paymentClient">Client *</label>
-                            <input type="text" id="paymentClient" placeholder="Nom du client" required>
+                            <div class="client-input-container">
+                                <input type="text" id="paymentClient" placeholder="Nom du client" required autocomplete="off" oninput="showClientDropdown(this)" onblur="hideClientDropdown(this)" onkeydown="handleClientKeydown(event, this)">
+                                <div class="client-dropdown" id="paymentClientDropdown"></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="paymentDate">Date *</label>
@@ -1493,6 +1575,8 @@
         let paymentsData = [];
         let productsData = [];
         let filteredData = [];
+        let filteredRecapSales = [];
+        let filteredRecapPayments = [];
         let charts = {};
         let db = null;
         let isFirebaseInitialized = false;
@@ -1500,6 +1584,7 @@
         let editingProductId = null;
         let editingSaleId = null;
         let editingPaymentId = null;
+        let clientsList = [];
 
         // Configuration Firebase
         const firebaseConfig = {
@@ -1527,11 +1612,13 @@
             addSaleLine();
             
             populateFilters();
+            populateRecapFilters();
+            updateClientsList();
             applyFilters();
+            applyRecapFilters();
             updateClientsOverview();
             updateProductsDisplay();
             updatePaymentsDisplay();
-            updateRecapDisplay();
             setTodayForNewInvoice();
             updateClientsSummaryTable();
         }
@@ -1601,9 +1688,11 @@
                 if (hasChanges) {
                     saveToLocalStorage();
                     populateFilters();
+                    populateRecapFilters();
+                    updateClientsList();
                     applyFilters();
+                    applyRecapFilters();
                     updateClientsOverview();
-                    updateRecapDisplay();
                     updateClientsSummaryTable();
                 }
                 updateCloudStatus('online', '☁️ Sync');
@@ -1637,9 +1726,10 @@
                 
                 if (hasChanges) {
                     saveToLocalStorage();
+                    updateClientsList();
                     updatePaymentsDisplay();
                     updateClientsOverview();
-                    updateRecapDisplay();
+                    applyRecapFilters();
                     updateClientsSummaryTable();
                 }
             });
@@ -1674,8 +1764,104 @@
                     saveToLocalStorage();
                     updateProductsDisplay();
                     updateProductSelects();
+                    populateRecapFilters();
                 }
             });
+        }
+
+        // Gestion de la liste des clients
+        function updateClientsList() {
+            const allClients = new Set();
+            
+            // Clients des ventes
+            salesData.forEach(sale => {
+                if (sale.client && sale.client.trim()) {
+                    allClients.add(sale.client.trim());
+                }
+            });
+            
+            // Clients des encaissements
+            paymentsData.forEach(payment => {
+                if (payment.client && payment.client.trim()) {
+                    allClients.add(payment.client.trim());
+                }
+            });
+            
+            clientsList = Array.from(allClients).sort();
+        }
+
+        // Fonctions pour les dropdowns de clients
+        function showClientDropdown(input) {
+            const dropdown = document.getElementById(input.id + 'Dropdown');
+            if (!dropdown) return;
+            
+            const inputValue = input.value.toLowerCase();
+            const filteredClients = clientsList.filter(client => 
+                client.toLowerCase().includes(inputValue)
+            );
+            
+            if (filteredClients.length > 0 && inputValue) {
+                dropdown.innerHTML = '';
+                filteredClients.slice(0, 10).forEach(client => {
+                    const option = document.createElement('div');
+                    option.className = 'client-option';
+                    option.textContent = client;
+                    option.onclick = () => selectClient(input, client, dropdown);
+                    dropdown.appendChild(option);
+                });
+                dropdown.style.display = 'block';
+            } else {
+                dropdown.style.display = 'none';
+            }
+        }
+
+        function hideClientDropdown(input) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(input.id + 'Dropdown');
+                if (dropdown) {
+                    dropdown.style.display = 'none';
+                }
+            }, 200);
+        }
+
+        function selectClient(input, client, dropdown) {
+            input.value = client;
+            dropdown.style.display = 'none';
+        }
+
+        function handleClientKeydown(event, input) {
+            const dropdown = document.getElementById(input.id + 'Dropdown');
+            if (!dropdown || dropdown.style.display === 'none') return;
+            
+            const options = dropdown.querySelectorAll('.client-option');
+            let selected = dropdown.querySelector('.client-option.selected');
+            
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if (!selected) {
+                    options[0]?.classList.add('selected');
+                } else {
+                    selected.classList.remove('selected');
+                    const next = selected.nextElementSibling || options[0];
+                    next.classList.add('selected');
+                }
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (!selected) {
+                    options[options.length - 1]?.classList.add('selected');
+                } else {
+                    selected.classList.remove('selected');
+                    const prev = selected.previousElementSibling || options[options.length - 1];
+                    prev.classList.add('selected');
+                }
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                if (selected) {
+                    selectClient(input, selected.textContent, dropdown);
+                }
+            } else if (event.key === 'Escape') {
+                dropdown.style.display = 'none';
+            }
         }
 
         // Navigation entre sections
@@ -1697,7 +1883,7 @@
             } else if (sectionName === 'clients') {
                 updateClientsOverview();
             } else if (sectionName === 'recap') {
-                updateRecapDisplay();
+                applyRecapFilters();
             } else if (sectionName === 'payments') {
                 updatePaymentsDisplay();
             } else if (sectionName === 'settings') {
@@ -1733,14 +1919,22 @@
             event.target.classList.add('active');
         }
 
-        // Mise à jour tableau En-cours Clients dans dashboard
+        // Bouton "Toutes périodes" dans le dashboard
+        function setAllTimeFilters() {
+            document.getElementById('dateStart').value = '';
+            document.getElementById('dateEnd').value = '';
+            applyFilters();
+            showAlert('Filtres étendus à toutes les périodes', 'success');
+        }
+
+        // Mise à jour tableau En-cours Clients dans dashboard (NON FILTRÉE)
         function updateClientsSummaryTable() {
             const tbody = document.getElementById('clientsSummaryBody');
             tbody.innerHTML = '';
             
             const clientsData = {};
             
-            // Calcul des ventes par client
+            // Calcul des ventes par client (TOUTES les données)
             salesData.forEach(sale => {
                 if (!clientsData[sale.client]) {
                     clientsData[sale.client] = {
@@ -1753,7 +1947,7 @@
                 clientsData[sale.client].sales += sale.valeur || 0;
             });
             
-            // Calcul des encaissements par client
+            // Calcul des encaissements par client (TOUTES les données)
             paymentsData.forEach(payment => {
                 if (!clientsData[payment.client]) {
                     clientsData[payment.client] = {
@@ -1800,30 +1994,86 @@
             showSection('recap');
             document.querySelector('.nav-tab:nth-child(3)').classList.add('active');
             
-            // Filtrer par client
-            document.getElementById('clientFilter').value = clientName;
+            // Filtrer par client dans récap
+            document.getElementById('recapClientFilter').value = clientName;
             
             // Appliquer le filtre et mettre à jour l'affichage
-            applyFilters();
-            updateRecapDisplay(clientName);
+            applyRecapFilters();
         }
 
-        // Mise à jour de l'affichage récapitulatif
-        function updateRecapDisplay(filterClient = null) {
-            updateSalesRecapTable(filterClient);
-            updatePaymentsRecapTable(filterClient);
+        // Filtres et affichage récapitulatif
+        function populateRecapFilters() {
+            // Clients
+            const clients = [...new Set(salesData.map(sale => sale.client))].sort();
+            populateSelect('recapClientFilter', clients, 'Tous les clients');
+            
+            // Produits
+            const products = [...new Set(salesData.map(sale => sale.product).filter(p => p))].sort();
+            populateSelect('recapProductFilter', products, 'Tous les produits');
         }
 
-        function updateSalesRecapTable(filterClient = null) {
+        function applyRecapFilters() {
+            const clientFilter = document.getElementById('recapClientFilter').value;
+            const productFilter = document.getElementById('recapProductFilter').value;
+            const dateStart = document.getElementById('recapDateStart').value;
+            const dateEnd = document.getElementById('recapDateEnd').value;
+            
+            // Filtrer les ventes
+            filteredRecapSales = salesData.filter(sale => {
+                let include = true;
+                
+                if (clientFilter && sale.client !== clientFilter) include = false;
+                if (productFilter && sale.product !== productFilter) include = false;
+                
+                if (dateStart || dateEnd) {
+                    const saleDate = parseDate(sale.date);
+                    if (saleDate) {
+                        if (dateStart && saleDate < new Date(dateStart)) include = false;
+                        if (dateEnd && saleDate > new Date(dateEnd + 'T23:59:59')) include = false;
+                    }
+                }
+                
+                return include;
+            });
+            
+            // Filtrer les encaissements
+            filteredRecapPayments = paymentsData.filter(payment => {
+                let include = true;
+                
+                if (clientFilter && payment.client !== clientFilter) include = false;
+                
+                if (dateStart || dateEnd) {
+                    const paymentDate = parseDate(payment.date);
+                    if (paymentDate) {
+                        if (dateStart && paymentDate < new Date(dateStart)) include = false;
+                        if (dateEnd && paymentDate > new Date(dateEnd + 'T23:59:59')) include = false;
+                    }
+                }
+                
+                return include;
+            });
+            
+            updateRecapDisplay();
+        }
+
+        function resetRecapFilters() {
+            document.getElementById('recapClientFilter').value = '';
+            document.getElementById('recapProductFilter').value = '';
+            document.getElementById('recapDateStart').value = '';
+            document.getElementById('recapDateEnd').value = '';
+            applyRecapFilters();
+        }
+
+        function updateRecapDisplay() {
+            updateSalesRecapTable();
+            updatePaymentsRecapTable();
+        }
+
+        function updateSalesRecapTable() {
             const tbody = document.getElementById('salesRecapTableBody');
             tbody.innerHTML = '';
             
-            let sales = [...salesData];
-            if (filterClient) {
-                sales = sales.filter(s => s.client === filterClient);
-            }
-            
-            const sortedSales = sales.sort((a, b) => {
+            const sortedSales = filteredRecapSales.sort((a, b) => {
                 const dateA = parseDate(a.date);
                 const dateB = parseDate(b.date);
                 return dateB - dateA;
@@ -1848,16 +2098,11 @@
             });
         }
 
-        function updatePaymentsRecapTable(filterClient = null) {
+        function updatePaymentsRecapTable() {
             const tbody = document.getElementById('paymentsRecapTableBody');
             tbody.innerHTML = '';
             
-            let payments = [...paymentsData];
-            if (filterClient) {
-                payments = payments.filter(p => p.client === filterClient);
-            }
-            
-            const sortedPayments = payments.sort((a, b) => {
+            const sortedPayments = filteredRecapPayments.sort((a, b) => {
                 const dateA = parseDate(a.date);
                 const dateB = parseDate(b.date);
                 return dateB - dateA;
@@ -1950,6 +2195,7 @@
             
             updateProductsDisplay();
             updateProductSelects();
+            populateRecapFilters();
             closeProductModal();
             showAlert(editingProductId ? 'Produit modifié' : 'Produit ajouté', 'success');
         }
@@ -1969,6 +2215,7 @@
                 
                 updateProductsDisplay();
                 updateProductSelects();
+                populateRecapFilters();
                 showAlert('Produit supprimé', 'success');
             }
         }
@@ -2091,6 +2338,7 @@
                 
                 updateProductsDisplay();
                 updateProductSelects();
+                populateRecapFilters();
                 showAlert(`Import: ${imported} produits, ${errors} erreurs`, 
                          errors > 0 ? 'warning' : 'success');
                 
@@ -2188,9 +2436,10 @@
                     await batch.commit();
                 }
                 
+                updateClientsList();
                 updatePaymentsDisplay();
                 updateClientsOverview();
-                updateRecapDisplay();
+                applyRecapFilters();
                 updateClientsSummaryTable();
                 
                 const totalImported = paymentsData.slice(-imported).reduce((sum, p) => sum + p.amount, 0);
@@ -2402,9 +2651,11 @@
                 
                 clearInvoice();
                 populateFilters();
+                populateRecapFilters();
+                updateClientsList();
                 applyFilters();
+                applyRecapFilters();
                 updateClientsOverview();
-                updateRecapDisplay();
                 updateClientsSummaryTable();
                 updateCloudStatus('online', '☁️ Sync');
                 
@@ -2462,9 +2713,10 @@
             
             showAlert(`Encaissement enregistré: ${formatCurrency(amount)}`, 'success');
             clearPaymentForm();
+            updateClientsList();
             updatePaymentsDisplay();
             updateClientsOverview();
-            updateRecapDisplay();
+            applyRecapFilters();
             updateClientsSummaryTable();
         }
 
@@ -2501,9 +2753,10 @@
                     }
                 }
                 
+                updateClientsList();
                 updatePaymentsDisplay();
                 updateClientsOverview();
-                updateRecapDisplay();
+                applyRecapFilters();
                 updateClientsSummaryTable();
                 showAlert('Encaissement supprimé', 'success');
             }
@@ -2921,11 +3174,13 @@
         function refreshData() {
             updateLastUpdateTime();
             populateFilters();
+            populateRecapFilters();
+            updateClientsList();
             applyFilters();
+            applyRecapFilters();
             updateClientsOverview();
             updateProductsDisplay();
             updatePaymentsDisplay();
-            updateRecapDisplay();
             updateClientsSummaryTable();
             showAlert('Données actualisées', 'success');
         }
@@ -2986,13 +3241,16 @@
                     salesData = [];
                     paymentsData = [];
                     productsData = [];
+                    clientsList = [];
                     saveToLocalStorage();
                     populateFilters();
+                    populateRecapFilters();
+                    updateClientsList();
                     applyFilters();
+                    applyRecapFilters();
                     updateClientsOverview();
                     updateProductsDisplay();
                     updatePaymentsDisplay();
-                    updateRecapDisplay();
                     updateClientsSummaryTable();
                     showAlert('Toutes les données ont été supprimées', 'warning');
                 }
@@ -3098,11 +3356,13 @@
             }
             
             closeEditSaleModal();
-            updateRecapDisplay();
+            populateFilters();
+            populateRecapFilters();
+            updateClientsList();
+            applyFilters();
+            applyRecapFilters();
             updateClientsOverview();
             updateClientsSummaryTable();
-            populateFilters();
-            applyFilters();
             showAlert('Vente modifiée avec succès', 'success');
         }
 
@@ -3119,11 +3379,13 @@
                     }
                 }
                 
-                updateRecapDisplay();
+                populateFilters();
+                populateRecapFilters();
+                updateClientsList();
+                applyFilters();
+                applyRecapFilters();
                 updateClientsOverview();
                 updateClientsSummaryTable();
-                populateFilters();
-                applyFilters();
                 showAlert('Vente supprimée', 'success');
             }
         }
@@ -3195,7 +3457,8 @@
             }
             
             closeEditPaymentModal();
-            updateRecapDisplay();
+            updateClientsList();
+            applyRecapFilters();
             updateClientsOverview();
             updateClientsSummaryTable();
             updatePaymentsDisplay();
