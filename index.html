@@ -804,16 +804,33 @@
             display: block;
         }
 
-        /* Style pour les inputs avec datalist */
-        .client-input-container {
+        /* Style pour les inputs avec datalist et dropdown */
+        .input-container {
             position: relative;
         }
 
-        .client-input-container input {
+        .input-container input {
             width: 100%;
+            padding-right: 40px;
         }
 
-        .client-dropdown {
+        .dropdown-arrow {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            cursor: pointer;
+            font-size: 12px;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+
+        .dropdown-arrow:hover {
+            color: #667eea;
+        }
+
+        .custom-dropdown {
             position: absolute;
             top: 100%;
             left: 0;
@@ -826,21 +843,27 @@
             overflow-y: auto;
             z-index: 100;
             display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
-        .client-option {
+        .custom-dropdown-option {
             padding: 10px 12px;
             cursor: pointer;
             transition: background 0.2s;
+            border-bottom: 1px solid #f8f9fa;
         }
 
-        .client-option:hover {
+        .custom-dropdown-option:hover {
             background: #f8f9fa;
         }
 
-        .client-option.selected {
+        .custom-dropdown-option.selected {
             background: #667eea;
             color: white;
+        }
+
+        .custom-dropdown-option:last-child {
+            border-bottom: none;
         }
         
         /* Optimisations mobile */
@@ -1143,6 +1166,7 @@
                                 <tr>
                                     <th>Date</th>
                                     <th>Client</th>
+                                    <th>Facture</th>
                                     <th>Produit</th>
                                     <th>Qté</th>
                                     <th>P.U.</th>
@@ -1190,9 +1214,10 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="invoiceClient">Client *</label>
-                            <div class="client-input-container">
-                                <input type="text" id="invoiceClient" placeholder="Nom du client" required autocomplete="off" oninput="showClientDropdown(this)" onblur="hideClientDropdown(this)" onkeydown="handleClientKeydown(event, this)">
-                                <div class="client-dropdown" id="invoiceClientDropdown"></div>
+                            <div class="input-container">
+                                <input type="text" id="invoiceClient" placeholder="Nom du client" required autocomplete="off" oninput="showCustomDropdown(this, 'clients')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)">
+                                <span class="dropdown-arrow" onclick="toggleCustomDropdown(document.getElementById('invoiceClient'), 'clients')">▼</span>
+                                <div class="custom-dropdown" id="invoiceClientDropdown"></div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -1251,9 +1276,10 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="paymentClient">Client *</label>
-                            <div class="client-input-container">
-                                <input type="text" id="paymentClient" placeholder="Nom du client" required autocomplete="off" oninput="showClientDropdown(this)" onblur="hideClientDropdown(this)" onkeydown="handleClientKeydown(event, this)">
-                                <div class="client-dropdown" id="paymentClientDropdown"></div>
+                            <div class="input-container">
+                                <input type="text" id="paymentClient" placeholder="Nom du client" required autocomplete="off" oninput="showCustomDropdown(this, 'clients')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)">
+                                <span class="dropdown-arrow" onclick="toggleCustomDropdown(document.getElementById('paymentClient'), 'clients')">▼</span>
+                                <div class="custom-dropdown" id="paymentClientDropdown"></div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -1585,6 +1611,7 @@
         let editingSaleId = null;
         let editingPaymentId = null;
         let clientsList = [];
+        let productsList = [];
 
         // Configuration Firebase
         const firebaseConfig = {
@@ -1614,6 +1641,7 @@
             populateFilters();
             populateRecapFilters();
             updateClientsList();
+            updateProductsList();
             applyFilters();
             applyRecapFilters();
             updateClientsOverview();
@@ -1690,6 +1718,7 @@
                     populateFilters();
                     populateRecapFilters();
                     updateClientsList();
+                    updateProductsList();
                     applyFilters();
                     applyRecapFilters();
                     updateClientsOverview();
@@ -1763,7 +1792,7 @@
                 if (hasChanges) {
                     saveToLocalStorage();
                     updateProductsDisplay();
-                    updateProductSelects();
+                    updateProductsList();
                     populateRecapFilters();
                 }
             });
@@ -1790,23 +1819,53 @@
             clientsList = Array.from(allClients).sort();
         }
 
-        // Fonctions pour les dropdowns de clients
-        function showClientDropdown(input) {
-            const dropdown = document.getElementById(input.id + 'Dropdown');
+        // Gestion de la liste des produits
+        function updateProductsList() {
+            productsList = productsData.map(product => ({
+                id: product.id,
+                name: product.reference || 'Sans référence',
+                price: product.price || 0,
+                displayText: `${product.reference || 'Sans ref'} - ${formatCurrency(product.price || 0)}`
+            })).sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        // Système de dropdown personnalisé
+        function showCustomDropdown(input, type) {
+            const dropdownId = input.id + 'Dropdown';
+            const dropdown = document.getElementById(dropdownId);
             if (!dropdown) return;
             
             const inputValue = input.value.toLowerCase();
-            const filteredClients = clientsList.filter(client => 
-                client.toLowerCase().includes(inputValue)
-            );
+            let items = [];
             
-            if (filteredClients.length > 0 && inputValue) {
+            if (type === 'clients') {
+                items = clientsList.filter(client => 
+                    client.toLowerCase().includes(inputValue)
+                );
+            } else if (type === 'products') {
+                items = productsList.filter(product => 
+                    product.name.toLowerCase().includes(inputValue) ||
+                    product.displayText.toLowerCase().includes(inputValue)
+                );
+            }
+            
+            if (items.length > 0 && inputValue) {
                 dropdown.innerHTML = '';
-                filteredClients.slice(0, 10).forEach(client => {
+                items.slice(0, 10).forEach(item => {
                     const option = document.createElement('div');
-                    option.className = 'client-option';
-                    option.textContent = client;
-                    option.onclick = () => selectClient(input, client, dropdown);
+                    option.className = 'custom-dropdown-option';
+                    
+                    if (type === 'clients') {
+                        option.textContent = item;
+                        option.onclick = () => selectDropdownOption(input, item, dropdown);
+                    } else if (type === 'products') {
+                        option.textContent = item.displayText;
+                        option.dataset.productId = item.id;
+                        option.dataset.productName = item.name;
+                        option.dataset.productPrice = item.price;
+                        option.onclick = () => selectProductFromDropdown(input, item, dropdown);
+                    }
+                    
                     dropdown.appendChild(option);
                 });
                 dropdown.style.display = 'block';
@@ -1815,26 +1874,63 @@
             }
         }
 
-        function hideClientDropdown(input) {
+        function hideCustomDropdown(input) {
             setTimeout(() => {
-                const dropdown = document.getElementById(input.id + 'Dropdown');
+                const dropdownId = input.id + 'Dropdown';
+                const dropdown = document.getElementById(dropdownId);
                 if (dropdown) {
                     dropdown.style.display = 'none';
                 }
             }, 200);
         }
 
-        function selectClient(input, client, dropdown) {
-            input.value = client;
+        function toggleCustomDropdown(input, type) {
+            const dropdownId = input.id + 'Dropdown';
+            const dropdown = document.getElementById(dropdownId);
+            if (!dropdown) return;
+            
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+            } else {
+                input.value = '';
+                showCustomDropdown(input, type);
+                input.focus();
+            }
+        }
+
+        function selectDropdownOption(input, value, dropdown) {
+            input.value = value;
             dropdown.style.display = 'none';
         }
 
-        function handleClientKeydown(event, input) {
-            const dropdown = document.getElementById(input.id + 'Dropdown');
+        function selectProductFromDropdown(input, product, dropdown) {
+            input.value = product.displayText;
+            dropdown.style.display = 'none';
+            
+            // Trouver la ligne correspondante et mettre à jour les données
+            const lineId = input.dataset.lineId;
+            if (lineId) {
+                const line = salesLines.find(l => l.id == lineId);
+                if (line) {
+                    line.productId = product.id;
+                    line.product = product.name;
+                    if (!line.priceManuallyEdited) {
+                        line.unitPrice = product.price;
+                    }
+                    line.totalPrice = line.quantity * line.unitPrice;
+                    renderSalesLines();
+                    updateInvoiceTotals();
+                }
+            }
+        }
+
+        function handleDropdownKeydown(event, input) {
+            const dropdownId = input.id + 'Dropdown';
+            const dropdown = document.getElementById(dropdownId);
             if (!dropdown || dropdown.style.display === 'none') return;
             
-            const options = dropdown.querySelectorAll('.client-option');
-            let selected = dropdown.querySelector('.client-option.selected');
+            const options = dropdown.querySelectorAll('.custom-dropdown-option');
+            let selected = dropdown.querySelector('.custom-dropdown-option.selected');
             
             if (event.key === 'ArrowDown') {
                 event.preventDefault();
@@ -1857,7 +1953,7 @@
             } else if (event.key === 'Enter') {
                 event.preventDefault();
                 if (selected) {
-                    selectClient(input, selected.textContent, dropdown);
+                    selected.click();
                 }
             } else if (event.key === 'Escape') {
                 dropdown.style.display = 'none';
@@ -2084,6 +2180,7 @@
                 row.innerHTML = `
                     <td>${sale.date}</td>
                     <td>${sale.client}</td>
+                    <td>${sale.invoice || '-'}</td>
                     <td>${sale.product || '-'}</td>
                     <td>${sale.quantity || '-'}</td>
                     <td>${formatCurrency(sale.unitPrice || 0)}</td>
@@ -2194,7 +2291,7 @@
             }
             
             updateProductsDisplay();
-            updateProductSelects();
+            updateProductsList();
             populateRecapFilters();
             closeProductModal();
             showAlert(editingProductId ? 'Produit modifié' : 'Produit ajouté', 'success');
@@ -2214,7 +2311,7 @@
                 }
                 
                 updateProductsDisplay();
-                updateProductSelects();
+                updateProductsList();
                 populateRecapFilters();
                 showAlert('Produit supprimé', 'success');
             }
@@ -2250,26 +2347,6 @@
                     </div>
                 `;
                 container.appendChild(productCard);
-            });
-        }
-
-        function updateProductSelects() {
-            const selects = document.querySelectorAll('select[data-field="product"]');
-            selects.forEach(select => {
-                const currentValue = select.value;
-                select.innerHTML = '<option value="">Sélectionner un produit</option>';
-                
-                productsData.forEach(product => {
-                    const option = document.createElement('option');
-                    option.value = product.id;
-                    option.textContent = `${product.reference || 'Sans ref'} - ${formatCurrency(product.price || 0)}`;
-                    option.dataset.price = product.price || 0;
-                    select.appendChild(option);
-                });
-                
-                if (currentValue) {
-                    select.value = currentValue;
-                }
             });
         }
 
@@ -2337,7 +2414,7 @@
                 }
                 
                 updateProductsDisplay();
-                updateProductSelects();
+                updateProductsList();
                 populateRecapFilters();
                 showAlert(`Import: ${imported} produits, ${errors} erreurs`, 
                          errors > 0 ? 'warning' : 'success');
@@ -2514,14 +2591,11 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Produit *</label>
-                            <select data-field="product" data-line-id="${line.id}" onchange="selectProduct(${line.id}, this)" required>
-                                <option value="">Sélectionner un produit</option>
-                                ${productsData.map(p => `
-                                    <option value="${p.id}" data-price="${p.price || 0}" ${line.productId == p.id ? 'selected' : ''}>
-                                        ${p.reference || 'Sans ref'} - ${formatCurrency(p.price || 0)}
-                                    </option>
-                                `).join('')}
-                            </select>
+                            <div class="input-container">
+                                <input type="text" id="productLine${line.id}" data-line-id="${line.id}" placeholder="Rechercher un produit..." value="${line.product ? productsList.find(p => p.id == line.productId)?.displayText || line.product : ''}" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)" required>
+                                <span class="dropdown-arrow" onclick="toggleCustomDropdown(document.getElementById('productLine${line.id}'), 'products')">▼</span>
+                                <div class="custom-dropdown" id="productLine${line.id}Dropdown"></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Quantité *</label>
@@ -2544,34 +2618,6 @@
                 `;
                 container.appendChild(lineDiv);
             });
-        }
-
-        function selectProduct(lineId, select) {
-            const line = salesLines.find(l => l.id === lineId);
-            if (!line) return;
-            
-            const selectedOption = select.selectedOptions[0];
-            if (selectedOption && selectedOption.value) {
-                const product = productsData.find(p => p.id == selectedOption.value);
-                if (product) {
-                    line.productId = product.id;
-                    line.product = product.reference || '';
-                    // Ne mettre à jour le prix unitaire que s'il n'a pas été modifié manuellement
-                    if (!line.priceManuallyEdited) {
-                        line.unitPrice = product.price || 0;
-                    }
-                    line.totalPrice = line.quantity * line.unitPrice;
-                }
-            } else {
-                line.productId = '';
-                line.product = '';
-                line.unitPrice = 0;
-                line.totalPrice = 0;
-                line.priceManuallyEdited = false;
-            }
-            
-            renderSalesLines();
-            updateInvoiceTotals();
         }
 
         function resetPriceFromProduct(lineId) {
@@ -2677,6 +2723,7 @@
                 populateFilters();
                 populateRecapFilters();
                 updateClientsList();
+                updateProductsList();
                 applyFilters();
                 applyRecapFilters();
                 updateClientsOverview();
@@ -3203,6 +3250,7 @@
             populateFilters();
             populateRecapFilters();
             updateClientsList();
+            updateProductsList();
             applyFilters();
             applyRecapFilters();
             updateClientsOverview();
@@ -3269,10 +3317,12 @@
                     paymentsData = [];
                     productsData = [];
                     clientsList = [];
+                    productsList = [];
                     saveToLocalStorage();
                     populateFilters();
                     populateRecapFilters();
                     updateClientsList();
+                    updateProductsList();
                     applyFilters();
                     applyRecapFilters();
                     updateClientsOverview();
@@ -3386,6 +3436,7 @@
             populateFilters();
             populateRecapFilters();
             updateClientsList();
+            updateProductsList();
             applyFilters();
             applyRecapFilters();
             updateClientsOverview();
@@ -3409,6 +3460,7 @@
                 populateFilters();
                 populateRecapFilters();
                 updateClientsList();
+                updateProductsList();
                 applyFilters();
                 applyRecapFilters();
                 updateClientsOverview();
