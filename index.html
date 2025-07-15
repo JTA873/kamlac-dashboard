@@ -537,6 +537,12 @@
             border-left: 4px solid #dc3545;
         }
         
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+        
         .stats-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -2717,7 +2723,16 @@
                 }
                 
                 const totalValue = newSales.reduce((sum, sale) => sum + sale.valeur, 0);
-                showAlert(`Facture sauvegardée ! ${validLines.length} lignes, Total: ${formatCurrency(totalValue)}`, 'success');
+                
+                // Calculer le nouveau solde du client
+                const clientBalance = getClientBalance(client);
+                const balanceMessage = clientBalance > 0 
+                    ? `En-cours client: ${formatCurrency(clientBalance)}` 
+                    : clientBalance < 0 
+                        ? `Crédit client: ${formatCurrency(Math.abs(clientBalance))}`
+                        : `Client soldé`;
+                
+                showAlert(`✅ Facture sauvegardée ! ${validLines.length} lignes, Total: ${formatCurrency(totalValue)}. ${balanceMessage}`, 'success');
                 
                 clearInvoice();
                 populateFilters();
@@ -2782,7 +2797,20 @@
                 }
             }
             
-            showAlert(`Encaissement enregistré: ${formatCurrency(amount)}`, 'success');
+            showAlert(`💰 Encaissement enregistré: ${formatCurrency(amount)}`, 'success');
+            
+            // Calculer le nouveau solde du client après encaissement
+            const clientBalance = getClientBalance(client);
+            const balanceMessage = clientBalance > 0 
+                ? `En-cours client: ${formatCurrency(clientBalance)}` 
+                : clientBalance < 0 
+                    ? `Crédit client: ${formatCurrency(Math.abs(clientBalance))}`
+                    : `Client soldé`;
+            
+            // Afficher un second message avec le solde
+            setTimeout(() => {
+                showAlert(`📊 ${balanceMessage}`, 'info');
+            }, 1500);
             clearPaymentForm();
             updateClientsList();
             updatePaymentsDisplay();
@@ -2813,6 +2841,9 @@
 
         async function deletePayment(paymentId) {
             if (confirm('Supprimer cet encaissement ?')) {
+                const payment = paymentsData.find(p => p.id === paymentId);
+                const clientName = payment ? payment.client : null;
+                
                 paymentsData = paymentsData.filter(p => p.id !== paymentId);
                 saveToLocalStorage();
                 
@@ -2829,8 +2860,34 @@
                 updateClientsOverview();
                 applyRecapFilters();
                 updateClientsSummaryTable();
-                showAlert('Encaissement supprimé', 'success');
+                
+                // Afficher le nouveau solde du client si on a le nom
+                if (clientName) {
+                    const clientBalance = getClientBalance(clientName);
+                    const balanceMessage = clientBalance > 0 
+                        ? `En-cours client: ${formatCurrency(clientBalance)}` 
+                        : clientBalance < 0 
+                            ? `Crédit client: ${formatCurrency(Math.abs(clientBalance))}`
+                            : `Client soldé`;
+                    
+                    showAlert(`🗑️ Encaissement supprimé. ${balanceMessage}`, 'warning');
+                } else {
+                    showAlert('Encaissement supprimé', 'warning');
+                }
             }
+        }
+
+        // Fonction pour calculer l'en-cours d'un client spécifique
+        function getClientBalance(clientName) {
+            const clientSales = salesData
+                .filter(sale => sale.client === clientName)
+                .reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+            
+            const clientPayments = paymentsData
+                .filter(payment => payment.client === clientName)
+                .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            
+            return clientSales - clientPayments;
         }
 
         // Gestion des clients et en-cours
@@ -3441,11 +3498,23 @@
             applyRecapFilters();
             updateClientsOverview();
             updateClientsSummaryTable();
-            showAlert('Vente modifiée avec succès', 'success');
+            
+            // Calculer le nouveau solde du client après modification
+            const clientBalance = getClientBalance(client);
+            const balanceMessage = clientBalance > 0 
+                ? `En-cours client: ${formatCurrency(clientBalance)}` 
+                : clientBalance < 0 
+                    ? `Crédit client: ${formatCurrency(Math.abs(clientBalance))}`
+                    : `Client soldé`;
+            
+            showAlert(`✏️ Vente modifiée avec succès. ${balanceMessage}`, 'success');
         }
 
         async function deleteSale(saleId) {
             if (confirm('Supprimer cette vente ?')) {
+                const sale = salesData.find(s => s.id === saleId);
+                const clientName = sale ? sale.client : null;
+                
                 salesData = salesData.filter(s => s.id !== saleId);
                 saveToLocalStorage();
                 
@@ -3465,7 +3534,20 @@
                 applyRecapFilters();
                 updateClientsOverview();
                 updateClientsSummaryTable();
-                showAlert('Vente supprimée', 'success');
+                
+                // Afficher le nouveau solde du client si on a le nom
+                if (clientName) {
+                    const clientBalance = getClientBalance(clientName);
+                    const balanceMessage = clientBalance > 0 
+                        ? `En-cours client: ${formatCurrency(clientBalance)}` 
+                        : clientBalance < 0 
+                            ? `Crédit client: ${formatCurrency(Math.abs(clientBalance))}`
+                            : `Client soldé`;
+                    
+                    showAlert(`🗑️ Vente supprimée. ${balanceMessage}`, 'warning');
+                } else {
+                    showAlert('Vente supprimée', 'warning');
+                }
             }
         }
 
@@ -3541,7 +3623,16 @@
             updateClientsOverview();
             updateClientsSummaryTable();
             updatePaymentsDisplay();
-            showAlert('Encaissement modifié avec succès', 'success');
+            
+            // Calculer le nouveau solde du client après modification
+            const clientBalance = getClientBalance(client);
+            const balanceMessage = clientBalance > 0 
+                ? `En-cours client: ${formatCurrency(clientBalance)}` 
+                : clientBalance < 0 
+                    ? `Crédit client: ${formatCurrency(Math.abs(clientBalance))}`
+                    : `Client soldé`;
+            
+            showAlert(`💰 Encaissement modifié avec succès. ${balanceMessage}`, 'success');
         }
 
         // Fonction utilitaire pour formater une date pour les inputs
