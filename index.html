@@ -2728,9 +2728,19 @@
             const totalValue = salesLines.reduce((sum, line) => sum + line.totalPrice, 0);
             const totalQuantity = salesLines.reduce((sum, line) => sum + line.quantity, 0);
             
+            console.log('Mise à jour totaux:', { totalLines, totalValue, totalQuantity }); // Debug
+            
             document.getElementById('totalLines').textContent = totalLines;
             document.getElementById('totalInvoice').textContent = formatCurrency(totalValue);
-            document.getElementById('totalCartons').textContent = Math.round(totalQuantity);
+            
+            // Vérifier que l'élément existe avant de le mettre à jour
+            const totalCartonsElement = document.getElementById('totalCartons');
+            if (totalCartonsElement) {
+                totalCartonsElement.textContent = Math.round(totalQuantity);
+                console.log('Total cartons mis à jour:', Math.round(totalQuantity)); // Debug
+            } else {
+                console.error('Élément totalCartons non trouvé!'); // Debug
+            }
         }
 
         async function saveInvoice() {
@@ -2821,6 +2831,7 @@
             setTodayForNewInvoice();
             salesLines = [];
             addSaleLine();
+            updateInvoiceTotals(); // S'assurer que les totaux sont mis à jour
         }
 
         // Gestion des encaissements
