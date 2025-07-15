@@ -2724,15 +2724,20 @@
                 
                 const totalValue = newSales.reduce((sum, sale) => sum + sale.valeur, 0);
                 
-                // Calculer le nouveau solde du client
+                // Calculer le nouveau solde du client APRÈS avoir ajouté les ventes
                 const clientBalance = getClientBalance(client);
-                const balanceMessage = clientBalance > 0 
-                    ? `En-cours client: ${formatCurrency(clientBalance)}` 
-                    : clientBalance < 0 
-                        ? `Crédit client: ${formatCurrency(Math.abs(clientBalance))}`
-                        : `Client soldé`;
                 
-                showAlert(`✅ Facture sauvegardée ! ${validLines.length} lignes, Total: ${formatCurrency(totalValue)}. ${balanceMessage}`, 'success');
+                let message = `✅ Facture sauvegardée ! ${validLines.length} lignes, Total: ${formatCurrency(totalValue)}`;
+                
+                if (clientBalance > 0) {
+                    message += `. En-cours client: ${formatCurrency(clientBalance)}`;
+                } else if (clientBalance < 0) {
+                    message += `. Crédit client: ${formatCurrency(Math.abs(clientBalance))}`;
+                } else {
+                    message += `. Client soldé`;
+                }
+                
+                showAlert(message, 'success');
                 
                 clearInvoice();
                 populateFilters();
@@ -3501,13 +3506,18 @@
             
             // Calculer le nouveau solde du client après modification
             const clientBalance = getClientBalance(client);
-            const balanceMessage = clientBalance > 0 
-                ? `En-cours client: ${formatCurrency(clientBalance)}` 
-                : clientBalance < 0 
-                    ? `Crédit client: ${formatCurrency(Math.abs(clientBalance))}`
-                    : `Client soldé`;
             
-            showAlert(`✏️ Vente modifiée avec succès. ${balanceMessage}`, 'success');
+            let message = `✏️ Vente modifiée avec succès`;
+            
+            if (clientBalance > 0) {
+                message += `. En-cours client: ${formatCurrency(clientBalance)}`;
+            } else if (clientBalance < 0) {
+                message += `. Crédit client: ${formatCurrency(Math.abs(clientBalance))}`;
+            } else {
+                message += `. Client soldé`;
+            }
+            
+            showAlert(message, 'success');
         }
 
         async function deleteSale(saleId) {
@@ -3626,13 +3636,18 @@
             
             // Calculer le nouveau solde du client après modification
             const clientBalance = getClientBalance(client);
-            const balanceMessage = clientBalance > 0 
-                ? `En-cours client: ${formatCurrency(clientBalance)}` 
-                : clientBalance < 0 
-                    ? `Crédit client: ${formatCurrency(Math.abs(clientBalance))}`
-                    : `Client soldé`;
             
-            showAlert(`💰 Encaissement modifié avec succès. ${balanceMessage}`, 'success');
+            let message = `💰 Encaissement modifié avec succès`;
+            
+            if (clientBalance > 0) {
+                message += `. En-cours client: ${formatCurrency(clientBalance)}`;
+            } else if (clientBalance < 0) {
+                message += `. Crédit client: ${formatCurrency(Math.abs(clientBalance))}`;
+            } else {
+                message += `. Client soldé`;
+            }
+            
+            showAlert(message, 'success');
         }
 
         // Fonction utilitaire pour formater une date pour les inputs
