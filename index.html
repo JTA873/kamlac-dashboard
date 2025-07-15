@@ -1042,7 +1042,7 @@
                         <button class="btn btn-info" onclick="setAllTimeFilters()">📅 Toutes périodes</button>
                     </div>
                     <div class="filter-group">
-                        <button class="btn btn-warning" onclick="resetFilters()">🗑️</button>
+                        <button class="btn btn-warning" onclick="resetFilters()">📅 Mois en cours</button>
                     </div>
                 </div>
             </div>
@@ -1439,26 +1439,6 @@
                 
                 <!-- Section Données -->
                 <div id="settings-data" class="settings-section">
-                    <!-- Import Encaissements Manquants -->
-                    <div class="import-section" style="margin-bottom: 20px;">
-                        <h3 style="margin-bottom: 15px; color: #667eea;">💳 Import Encaissements Manquants</h3>
-                        <p style="margin-bottom: 12px; color: #666; font-size: clamp(0.8rem, 2vw, 0.9rem);">
-                            Format: <strong>Client, Encaissement manquant (CFA)</strong><br>
-                            <small>Les encaissements seront créés automatiquement à la date du jour</small>
-                        </p>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>📊 Import Excel/CSV</label>
-                                <input type="file" id="importPaymentsFile" accept=".xlsx,.xls,.csv" onchange="handlePaymentsImport()">
-                            </div>
-                            <div class="form-group">
-                                <label>📋 Copier-Coller</label>
-                                <button class="btn btn-primary" onclick="showPaymentsPasteModal()">📋 Coller</button>
-                            </div>
-                        </div>
-                        <div id="paymentsImportStatus"></div>
-                    </div>
-                    
                     <!-- Export et Gestion -->
                     <div class="import-section">
                         <h3 style="margin-bottom: 15px;">💾 Gestion des données</h3>
@@ -1532,23 +1512,6 @@
             <div style="text-align: center; margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <button class="btn btn-primary" onclick="processProductsPastedData()" style="flex: 1;">✅ Importer</button>
                 <button class="btn btn-warning" onclick="closeProductsPasteModal()" style="flex: 1;">❌ Annuler</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal pour copier-coller encaissements manquants -->
-    <div id="paymentsPasteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; backdrop-filter: blur(5px); padding: 10px;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; width: calc(100% - 20px); max-width: 500px; max-height: 80vh; overflow-y: auto;">
-            <h3 style="margin-bottom: 15px;">💳 Importer Encaissements Manquants</h3>
-            <p style="margin-bottom: 12px; color: #666; font-size: clamp(0.8rem, 2vw, 0.9rem);">
-                Format: <strong>Client, Encaissement manquant (CFA)</strong><br>
-                <small>Les encaissements seront créés à la date du jour avec la mention "Import automatique"</small><br>
-                Copiez depuis Excel et collez ci-dessous:
-            </p>
-            <textarea id="paymentsPasteArea" placeholder="Collez vos données ici..." style="width: 100%; height: 200px; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-family: monospace; font-size: 11px;"></textarea>
-            <div style="text-align: center; margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="processPaymentsPastedData()" style="flex: 1;">✅ Importer</button>
-                <button class="btn btn-warning" onclick="closePaymentsPasteModal()" style="flex: 1;">❌ Annuler</button>
             </div>
         </div>
     </div>
@@ -2497,126 +2460,6 @@
                 parseProductsData(e.target.result);
             };
             reader.readAsText(file);
-        }
-
-        // Import encaissements manquants
-        function showPaymentsPasteModal() {
-            document.getElementById('paymentsPasteModal').style.display = 'block';
-        }
-
-        function closePaymentsPasteModal() {
-            document.getElementById('paymentsPasteModal').style.display = 'none';
-            document.getElementById('paymentsPasteArea').value = '';
-        }
-
-        function processPaymentsPastedData() {
-            const data = document.getElementById('paymentsPasteArea').value.trim();
-            if (!data) {
-                showAlert('Aucune donnée à importer', 'error');
-                return;
-            }
-            parsePaymentsData(data);
-            closePaymentsPasteModal();
-        }
-
-        async function parsePaymentsData(data) {
-            const lines = data.split('\n');
-            let imported = 0;
-            let errors = 0;
-            const today = new Date().toLocaleDateString('fr-FR');
-            
-            try {
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    
-                    // Supporter différents délimiteurs
-                    let columns = line.split('\t');
-                    if (columns.length < 2) {
-                        columns = line.split(',');
-                    }
-                    
-                    if (columns.length >= 2) {
-                        const client = columns[0].trim().replace(/"/g, '');
-                        const amountStr = columns[1].trim().replace(/[^0-9.-]/g, '');
-                        const amount = parseFloat(amountStr);
-                        
-                        if (client && !isNaN(amount) && amount > 0) {
-                            const payment = {
-                                id: Date.now() + i + Math.random(),
-                                client: client,
-                                date: today,
-                                amount: amount,
-                                method: 'Virement',
-                                reference: 'Import automatique',
-                                notes: 'Encaissement importé depuis tableau'
-                            };
-                            
-                            paymentsData.push(payment);
-                            imported++;
-                        } else {
-                            errors++;
-                        }
-                    } else {
-                        errors++;
-                    }
-                }
-                
-                saveToLocalStorage();
-                
-                if (isFirebaseInitialized && imported > 0) {
-                    const batch = db.batch();
-                    paymentsData.slice(-imported).forEach(payment => {
-                        const docRef = db.collection('payments').doc(payment.id.toString());
-                        batch.set(docRef, {
-                            ...payment,
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    });
-                    await batch.commit();
-                }
-                
-                updateClientsList();
-                updatePaymentsDisplay();
-                updateClientsOverview();
-                applyRecapFilters();
-                updateClientsSummaryTable();
-                
-                const totalImported = paymentsData.slice(-imported).reduce((sum, p) => sum + p.amount, 0);
-                showAlertInSettings(`Import réussi: ${imported} encaissements pour ${formatCurrency(totalImported)}`, 
-                                  errors > 0 ? 'warning' : 'success');
-                
-            } catch (error) {
-                showAlertInSettings(`Erreur import: ${error.message}`, 'error');
-            }
-        }
-
-        function handlePaymentsImport() {
-            const fileInput = document.getElementById('importPaymentsFile');
-            const file = fileInput.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                parsePaymentsData(e.target.result);
-            };
-            reader.readAsText(file);
-        }
-
-        function showAlertInSettings(message, type = 'success') {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.textContent = message;
-            
-            const container = document.getElementById('paymentsImportStatus');
-            if (container) {
-                container.innerHTML = '';
-                container.appendChild(alertDiv);
-                
-                setTimeout(() => {
-                    alertDiv.remove();
-                }, 5000);
-            }
         }
 
         // Gestion des lignes de vente
@@ -3842,7 +3685,6 @@
         window.onclick = function(event) {
             const productModal = document.getElementById('productModal');
             const productsPasteModal = document.getElementById('productsPasteModal');
-            const paymentsPasteModal = document.getElementById('paymentsPasteModal');
             const editSaleModal = document.getElementById('editSaleModal');
             const editPaymentModal = document.getElementById('editPaymentModal');
             
@@ -3851,9 +3693,6 @@
             }
             if (event.target === productsPasteModal) {
                 closeProductsPasteModal();
-            }
-            if (event.target === paymentsPasteModal) {
-                closePaymentsPasteModal();
             }
             if (event.target === editSaleModal) {
                 closeEditSaleModal();
