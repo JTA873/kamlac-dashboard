@@ -1292,6 +1292,8 @@
                             <div style="margin-top: 10px;">
                                 <span style="font-size: clamp(1rem, 3vw, 1.1rem); color: #666;">Total lignes: </span>
                                 <span id="totalLines" style="font-weight: 600;">0</span><br>
+                                <span style="font-size: clamp(1rem, 3vw, 1.1rem); color: #666;">Total cartons: </span>
+                                <span id="totalCartons" style="font-weight: 600;">0</span><br>
                                 <span style="font-size: clamp(1.1rem, 3vw, 1.3rem); color: #333; font-weight: 600;">Total Facture: </span>
                                 <span id="totalInvoice" style="font-size: clamp(1.2rem, 4vw, 1.5rem); font-weight: 700; color: #667eea;">0 CFA</span>
                             </div>
@@ -2724,9 +2726,11 @@
         function updateInvoiceTotals() {
             const totalLines = salesLines.length;
             const totalValue = salesLines.reduce((sum, line) => sum + line.totalPrice, 0);
+            const totalQuantity = salesLines.reduce((sum, line) => sum + line.quantity, 0);
             
             document.getElementById('totalLines').textContent = totalLines;
             document.getElementById('totalInvoice').textContent = formatCurrency(totalValue);
+            document.getElementById('totalCartons').textContent = Math.round(totalQuantity);
         }
 
         async function saveInvoice() {
@@ -3160,8 +3164,9 @@
                 return include;
             });
             
-            const totalPayments = filteredPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            const filteredOutstanding = totalRevenue - totalPayments;
+            // Encaissements filtrés (responsive aux filtres)
+            const totalFilteredPayments = filteredPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const filteredOutstanding = totalRevenue - totalFilteredPayments;
             
             // Calcul de l'en-cours global (non filtré) pour comparaison
             const totalAllSales = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
@@ -3170,7 +3175,7 @@
             
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
             document.getElementById('totalSales').textContent = totalSales;
-            document.getElementById('totalPayments').textContent = formatCurrency(totalPayments);
+            document.getElementById('totalPayments').textContent = formatCurrency(totalFilteredPayments); // Maintenant filtré
             document.getElementById('totalOutstanding').textContent = formatCurrency(totalOutstanding);
             document.getElementById('filteredOutstanding').textContent = formatCurrency(filteredOutstanding);
         }
