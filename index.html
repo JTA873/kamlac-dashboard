@@ -1025,6 +1025,13 @@
                         <label for="dateStart">Date début</label>
                         <input type="date" id="dateStart" onchange="applyFilters()">
                     </div>
+            
+            <div style="text-align: center; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+                <small style="color: #666; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                    📊 <strong>Les données filtrées</strong> correspondent aux filtres de dates et client sélectionnés.<br>
+                    🌍 <strong>L'en-cours global</strong> inclut toutes les données sans filtre.
+                </small>
+            </div>
                     <div class="filter-group">
                         <label for="dateEnd">Date fin</label>
                         <input type="date" id="dateEnd" onchange="applyFilters()">
@@ -1053,27 +1060,27 @@
                 <div class="kpi-card">
                     <div class="kpi-icon">💰</div>
                     <div class="kpi-value" id="totalRevenue">0 CFA</div>
-                    <div class="kpi-label">CA Total</div>
+                    <div class="kpi-label">CA Total (Filtré)</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon">📦</div>
                     <div class="kpi-value" id="totalSales">0</div>
-                    <div class="kpi-label">Ventes</div>
+                    <div class="kpi-label">Ventes (Filtrées)</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon">💳</div>
                     <div class="kpi-value" id="totalPayments">0 CFA</div>
-                    <div class="kpi-label">Encaissé</div>
+                    <div class="kpi-label">Encaissé (Filtré)</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon">⚖️</div>
+                    <div class="kpi-value" id="filteredBalance">0 CFA</div>
+                    <div class="kpi-label">Balance Filtrée</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon">⚠️</div>
                     <div class="kpi-value" id="totalOutstanding">0 CFA</div>
                     <div class="kpi-label">En-cours (Global)</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-icon">📊</div>
-                    <div class="kpi-value" id="avgSale">0 CFA</div>
-                    <div class="kpi-label">Moy. Vente</div>
                 </div>
             </div>
             
@@ -1261,6 +1268,8 @@
                             <div style="margin-top: 10px;">
                                 <span style="font-size: clamp(1rem, 3vw, 1.1rem); color: #666;">Total lignes: </span>
                                 <span id="totalLines" style="font-weight: 600;">0</span><br>
+                                <span style="font-size: clamp(1rem, 3vw, 1.1rem); color: #666;">Total cartons: </span>
+                                <span id="totalQuantity" style="font-weight: 600; color: #28a745;">0</span><br>
                                 <span style="font-size: clamp(1.1rem, 3vw, 1.3rem); color: #333; font-weight: 600;">Total Facture: </span>
                                 <span id="totalInvoice" style="font-size: clamp(1.2rem, 4vw, 1.5rem); font-weight: 700; color: #667eea;">0 CFA</span>
                             </div>
@@ -2672,8 +2681,10 @@
         function updateInvoiceTotals() {
             const totalLines = salesLines.length;
             const totalValue = salesLines.reduce((sum, line) => sum + line.totalPrice, 0);
+            const totalQuantity = salesLines.reduce((sum, line) => sum + (line.quantity || 0), 0);
             
             document.getElementById('totalLines').textContent = totalLines;
+            document.getElementById('totalQuantity').textContent = totalQuantity;
             document.getElementById('totalInvoice').textContent = formatCurrency(totalValue);
         }
 
@@ -2726,11 +2737,12 @@
                 }
                 
                 const totalValue = newSales.reduce((sum, sale) => sum + sale.valeur, 0);
+                const totalQuantity = newSales.reduce((sum, sale) => sum + (sale.quantity || 0), 0);
                 
                 // Calculer le nouveau solde du client APRÈS avoir ajouté les ventes
                 const clientBalance = getClientBalance(client);
                 
-                let message = `✅ Facture sauvegardée ! ${validLines.length} lignes, Total: ${formatCurrency(totalValue)}`;
+                let message = `✅ Facture sauvegardée ! ${validLines.length} lignes, ${totalQuantity} cartons, Total: ${formatCurrency(totalValue)}`;
                 
                 if (clientBalance > 0) {
                     message += `. En-cours client: ${formatCurrency(clientBalance)}`;
@@ -3086,18 +3098,56 @@
         function updateKPIs() {
             const totalRevenue = filteredData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
             const totalSales = filteredData.length;
-            const totalPayments = paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            const avgSale = totalSales > 0 ? totalRevenue / totalSales : 0;
             
-            // Calcul de l'en-cours sur TOUTES les données (non filtré)
+            // Filtrer les encaissements selon les mêmes dates que les ventes
+            const dateStart = document.getElementById('dateStart').value;
+            const dateEnd = document.getElementById('dateEnd').value;
+            const clientFilter = document.getElementById('clientFilter').value;
+            
+            const filteredPayments = paymentsData.filter(payment => {
+                let include = true;
+                
+                if (dateStart || dateEnd) {
+                    const paymentDate = parseDate(payment.date);
+                    if (paymentDate) {
+                        if (dateStart && paymentDate < new Date(dateStart)) include = false;
+                        if (dateEnd && paymentDate > new Date(dateEnd + 'T23:59:59')) include = false;
+                    }
+                }
+                
+                if (clientFilter && payment.client !== clientFilter) include = false;
+                
+                return include;
+            });
+            
+            const totalFilteredPayments = filteredPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const filteredBalance = totalRevenue - totalFilteredPayments;
+            
+            // Calcul de l'en-cours global (non filtré)
             const totalAllSales = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
-            const totalOutstanding = totalAllSales - totalPayments;
+            const totalAllPayments = paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const totalOutstanding = totalAllSales - totalAllPayments;
             
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
             document.getElementById('totalSales').textContent = totalSales;
-            document.getElementById('totalPayments').textContent = formatCurrency(totalPayments);
+            document.getElementById('totalPayments').textContent = formatCurrency(totalFilteredPayments);
             document.getElementById('totalOutstanding').textContent = formatCurrency(totalOutstanding);
-            document.getElementById('avgSale').textContent = formatCurrency(avgSale);
+            
+            // Affichage de la balance filtrée avec couleur conditionnelle
+            const balanceElement = document.getElementById('filteredBalance');
+            balanceElement.textContent = formatCurrency(Math.abs(filteredBalance));
+            
+            // Changer la couleur selon le signe de la balance
+            if (filteredBalance > 0) {
+                balanceElement.style.color = '#dc3545'; // Rouge pour les dettes clients
+                balanceElement.parentElement.querySelector('.kpi-label').textContent = 'À Recevoir (Filtré)';
+            } else if (filteredBalance < 0) {
+                balanceElement.style.color = '#28a745'; // Vert pour les crédits clients
+                balanceElement.parentElement.querySelector('.kpi-label').textContent = 'Crédit Client (Filtré)';
+            } else {
+                balanceElement.style.color = '#333'; // Gris neutre pour zéro
+                balanceElement.parentElement.querySelector('.kpi-label').textContent = 'Soldé (Filtré)';
+            }
         }
 
         function updateCharts() {
