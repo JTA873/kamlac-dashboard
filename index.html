@@ -1036,7 +1036,10 @@
                         </select>
                     </div>
                     <div class="filter-group">
-                        <button class="btn btn-primary" onclick="refreshData()">🔄</button>
+                        <button class="btn btn-primary" onclick="refreshData()" title="Actualiser les données">🔄</button>
+                    </div>
+                    <div class="filter-group">
+                        <button class="btn btn-secondary" onclick="testAlerts()" title="Test des messages">🧪</button>
                     </div>
                     <div class="filter-group">
                         <button class="btn btn-info" onclick="setAllTimeFilters()">📅 Toutes périodes</button>
@@ -2869,15 +2872,20 @@
                 // Afficher le nouveau solde du client si on a le nom
                 if (clientName) {
                     const clientBalance = getClientBalance(clientName);
-                    const balanceMessage = clientBalance > 0 
-                        ? `En-cours client: ${formatCurrency(clientBalance)}` 
-                        : clientBalance < 0 
-                            ? `Crédit client: ${formatCurrency(Math.abs(clientBalance))}`
-                            : `Client soldé`;
                     
-                    showAlert(`🗑️ Encaissement supprimé. ${balanceMessage}`, 'warning');
+                    let message = `🗑️ Encaissement supprimé`;
+                    
+                    if (clientBalance > 0) {
+                        message += `. En-cours client: ${formatCurrency(clientBalance)}`;
+                    } else if (clientBalance < 0) {
+                        message += `. Crédit client: ${formatCurrency(Math.abs(clientBalance))}`;
+                    } else {
+                        message += `. Client soldé`;
+                    }
+                    
+                    showAlert(message, 'warning');
                 } else {
-                    showAlert('Encaissement supprimé', 'warning');
+                    showAlert('🗑️ Encaissement supprimé', 'warning');
                 }
             }
         }
@@ -3319,7 +3327,14 @@
             updateProductsDisplay();
             updatePaymentsDisplay();
             updateClientsSummaryTable();
-            showAlert('Données actualisées', 'success');
+            showAlert('📊 Données actualisées avec succès', 'success');
+        }
+
+        // Fonction de test pour vérifier les messages
+        function testAlerts() {
+            showAlert('✅ Test message de succès', 'success');
+            setTimeout(() => showAlert('⚠️ Test message d\'avertissement', 'warning'), 1000);
+            setTimeout(() => showAlert('ℹ️ Test message d\'information', 'info'), 2000);
         }
 
         // Export
@@ -3397,18 +3412,92 @@
         }
 
         function showAlert(message, type = 'success') {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.textContent = message;
+            console.log('Affichage message:', message, type); // Debug
             
-            const container = document.getElementById('importStatus') || document.querySelector('.section.active .card');
-            if (container) {
-                container.insertBefore(alertDiv, container.firstChild);
-                
-                setTimeout(() => {
-                    alertDiv.remove();
-                }, 4000);
+            // Créer une zone d'alerte fixe en haut de la page
+            let alertContainer = document.getElementById('alertContainer');
+            if (!alertContainer) {
+                alertContainer = document.createElement('div');
+                alertContainer.id = 'alertContainer';
+                alertContainer.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    right: 20px;
+                    z-index: 10000;
+                    max-width: 400px;
+                    pointer-events: none;
+                `;
+                document.body.appendChild(alertContainer);
             }
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.style.cssText = `
+                padding: 12px 16px;
+                margin-bottom: 10px;
+                border-radius: 8px;
+                font-weight: 500;
+                font-size: 14px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                pointer-events: auto;
+                animation: slideIn 0.3s ease-out;
+                word-wrap: break-word;
+            `;
+            
+            // Couleurs selon le type
+            switch(type) {
+                case 'success':
+                    alertDiv.style.background = '#d4edda';
+                    alertDiv.style.color = '#155724';
+                    alertDiv.style.borderLeft = '4px solid #28a745';
+                    break;
+                case 'warning':
+                    alertDiv.style.background = '#fff3cd';
+                    alertDiv.style.color = '#856404';
+                    alertDiv.style.borderLeft = '4px solid #ffc107';
+                    break;
+                case 'error':
+                    alertDiv.style.background = '#f8d7da';
+                    alertDiv.style.color = '#721c24';
+                    alertDiv.style.borderLeft = '4px solid #dc3545';
+                    break;
+                case 'info':
+                    alertDiv.style.background = '#d1ecf1';
+                    alertDiv.style.color = '#0c5460';
+                    alertDiv.style.borderLeft = '4px solid #17a2b8';
+                    break;
+            }
+            
+            alertDiv.textContent = message;
+            alertContainer.appendChild(alertDiv);
+            
+            // Animation d'entrée
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { opacity: 0; transform: translateX(100%); }
+                    to { opacity: 1; transform: translateX(0); }
+                }
+                @keyframes slideOut {
+                    from { opacity: 1; transform: translateX(0); }
+                    to { opacity: 0; transform: translateX(100%); }
+                }
+            `;
+            if (!document.head.querySelector('style[data-alerts]')) {
+                style.setAttribute('data-alerts', 'true');
+                document.head.appendChild(style);
+            }
+            
+            // Supprimer après 5 secondes
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(() => {
+                        if (alertDiv && alertDiv.parentNode) {
+                            alertDiv.remove();
+                        }
+                    }, 300);
+                }
+            }, 5000);
         }
 
         // Gestion de l'édition des ventes
@@ -3548,15 +3637,20 @@
                 // Afficher le nouveau solde du client si on a le nom
                 if (clientName) {
                     const clientBalance = getClientBalance(clientName);
-                    const balanceMessage = clientBalance > 0 
-                        ? `En-cours client: ${formatCurrency(clientBalance)}` 
-                        : clientBalance < 0 
-                            ? `Crédit client: ${formatCurrency(Math.abs(clientBalance))}`
-                            : `Client soldé`;
                     
-                    showAlert(`🗑️ Vente supprimée. ${balanceMessage}`, 'warning');
+                    let message = `🗑️ Vente supprimée`;
+                    
+                    if (clientBalance > 0) {
+                        message += `. En-cours client: ${formatCurrency(clientBalance)}`;
+                    } else if (clientBalance < 0) {
+                        message += `. Crédit client: ${formatCurrency(Math.abs(clientBalance))}`;
+                    } else {
+                        message += `. Client soldé`;
+                    }
+                    
+                    showAlert(message, 'warning');
                 } else {
-                    showAlert('Vente supprimée', 'warning');
+                    showAlert('🗑️ Vente supprimée', 'warning');
                 }
             }
         }
