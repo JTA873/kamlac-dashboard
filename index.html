@@ -1039,9 +1039,6 @@
                         <button class="btn btn-primary" onclick="refreshData()" title="Actualiser les données">🔄</button>
                     </div>
                     <div class="filter-group">
-                        <button class="btn btn-secondary" onclick="testAlerts()" title="Test des messages">🧪</button>
-                    </div>
-                    <div class="filter-group">
                         <button class="btn btn-info" onclick="setAllTimeFilters()">📅 Toutes périodes</button>
                     </div>
                     <div class="filter-group">
@@ -1071,9 +1068,9 @@
                     <div class="kpi-label">En-cours (Global)</div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-icon">📊</div>
-                    <div class="kpi-value" id="avgSale">0 CFA</div>
-                    <div class="kpi-label">Moy. Vente</div>
+                    <div class="kpi-icon">📋</div>
+                    <div class="kpi-value" id="filteredOutstanding">0 CFA</div>
+                    <div class="kpi-label">En-cours (Filtré)</div>
                 </div>
             </div>
             
@@ -1169,6 +1166,23 @@
                 <!-- Sous-section Ventes -->
                 <div id="recap-sales" class="sub-section active">
                     <h3 style="margin-bottom: 15px; color: #667eea;">📦 Historique des Ventes</h3>
+                    
+                    <!-- Stats récapitulatif ventes -->
+                    <div class="stats-row" style="margin-bottom: 20px;">
+                        <div class="stat-item">
+                            <div class="stat-value" id="recapSalesCount">0</div>
+                            <div class="stat-label">Ventes</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="recapSalesTotal">0 CFA</div>
+                            <div class="stat-label">CA Total</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="recapTotalQuantity">0</div>
+                            <div class="stat-label">Total Cartons</div>
+                        </div>
+                    </div>
+                    
                     <div style="overflow-x: auto;">
                         <table class="data-table">
                             <thead>
@@ -1192,6 +1206,23 @@
                 <!-- Sous-section Encaissements -->
                 <div id="recap-payments" class="sub-section">
                     <h3 style="margin-bottom: 15px; color: #667eea;">💰 Historique des Encaissements</h3>
+                    
+                    <!-- Stats récapitulatif encaissements -->
+                    <div class="stats-row" style="margin-bottom: 20px;">
+                        <div class="stat-item">
+                            <div class="stat-value" id="recapPaymentsCount">0</div>
+                            <div class="stat-label">Encaissements</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="recapPaymentsTotal">0 CFA</div>
+                            <div class="stat-label">Total Encaissé</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="recapBalance">0 CFA</div>
+                            <div class="stat-label">Solde</div>
+                        </div>
+                    </div>
+                    
                     <div style="overflow-x: auto;">
                         <table class="data-table">
                             <thead>
@@ -2172,6 +2203,27 @@
         function updateRecapDisplay() {
             updateSalesRecapTable();
             updatePaymentsRecapTable();
+            updateRecapStats();
+        }
+
+        function updateRecapStats() {
+            // Stats ventes récapitulatif
+            const salesCount = filteredRecapSales.length;
+            const salesTotal = filteredRecapSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+            const totalQuantity = filteredRecapSales.reduce((sum, sale) => sum + (parseFloat(sale.quantity) || 0), 0);
+            
+            document.getElementById('recapSalesCount').textContent = salesCount;
+            document.getElementById('recapSalesTotal').textContent = formatCurrency(salesTotal);
+            document.getElementById('recapTotalQuantity').textContent = Math.round(totalQuantity);
+            
+            // Stats encaissements récapitulatif
+            const paymentsCount = filteredRecapPayments.length;
+            const paymentsTotal = filteredRecapPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const balance = salesTotal - paymentsTotal;
+            
+            document.getElementById('recapPaymentsCount').textContent = paymentsCount;
+            document.getElementById('recapPaymentsTotal').textContent = formatCurrency(paymentsTotal);
+            document.getElementById('recapBalance').textContent = formatCurrency(balance);
         }
 
         function updateSalesRecapTable() {
@@ -3086,18 +3138,41 @@
         function updateKPIs() {
             const totalRevenue = filteredData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
             const totalSales = filteredData.length;
-            const totalPayments = paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            const avgSale = totalSales > 0 ? totalRevenue / totalSales : 0;
             
-            // Calcul de l'en-cours sur TOUTES les données (non filtré)
+            // Calculer les encaissements filtrés selon les mêmes critères que les ventes
+            const dateStart = document.getElementById('dateStart').value;
+            const dateEnd = document.getElementById('dateEnd').value;
+            const clientFilter = document.getElementById('clientFilter').value;
+            
+            const filteredPayments = paymentsData.filter(payment => {
+                let include = true;
+                
+                if (dateStart || dateEnd) {
+                    const paymentDate = parseDate(payment.date);
+                    if (paymentDate) {
+                        if (dateStart && paymentDate < new Date(dateStart)) include = false;
+                        if (dateEnd && paymentDate > new Date(dateEnd + 'T23:59:59')) include = false;
+                    }
+                }
+                
+                if (clientFilter && payment.client !== clientFilter) include = false;
+                
+                return include;
+            });
+            
+            const totalPayments = filteredPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const filteredOutstanding = totalRevenue - totalPayments;
+            
+            // Calcul de l'en-cours global (non filtré) pour comparaison
             const totalAllSales = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
-            const totalOutstanding = totalAllSales - totalPayments;
+            const totalAllPayments = paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const totalOutstanding = totalAllSales - totalAllPayments;
             
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
             document.getElementById('totalSales').textContent = totalSales;
             document.getElementById('totalPayments').textContent = formatCurrency(totalPayments);
             document.getElementById('totalOutstanding').textContent = formatCurrency(totalOutstanding);
-            document.getElementById('avgSale').textContent = formatCurrency(avgSale);
+            document.getElementById('filteredOutstanding').textContent = formatCurrency(filteredOutstanding);
         }
 
         function updateCharts() {
@@ -3328,13 +3403,6 @@
             updatePaymentsDisplay();
             updateClientsSummaryTable();
             showAlert('📊 Données actualisées avec succès', 'success');
-        }
-
-        // Fonction de test pour vérifier les messages
-        function testAlerts() {
-            showAlert('✅ Test message de succès', 'success');
-            setTimeout(() => showAlert('⚠️ Test message d\'avertissement', 'warning'), 1000);
-            setTimeout(() => showAlert('ℹ️ Test message d\'information', 'info'), 2000);
         }
 
         // Export
