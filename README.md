@@ -12,7 +12,7 @@ Dashboard professionnel pour le suivi des ventes KAMLAC Food Industry.
 
 ## 🌐 Accès
 
-Visitez : https://votrenom.github.io/kamlac-dashboard/
+[Visitez : https://votrenom.github.io/kamlac-dashboard/](https://jta873.github.io/kamlac-dashboard/)
 
 ## 🔧 Installation
 
