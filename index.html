@@ -1065,12 +1065,12 @@
                 <div class="kpi-card">
                     <div class="kpi-icon">⚠️</div>
                     <div class="kpi-value" id="totalOutstanding">0 CFA</div>
-                    <div class="kpi-label">Compte Client (Toute période)</div>
+                    <div class="kpi-label">En-cours (Global)</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon">📋</div>
                     <div class="kpi-value" id="filteredOutstanding">0 CFA</div>
-                    <div class="kpi-label">Compte Client (Filtré)</div>
+                    <div class="kpi-label">En-cours (Filtré)</div>
                 </div>
             </div>
             
@@ -1142,12 +1142,6 @@
                             <label for="recapProductFilter">Produit</label>
                             <select id="recapProductFilter" onchange="applyRecapFilters()">
                                 <option value="">Tous les produits</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="recapInvoiceFilter">Facture</label>
-                            <select id="recapInvoiceFilter" onchange="applyRecapFilters()">
-                                <option value="">Toutes les factures</option>
                             </select>
                         </div>
                         <div class="filter-group">
@@ -2117,16 +2111,11 @@
             // Produits
             const products = [...new Set(salesData.map(sale => sale.product).filter(p => p))].sort();
             populateSelect('recapProductFilter', products, 'Tous les produits');
-            
-            // Factures
-            const invoices = [...new Set(salesData.map(sale => sale.invoice).filter(i => i))].sort();
-            populateSelect('recapInvoiceFilter', invoices, 'Toutes les factures');
         }
 
         function applyRecapFilters() {
             const clientFilter = document.getElementById('recapClientFilter').value;
             const productFilter = document.getElementById('recapProductFilter').value;
-            const invoiceFilter = document.getElementById('recapInvoiceFilter').value;
             const dateStart = document.getElementById('recapDateStart').value;
             const dateEnd = document.getElementById('recapDateEnd').value;
             
@@ -2136,7 +2125,6 @@
                 
                 if (clientFilter && sale.client !== clientFilter) include = false;
                 if (productFilter && sale.product !== productFilter) include = false;
-                if (invoiceFilter && sale.invoice !== invoiceFilter) include = false;
                 
                 if (dateStart || dateEnd) {
                     const saleDate = parseDate(sale.date);
@@ -2172,7 +2160,6 @@
         function resetRecapFilters() {
             document.getElementById('recapClientFilter').value = '';
             document.getElementById('recapProductFilter').value = '';
-            document.getElementById('recapInvoiceFilter').value = '';
             document.getElementById('recapDateStart').value = '';
             document.getElementById('recapDateEnd').value = '';
             applyRecapFilters();
@@ -3033,49 +3020,18 @@
             
             // Encaissements filtrés (responsive aux filtres)
             const totalFilteredPayments = filteredPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            const filteredOutstanding = totalRevenue - totalFilteredPayments; // CA - Encaissements (logique standard)
+            const filteredOutstanding = totalFilteredPayments - totalRevenue; // Inversé : Encaissements - CA
             
             // Calcul de l'en-cours global (non filtré) pour comparaison
             const totalAllSales = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
             const totalAllPayments = paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            const totalOutstanding = totalAllSales - totalAllPayments; // CA - Encaissements (logique standard)
+            const totalOutstanding = totalAllSales - totalAllPayments;
             
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
             document.getElementById('totalSales').textContent = totalSales;
             document.getElementById('totalPayments').textContent = formatCurrency(totalFilteredPayments); // Maintenant filtré
-            
-            // Affichage avec indication claire et couleurs
-            updateAccountBalanceDisplay('totalOutstanding', totalOutstanding);
-            updateAccountBalanceDisplay('filteredOutstanding', filteredOutstanding);
-        }
-
-        function updateAccountBalanceDisplay(elementId, value) {
-            const element = document.getElementById(elementId);
-            if (!element) return;
-            
-            const absValue = Math.abs(value);
-            const formattedValue = new Intl.NumberFormat('fr-FR', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-            }).format(absValue) + ' CFA';
-            
-            if (value > 0) {
-                // Positif = Client DOIT de l'argent (à recevoir)
-                element.textContent = `+${formattedValue}`;
-                element.style.color = '#dc3545'; // Rouge
-                element.title = 'Montant à recevoir du client';
-            } else if (value < 0) {
-                // Négatif = Client en AVANCE (crédit client)
-                element.textContent = `-${formattedValue}`;
-                element.style.color = '#28a745'; // Vert
-                element.title = 'Crédit client (payé en avance)';
-            } else {
-                // Zéro = Soldé
-                element.textContent = formattedValue;
-                element.style.color = '#6c757d'; // Gris
-                element.title = 'Comptes soldés';
-            }
-        }
+            document.getElementById('totalOutstanding').textContent = formatCurrency(totalOutstanding);
+            document.getElementById('filteredOutstanding').textContent = formatCurrency(filteredOutstanding);
         }
 
         function updateCharts() {
