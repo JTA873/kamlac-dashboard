@@ -1065,12 +1065,12 @@
                 <div class="kpi-card">
                     <div class="kpi-icon">⚠️</div>
                     <div class="kpi-value" id="totalOutstanding">0 CFA</div>
-                    <div class="kpi-label">En-cours (Global)</div>
+                    <div class="kpi-label">Compte client toute période</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon">📋</div>
                     <div class="kpi-value" id="filteredOutstanding">0 CFA</div>
-                    <div class="kpi-label">En-cours (Filtré)</div>
+                    <div class="kpi-label">Compte client filtré</div>
                 </div>
             </div>
             
@@ -1143,6 +1143,10 @@
                             <select id="recapProductFilter" onchange="applyRecapFilters()">
                                 <option value="">Tous les produits</option>
                             </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="recapInvoiceFilter">N° Facture</label>
+                            <input type="text" id="recapInvoiceFilter" placeholder="Numéro de facture" onchange="applyRecapFilters()" oninput="applyRecapFilters()">
                         </div>
                         <div class="filter-group">
                             <label for="recapDateStart">Date début</label>
@@ -2116,6 +2120,7 @@
         function applyRecapFilters() {
             const clientFilter = document.getElementById('recapClientFilter').value;
             const productFilter = document.getElementById('recapProductFilter').value;
+            const invoiceFilter = document.getElementById('recapInvoiceFilter').value.trim().toLowerCase();
             const dateStart = document.getElementById('recapDateStart').value;
             const dateEnd = document.getElementById('recapDateEnd').value;
             
@@ -2125,6 +2130,7 @@
                 
                 if (clientFilter && sale.client !== clientFilter) include = false;
                 if (productFilter && sale.product !== productFilter) include = false;
+                if (invoiceFilter && (!sale.invoice || !sale.invoice.toLowerCase().includes(invoiceFilter))) include = false;
                 
                 if (dateStart || dateEnd) {
                     const saleDate = parseDate(sale.date);
@@ -2160,6 +2166,7 @@
         function resetRecapFilters() {
             document.getElementById('recapClientFilter').value = '';
             document.getElementById('recapProductFilter').value = '';
+            document.getElementById('recapInvoiceFilter').value = '';
             document.getElementById('recapDateStart').value = '';
             document.getElementById('recapDateEnd').value = '';
             applyRecapFilters();
@@ -3020,18 +3027,33 @@
             
             // Encaissements filtrés (responsive aux filtres)
             const totalFilteredPayments = filteredPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            const filteredOutstanding = totalFilteredPayments - totalRevenue; // Inversé : Encaissements - CA
+            const filteredOutstanding = totalRevenue - totalFilteredPayments; // Cohérent : Ventes - Encaissements
             
-            // Calcul de l'en-cours global (non filtré) pour comparaison
+            // Calcul de l'en-cours global (non filtré) - même logique
             const totalAllSales = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
             const totalAllPayments = paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            const totalOutstanding = totalAllSales - totalAllPayments;
+            const totalOutstanding = totalAllSales - totalAllPayments; // Cohérent : Ventes - Encaissements
+            
+            // Formatage des montants avec indication explicite
+            const formattedTotalOutstanding = formatAccountBalance(totalOutstanding);
+            const formattedFilteredOutstanding = formatAccountBalance(filteredOutstanding);
             
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
             document.getElementById('totalSales').textContent = totalSales;
             document.getElementById('totalPayments').textContent = formatCurrency(totalFilteredPayments); // Maintenant filtré
-            document.getElementById('totalOutstanding').textContent = formatCurrency(totalOutstanding);
-            document.getElementById('filteredOutstanding').textContent = formatCurrency(filteredOutstanding);
+            document.getElementById('totalOutstanding').textContent = formattedTotalOutstanding;
+            document.getElementById('filteredOutstanding').textContent = formattedFilteredOutstanding;
+        }
+
+        // Fonction pour formater les montants de compte client de manière explicite
+        function formatAccountBalance(amount) {
+            if (amount > 0) {
+                return `À recevoir: ${formatCurrency(amount)}`;
+            } else if (amount < 0) {
+                return `Crédit client: ${formatCurrency(Math.abs(amount))}`;
+            } else {
+                return `Soldé: ${formatCurrency(0)}`;
+            }
         }
 
         function updateCharts() {
