@@ -3020,7 +3020,7 @@
             
             // Encaissements filtrés (responsive aux filtres)
             const totalFilteredPayments = filteredPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            const filteredOutstanding = totalRevenue - totalFilteredPayments;
+            const filteredOutstanding = totalFilteredPayments - totalRevenue; // Inversé : Encaissements - CA
             
             // Calcul de l'en-cours global (non filtré) pour comparaison
             const totalAllSales = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
@@ -3751,4 +3751,4 @@
         });
     </script>
 </body>
-</html> 
+</html>
