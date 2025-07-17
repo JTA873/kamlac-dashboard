@@ -881,10 +881,17 @@
             font-size: 12px;
             user-select: none;
             transition: all 0.2s ease;
+            padding: 4px;
+            border-radius: 3px;
         }
 
         .dropdown-arrow:hover {
             color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .dropdown-arrow:active {
+            background: #e9ecef;
         }
 
         .custom-dropdown {
@@ -975,7 +982,7 @@
                 gap: 12px;
             }
             
-            .charts-grid > div:last-child {
+            .charts-grid > div:first-child {
                 grid-template-columns: 1fr !important;
             }
             
@@ -1082,10 +1089,10 @@
         </div>
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showSection('dashboard')">📈 Dashboard</button>
-            <button class="nav-tab" onclick="showSection('clients')">👥 En-cours client</button>
+            <button class="nav-tab" onclick="showSection('clients')">👥 Compte client</button>
             <button class="nav-tab" onclick="showSection('recap')">📋 Récap.</button>
-            <button class="nav-tab" onclick="showSection('sales')">💼 Ventes</button>
-            <button class="nav-tab" onclick="showSection('payments')">💰 Encaissements</button>
+            <button class="nav-tab" onclick="showSection('sales')">💼 + Vente</button>
+            <button class="nav-tab" onclick="showSection('payments')">💰 + Encaisser</button>
             <button class="nav-tab" onclick="showSection('settings')">⚙️ Paramètres</button>
         </div>
         
@@ -1106,9 +1113,6 @@
                         <select id="clientFilter" onchange="applyFilters()">
                             <option value="">Tous les clients</option>
                         </select>
-                    </div>
-                    <div class="filter-group">
-                        <button class="btn btn-primary" onclick="refreshData()" title="Actualiser les données">🔄</button>
                     </div>
                     <div class="filter-group">
                         <button class="btn btn-info" onclick="setAllTimeFilters()">📅 Toutes périodes</button>
@@ -1147,13 +1151,7 @@
             </div>
             
             <div class="charts-grid">
-                <div class="chart-card">
-                    <h3 class="chart-title">📈 Évolution CA vs Encaissements</h3>
-                    <div class="chart-container tall">
-                        <canvas id="evolutionChart"></canvas>
-                    </div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div class="chart-card">
                         <h3 class="chart-title">📦 CA par Article</h3>
                         <div class="chart-container">
@@ -1181,6 +1179,12 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">📈 Évolution CA vs Encaissements</h3>
+                    <div class="chart-container tall">
+                        <canvas id="evolutionChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -1334,7 +1338,7 @@
                             <label for="invoiceClient">Client *</label>
                             <div class="input-container">
                                 <input type="text" id="invoiceClient" placeholder="Nom du client" required autocomplete="off" oninput="showCustomDropdown(this, 'clients')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)">
-                                <span class="dropdown-arrow" onclick="toggleCustomDropdown(document.getElementById('invoiceClient'), 'clients')">▼</span>
+                                <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'invoiceClient', 'clients')">▼</span>
                                 <div class="custom-dropdown" id="invoiceClientDropdown"></div>
                             </div>
                         </div>
@@ -1398,7 +1402,7 @@
                             <label for="paymentClient">Client *</label>
                             <div class="input-container">
                                 <input type="text" id="paymentClient" placeholder="Nom du client" required autocomplete="off" oninput="showCustomDropdown(this, 'clients')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)">
-                                <span class="dropdown-arrow" onclick="toggleCustomDropdown(document.getElementById('paymentClient'), 'clients')">▼</span>
+                                <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'paymentClient', 'clients')">▼</span>
                                 <div class="custom-dropdown" id="paymentClientDropdown"></div>
                             </div>
                         </div>
@@ -1939,12 +1943,29 @@
             const dropdown = document.getElementById(dropdownId);
             if (!dropdown) return;
             
+            // Fermer tous les autres dropdowns ouverts
+            document.querySelectorAll('.custom-dropdown').forEach(dd => {
+                if (dd.id !== dropdownId) {
+                    dd.style.display = 'none';
+                }
+            });
+            
             if (dropdown.style.display === 'block') {
                 dropdown.style.display = 'none';
             } else {
                 input.value = '';
-                showCustomDropdown(input, type);
                 input.focus();
+                showCustomDropdown(input, type);
+            }
+        }
+
+        // Fonction pour gérer les clics sur les flèches avec gestion des événements
+        function handleDropdownArrowClick(event, inputId, type) {
+            event.preventDefault();
+            event.stopPropagation();
+            const input = document.getElementById(inputId);
+            if (input) {
+                toggleCustomDropdown(input, type);
             }
         }
 
@@ -2467,7 +2488,7 @@
                             <label>Produit *</label>
                             <div class="input-container">
                                 <input type="text" id="productLine${line.id}" data-line-id="${line.id}" placeholder="Rechercher un produit..." value="${line.product ? productsList.find(p => p.id == line.productId)?.displayText || line.product : ''}" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)" required>
-                                <span class="dropdown-arrow" onclick="toggleCustomDropdown(document.getElementById('productLine${line.id}'), 'products')">▼</span>
+                                <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'productLine${line.id}', 'products')">▼</span>
                                 <div class="custom-dropdown" id="productLine${line.id}Dropdown"></div>
                             </div>
                         </div>
