@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>📊 KAMLAC - Gestion Clients Pro</title>
+    <title>📊 KAMLAC - Gestion Clients</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -85,209 +84,6 @@
             border: 1px solid #b8daff;
         }
         
-        /* Barre de raccourcis */
-        .shortcuts-bar {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: white;
-            padding: 10px;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-            z-index: 1000;
-            display: none;
-            font-size: 12px;
-            max-width: 250px;
-        }
-        
-        .shortcuts-bar.visible {
-            display: block;
-            animation: slideInRight 0.3s ease-out;
-        }
-        
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .shortcuts-bar h4 {
-            color: #667eea;
-            margin-bottom: 8px;
-            font-size: 13px;
-        }
-        
-        .shortcut-item {
-            display: flex;
-            justify-content: space-between;
-            margin: 4px 0;
-            color: #666;
-        }
-        
-        .shortcut-key {
-            background: #f0f0f0;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 11px;
-        }
-        
-        /* Alertes en temps réel */
-        .alerts-panel {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            max-width: 350px;
-            z-index: 9999;
-        }
-        
-        .alert-item {
-            background: white;
-            border-left: 4px solid #ffc107;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            animation: slideInLeft 0.3s ease-out;
-        }
-        
-        .alert-urgent {
-            border-left-color: #dc3545;
-            background: #fff5f5;
-        }
-        
-        .alert-info {
-            border-left-color: #17a2b8;
-            background: #f0f9ff;
-        }
-        
-        @keyframes slideInLeft {
-            from { transform: translateX(-100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        /* Recherche intelligente */
-        .smart-search {
-            position: relative;
-        }
-        
-        .search-suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #e9ecef;
-            border-top: none;
-            border-radius: 0 0 8px 8px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 100;
-            display: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .suggestion-item {
-            padding: 10px 12px;
-            cursor: pointer;
-            transition: background 0.2s;
-            border-bottom: 1px solid #f8f9fa;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .suggestion-item:hover,
-        .suggestion-item.highlighted {
-            background: #f8f9fa;
-        }
-        
-        .suggestion-item.selected {
-            background: #667eea;
-            color: white;
-        }
-        
-        .suggestion-icon {
-            font-size: 12px;
-            opacity: 0.7;
-        }
-        
-        .suggestion-text {
-            flex: 1;
-            font-size: 14px;
-        }
-        
-        .suggestion-meta {
-            font-size: 11px;
-            opacity: 0.7;
-        }
-        
-        /* Mode offline */
-        .offline-indicator {
-            position: fixed;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #ffc107;
-            color: #856404;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            z-index: 10000;
-            display: none;
-            animation: bounceIn 0.5s ease-out;
-        }
-        
-        .offline-indicator.visible {
-            display: block;
-        }
-        
-        @keyframes bounceIn {
-            0% { transform: translateX(-50%) scale(0.3); opacity: 0; }
-            50% { transform: translateX(-50%) scale(1.05); }
-            70% { transform: translateX(-50%) scale(0.9); }
-            100% { transform: translateX(-50%) scale(1); opacity: 1; }
-        }
-        
-        /* Prévisions */
-        .forecast-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .forecast-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .forecast-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-        }
-        
-        .forecast-item {
-            text-align: center;
-        }
-        
-        .forecast-value {
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-        
-        .forecast-label {
-            font-size: 0.85rem;
-            opacity: 0.9;
-        }
-        
         .nav-tabs {
             display: flex;
             justify-content: center;
@@ -311,7 +107,6 @@
             min-width: 44px;
             touch-action: manipulation;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            position: relative;
         }
         
         .nav-tab:hover, .nav-tab:active {
@@ -326,18 +121,6 @@
             background: #667eea;
             color: white;
             border-color: #667eea;
-        }
-        
-        .nav-tab .shortcut-hint {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: #ffc107;
-            color: #333;
-            font-size: 10px;
-            padding: 2px 4px;
-            border-radius: 4px;
-            font-weight: 700;
         }
         
         .section {
@@ -1286,22 +1069,6 @@
                 min-width: 120px;
                 text-align: center;
             }
-            
-            .shortcuts-bar {
-                bottom: 10px;
-                right: 10px;
-                max-width: 200px;
-            }
-            
-            .alerts-panel {
-                top: 10px;
-                left: 10px;
-                max-width: 280px;
-            }
-            
-            .forecast-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
         }
         
         @media (max-width: 480px) {
@@ -1326,114 +1093,27 @@
             .stats-row {
                 grid-template-columns: 1fr;
             }
-            
-            .forecast-grid {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Indicateur mode offline -->
-        <div class="offline-indicator" id="offlineIndicator">
-            📱 Mode hors-ligne - Synchronisation automatique au retour en ligne
-        </div>
-        
-        <!-- Panel d'alertes -->
-        <div class="alerts-panel" id="alertsPanel">
-            <!-- Les alertes apparaîtront ici -->
-        </div>
-        
-        <!-- Barre de raccourcis -->
-        <div class="shortcuts-bar" id="shortcutsBar">
-            <h4>⌨️ Raccourcis</h4>
-            <div class="shortcut-item">
-                <span>Sauvegarder</span>
-                <span class="shortcut-key">Ctrl+S</span>
-            </div>
-            <div class="shortcut-item">
-                <span>Nouvelle vente</span>
-                <span class="shortcut-key">Ctrl+N</span>
-            </div>
-            <div class="shortcut-item">
-                <span>Export rapide</span>
-                <span class="shortcut-key">Ctrl+E</span>
-            </div>
-            <div class="shortcut-item">
-                <span>Dashboard</span>
-                <span class="shortcut-key">Ctrl+1</span>
-            </div>
-            <div class="shortcut-item">
-                <span>Clients</span>
-                <span class="shortcut-key">Ctrl+2</span>
-            </div>
-            <div class="shortcut-item">
-                <span>Masquer aide</span>
-                <span class="shortcut-key">Ctrl+H</span>
-            </div>
-        </div>
-        
         <div class="header">
-            <h1>📊 KAMLAC - Suivi Clients Pro</h1>
+            <h1>📊 KAMLAC - Suivi Clients</h1>
             <div class="last-update" id="lastUpdate">Dernière mise à jour: --</div>
             <span class="cloud-status" id="cloudStatus">🔄 Initialisation...</span>
         </div>
         <div class="nav-tabs">
-            <button class="nav-tab active" onclick="showSection('dashboard')">
-                📈 Dashboard
-                <span class="shortcut-hint">1</span>
-            </button>
-            <button class="nav-tab" onclick="showSection('clients')">
-                👥 Clients
-                <span class="shortcut-hint">2</span>
-            </button>
-            <button class="nav-tab" onclick="showSection('recap')">
-                📋 Récap.
-                <span class="shortcut-hint">3</span>
-            </button>
-            <button class="nav-tab" onclick="showSection('sales')">
-                💼 + Vente
-                <span class="shortcut-hint">4</span>
-            </button>
-            <button class="nav-tab" onclick="showSection('payments')">
-                💰 + Encaisser
-                <span class="shortcut-hint">5</span>
-            </button>
-            <button class="nav-tab" onclick="showSection('settings')">
-                ⚙️ Paramètres
-                <span class="shortcut-hint">6</span>
-            </button>
+            <button class="nav-tab active" onclick="showSection('dashboard')">📈 Dashboard</button>
+            <button class="nav-tab" onclick="showSection('clients')">👥 Compte client</button>
+            <button class="nav-tab" onclick="showSection('recap')">📋 Récap.</button>
+            <button class="nav-tab" onclick="showSection('sales')">💼 + Vente</button>
+            <button class="nav-tab" onclick="showSection('payments')">💰 + Encaisser</button>
+            <button class="nav-tab" onclick="showSection('settings')">⚙️ Paramètres</button>
         </div>
         
         <!-- Dashboard Section -->
         <div id="dashboard" class="section active">
-            <!-- Prévisions de trésorerie -->
-            <div class="forecast-card">
-                <div class="forecast-title">
-                    <span>🔮</span>
-                    <span>Prévisions de Trésorerie (30 jours)</span>
-                </div>
-                <div class="forecast-grid">
-                    <div class="forecast-item">
-                        <div class="forecast-value" id="forecastSales">0 CFA</div>
-                        <div class="forecast-label">Ventes prévues</div>
-                    </div>
-                    <div class="forecast-item">
-                        <div class="forecast-value" id="forecastPayments">0 CFA</div>
-                        <div class="forecast-label">Encaissements attendus</div>
-                    </div>
-                    <div class="forecast-item">
-                        <div class="forecast-value" id="forecastBalance">0 CFA</div>
-                        <div class="forecast-label">Solde prévu</div>
-                    </div>
-                    <div class="forecast-item">
-                        <div class="forecast-value" id="forecastTrend">+0%</div>
-                        <div class="forecast-label">Tendance</div>
-                    </div>
-                </div>
-            </div>
-            
             <div class="filters-section">
                 <div class="filters-grid">
                     <div class="filter-group">
@@ -1446,11 +1126,9 @@
                     </div>
                     <div class="filter-group">
                         <label for="clientFilter">Client</label>
-                        <div class="smart-search">
-                            <select id="clientFilter" onchange="applyFilters()">
-                                <option value="">Tous les clients</option>
-                            </select>
-                        </div>
+                        <select id="clientFilter" onchange="applyFilters()">
+                            <option value="">Tous les clients</option>
+                        </select>
                     </div>
                     <div class="filter-group">
                         <button class="btn btn-info" onclick="setAllTimeFilters()">📅 Toutes périodes</button>
@@ -1674,10 +1352,10 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="invoiceClient">Client *</label>
-                            <div class="input-container smart-search">
-                                <input type="text" id="invoiceClient" placeholder="Nom du client" required autocomplete="off" oninput="showSmartSuggestions(this, 'clients')" onblur="hideSmartSuggestions(this)" onkeydown="handleSuggestionKeydown(event, this)">
+                            <div class="input-container">
+                                <input type="text" id="invoiceClient" placeholder="Nom du client" required autocomplete="off" oninput="showCustomDropdown(this, 'clients')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)">
                                 <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'invoiceClient', 'clients')">▼</span>
-                                <div class="search-suggestions" id="invoiceClientSuggestions"></div>
+                                <div class="custom-dropdown" id="invoiceClientDropdown"></div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -1720,7 +1398,6 @@
                         </div>
                         <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
                             <button class="btn btn-primary" onclick="saveInvoice()" style="flex: 1; min-width: 150px;">💾 Enregistrer</button>
-                            <button class="btn btn-info" onclick="generateInvoicePDF()" style="flex: 1; min-width: 150px;">📄 Générer PDF</button>
                             <button class="btn btn-warning" onclick="clearInvoice()" style="flex: 1; min-width: 150px;">🔄 Nouvelle</button>
                         </div>
                     </div>
@@ -1739,10 +1416,10 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="paymentClient">Client *</label>
-                            <div class="input-container smart-search">
-                                <input type="text" id="paymentClient" placeholder="Nom du client" required autocomplete="off" oninput="showSmartSuggestions(this, 'clients')" onblur="hideSmartSuggestions(this)" onkeydown="handleSuggestionKeydown(event, this)">
+                            <div class="input-container">
+                                <input type="text" id="paymentClient" placeholder="Nom du client" required autocomplete="off" oninput="showCustomDropdown(this, 'clients')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)">
                                 <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'paymentClient', 'clients')">▼</span>
-                                <div class="search-suggestions" id="paymentClientSuggestions"></div>
+                                <div class="custom-dropdown" id="paymentClientDropdown"></div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -2005,10 +1682,6 @@
         let editingPaymentId = null;
         let clientsList = [];
         let productsList = [];
-        let isOnline = navigator.onLine;
-        let pendingSync = [];
-        let autoSaveTimer = null;
-        let currentSuggestionIndex = -1;
 
         // Configuration Firebase
         const firebaseConfig = {
@@ -2024,18 +1697,6 @@
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
-            setupKeyboardShortcuts();
-            setupOfflineMode();
-            setupAutoSave();
-            setupSmartAlerts();
-            
-            // Afficher l'aide des raccourcis après 3 secondes
-            setTimeout(() => {
-                if (!localStorage.getItem('shortcutsShown')) {
-                    showShortcutsHelp();
-                    localStorage.setItem('shortcutsShown', 'true');
-                }
-            }, 3000);
         });
 
         function initializeApp() {
@@ -2058,593 +1719,12 @@
             updatePaymentsDisplay();
             setTodayForNewInvoice();
             updateClientsSummaryTable();
-            updateForecast();
         }
-
-        // ==== NOUVELLES FONCTIONNALITÉS ====
-
-        // 1. RACCOURCIS CLAVIER
-        function setupKeyboardShortcuts() {
-            document.addEventListener('keydown', (e) => {
-                // Ignore si on tape dans un input
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-                    return;
-                }
-                
-                // Ctrl/Cmd + S = Sauvegarder
-                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                    e.preventDefault();
-                    const activeSection = document.querySelector('.section.active');
-                    if (activeSection?.id === 'sales') {
-                        saveInvoice();
-                        showAlert('💾 Facture sauvegardée (Ctrl+S)', 'success');
-                    } else if (activeSection?.id === 'payments') {
-                        savePayment();
-                        showAlert('💰 Encaissement sauvegardé (Ctrl+S)', 'success');
-                    }
-                }
-                
-                // Échap = Fermer modales
-                if (e.key === 'Escape') {
-                    closeProductModal();
-                    closeEditSaleModal();
-                    closeEditPaymentModal();
-                    hideShortcutsHelp();
-                }
-                
-                // Ctrl + N = Nouvelle vente
-                if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-                    e.preventDefault();
-                    showSection('sales');
-                    clearInvoice();
-                    showAlert('➕ Nouvelle vente (Ctrl+N)', 'info');
-                }
-                
-                // Ctrl + E = Export rapide
-                if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
-                    e.preventDefault();
-                    exportToCSV();
-                    showAlert('📊 Export en cours (Ctrl+E)', 'info');
-                }
-                
-                // Ctrl + H = Aide raccourcis
-                if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
-                    e.preventDefault();
-                    toggleShortcutsHelp();
-                }
-                
-                // Ctrl + 1-6 = Navigation
-                if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '6') {
-                    e.preventDefault();
-                    const sections = ['dashboard', 'clients', 'recap', 'sales', 'payments', 'settings'];
-                    const sectionIndex = parseInt(e.key) - 1;
-                    if (sections[sectionIndex]) {
-                        showSection(sections[sectionIndex]);
-                        showAlert(`📱 ${sections[sectionIndex]} (Ctrl+${e.key})`, 'info');
-                    }
-                }
-            });
-        }
-
-        function showShortcutsHelp() {
-            document.getElementById('shortcutsBar').classList.add('visible');
-        }
-
-        function hideShortcutsHelp() {
-            document.getElementById('shortcutsBar').classList.remove('visible');
-        }
-
-        function toggleShortcutsHelp() {
-            const bar = document.getElementById('shortcutsBar');
-            if (bar.classList.contains('visible')) {
-                hideShortcutsHelp();
-            } else {
-                showShortcutsHelp();
-            }
-        }
-
-        // 2. MODE HORS-LIGNE
-        function setupOfflineMode() {
-            // Détecter les changements de connexion
-            window.addEventListener('online', () => {
-                isOnline = true;
-                document.getElementById('offlineIndicator').classList.remove('visible');
-                updateCloudStatus('syncing', '🔄 Synchronisation...');
-                syncPendingData();
-                showAlert('🌐 Connexion rétablie - Synchronisation en cours', 'success');
-            });
-            
-            window.addEventListener('offline', () => {
-                isOnline = false;
-                document.getElementById('offlineIndicator').classList.add('visible');
-                updateCloudStatus('offline', '❌ Hors-ligne');
-                showAlert('📱 Mode hors-ligne activé', 'warning');
-            });
-            
-            // État initial
-            if (!isOnline) {
-                document.getElementById('offlineIndicator').classList.add('visible');
-            }
-        }
-
-        function addToPendingSync(action, collection, data) {
-            if (!isOnline) {
-                pendingSync.push({ action, collection, data, timestamp: Date.now() });
-                localStorage.setItem('pendingSync', JSON.stringify(pendingSync));
-            }
-        }
-
-        async function syncPendingData() {
-            if (!isFirebaseInitialized || pendingSync.length === 0) {
-                updateCloudStatus('online', '☁️ Sync');
-                return;
-            }
-            
-            try {
-                for (const item of pendingSync) {
-                    if (item.action === 'add' || item.action === 'update') {
-                        await db.collection(item.collection).doc(item.data.id.toString()).set({
-                            ...item.data,
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    } else if (item.action === 'delete') {
-                        await db.collection(item.collection).doc(item.data.id.toString()).delete();
-                    }
-                }
-                
-                pendingSync = [];
-                localStorage.removeItem('pendingSync');
-                updateCloudStatus('online', '☁️ Sync');
-                showAlert('✅ Synchronisation terminée', 'success');
-            } catch (error) {
-                console.error('Erreur sync:', error);
-                updateCloudStatus('offline', '❌ Erreur sync');
-            }
-        }
-
-        // 3. RECHERCHE INTELLIGENTE
-        function showSmartSuggestions(input, type) {
-            const suggestionsId = input.id + 'Suggestions';
-            const suggestionsContainer = document.getElementById(suggestionsId);
-            if (!suggestionsContainer) return;
-            
-            const inputValue = input.value.toLowerCase().trim();
-            let suggestions = [];
-            
-            if (type === 'clients') {
-                suggestions = fuzzySearchClients(inputValue);
-            } else if (type === 'products') {
-                suggestions = fuzzySearchProducts(inputValue);
-            }
-            
-            // Afficher les suggestions
-            if (inputValue.length > 0 && suggestions.length > 0) {
-                suggestionsContainer.innerHTML = '';
-                
-                suggestions.slice(0, 8).forEach((suggestion, index) => {
-                    const suggestionDiv = document.createElement('div');
-                    suggestionDiv.className = 'suggestion-item';
-                    
-                    if (type === 'clients') {
-                        const balance = getClientBalance(suggestion.name);
-                        const balanceText = balance > 0 ? `Doit: ${formatCurrency(balance)}` : 
-                                          balance < 0 ? `Crédit: ${formatCurrency(Math.abs(balance))}` : 'Soldé';
-                        
-                        suggestionDiv.innerHTML = `
-                            <span class="suggestion-icon">👤</span>
-                            <span class="suggestion-text">${suggestion.name}</span>
-                            <span class="suggestion-meta">${balanceText}</span>
-                        `;
-                        suggestionDiv.onclick = () => selectClientSuggestion(input, suggestion.name, suggestionsContainer);
-                    } else if (type === 'products') {
-                        suggestionDiv.innerHTML = `
-                            <span class="suggestion-icon">📦</span>
-                            <span class="suggestion-text">${suggestion.name}</span>
-                            <span class="suggestion-meta">${formatCurrency(suggestion.price)}</span>
-                        `;
-                        suggestionDiv.onclick = () => selectProductSuggestion(input, suggestion, suggestionsContainer);
-                    }
-                    
-                    if (index === currentSuggestionIndex) {
-                        suggestionDiv.classList.add('selected');
-                    }
-                    
-                    suggestionsContainer.appendChild(suggestionDiv);
-                });
-                
-                suggestionsContainer.style.display = 'block';
-            } else {
-                suggestionsContainer.style.display = 'none';
-            }
-        }
-
-        function fuzzySearchClients(query) {
-            if (!query) return clientsList.slice(0, 8).map(name => ({ name, score: 1 }));
-            
-            const results = clientsList.map(name => {
-                const lowerName = name.toLowerCase();
-                let score = 0;
-                
-                // Recherche exacte
-                if (lowerName.includes(query)) {
-                    score = 100;
-                }
-                // Recherche par début de mot
-                else if (lowerName.startsWith(query)) {
-                    score = 80;
-                }
-                // Recherche fuzzy
-                else {
-                    let j = 0;
-                    for (let i = 0; i < lowerName.length && j < query.length; i++) {
-                        if (lowerName[i] === query[j]) j++;
-                    }
-                    score = j === query.length ? 60 : 0;
-                }
-                
-                return { name, score };
-            }).filter(item => item.score > 0)
-              .sort((a, b) => b.score - a.score);
-            
-            return results;
-        }
-
-        function fuzzySearchProducts(query) {
-            if (!query) return productsList.slice(0, 8);
-            
-            const results = productsList.map(product => {
-                const searchText = (product.name + ' ' + product.displayText).toLowerCase();
-                let score = 0;
-                
-                if (searchText.includes(query.toLowerCase())) {
-                    score = 100;
-                } else {
-                    let j = 0;
-                    for (let i = 0; i < searchText.length && j < query.length; i++) {
-                        if (searchText[i] === query[j]) j++;
-                    }
-                    score = j === query.length ? 60 : 0;
-                }
-                
-                return { ...product, score };
-            }).filter(item => item.score > 0)
-              .sort((a, b) => b.score - a.score);
-            
-            return results;
-        }
-
-        function selectClientSuggestion(input, clientName, container) {
-            input.value = clientName;
-            container.style.display = 'none';
-            currentSuggestionIndex = -1;
-        }
-
-        function selectProductSuggestion(input, product, container) {
-            input.value = product.displayText;
-            container.style.display = 'none';
-            currentSuggestionIndex = -1;
-            
-            // Mettre à jour la ligne de vente si applicable
-            const lineId = input.dataset.lineId;
-            if (lineId) {
-                const line = salesLines.find(l => l.id == lineId);
-                if (line) {
-                    line.productId = product.id;
-                    line.product = product.name;
-                    if (!line.priceManuallyEdited) {
-                        line.unitPrice = product.price;
-                    }
-                    line.totalPrice = line.quantity * line.unitPrice;
-                    renderSalesLines();
-                    updateInvoiceTotals();
-                }
-            }
-        }
-
-        function hideSmartSuggestions(input) {
-            setTimeout(() => {
-                const suggestionsId = input.id + 'Suggestions';
-                const container = document.getElementById(suggestionsId);
-                if (container) {
-                    container.style.display = 'none';
-                }
-                currentSuggestionIndex = -1;
-            }, 200);
-        }
-
-        function handleSuggestionKeydown(event, input) {
-            const suggestionsId = input.id + 'Suggestions';
-            const container = document.getElementById(suggestionsId);
-            if (!container || container.style.display === 'none') return;
-            
-            const options = container.querySelectorAll('.suggestion-item');
-            
-            if (event.key === 'ArrowDown') {
-                event.preventDefault();
-                currentSuggestionIndex = Math.min(currentSuggestionIndex + 1, options.length - 1);
-                updateSuggestionSelection(options);
-            } else if (event.key === 'ArrowUp') {
-                event.preventDefault();
-                currentSuggestionIndex = Math.max(currentSuggestionIndex - 1, -1);
-                updateSuggestionSelection(options);
-            } else if (event.key === 'Enter') {
-                event.preventDefault();
-                if (currentSuggestionIndex >= 0 && options[currentSuggestionIndex]) {
-                    options[currentSuggestionIndex].click();
-                }
-            } else if (event.key === 'Escape') {
-                container.style.display = 'none';
-                currentSuggestionIndex = -1;
-            }
-        }
-
-        function updateSuggestionSelection(options) {
-            options.forEach((option, index) => {
-                option.classList.toggle('selected', index === currentSuggestionIndex);
-            });
-        }
-
-        // 4. SAUVEGARDE AUTOMATIQUE
-        function setupAutoSave() {
-            // Sauvegarder automatiquement toutes les 30 secondes
-            setInterval(() => {
-                saveToLocalStorage();
-                showAlert('💾 Sauvegarde auto', 'info', 2000);
-            }, 30000);
-            
-            // Sauvegarder avant de quitter la page
-            window.addEventListener('beforeunload', () => {
-                saveToLocalStorage();
-            });
-        }
-
-        // 5. ALERTES INTELLIGENTES
-        function setupSmartAlerts() {
-            // Vérifier les paiements en retard toutes les heures
-            setInterval(checkOverduePayments, 60000);
-            
-            // Première vérification après 5 secondes
-            setTimeout(checkOverduePayments, 5000);
-        }
-
-        function checkOverduePayments() {
-            const today = new Date();
-            const overdueClients = [];
-            
-            // Calculer les clients avec des paiements en retard (>30 jours)
-            const clientBalances = {};
-            
-            salesData.forEach(sale => {
-                const saleDate = parseDate(sale.date);
-                if (saleDate) {
-                    const daysDiff = Math.floor((today - saleDate) / (1000 * 60 * 60 * 24));
-                    
-                    if (!clientBalances[sale.client]) {
-                        clientBalances[sale.client] = { sales: 0, payments: 0, oldestSale: saleDate, daysSinceOldest: daysDiff };
-                    }
-                    
-                    clientBalances[sale.client].sales += sale.valeur || 0;
-                    if (saleDate < clientBalances[sale.client].oldestSale) {
-                        clientBalances[sale.client].oldestSale = saleDate;
-                        clientBalances[sale.client].daysSinceOldest = daysDiff;
-                    }
-                }
-            });
-            
-            paymentsData.forEach(payment => {
-                if (clientBalances[payment.client]) {
-                    clientBalances[payment.client].payments += payment.amount || 0;
-                }
-            });
-            
-            // Identifier les clients en retard
-            Object.keys(clientBalances).forEach(client => {
-                const balance = clientBalances[client].sales - clientBalances[client].payments;
-                const daysSince = clientBalances[client].daysSinceOldest;
-                
-                if (balance > 0 && daysSince > 30) {
-                    overdueClients.push({
-                        name: client,
-                        amount: balance,
-                        days: daysSince
-                    });
-                }
-            });
-            
-            // Afficher les alertes
-            if (overdueClients.length > 0) {
-                overdueClients.forEach(client => {
-                    if (client.days > 60) {
-                        showSmartAlert(`🚨 ${client.name}: ${formatCurrency(client.amount)} en retard (${client.days}j)`, 'urgent');
-                    } else {
-                        showSmartAlert(`⏰ ${client.name}: ${formatCurrency(client.amount)} à relancer (${client.days}j)`, 'warning');
-                    }
-                });
-            }
-        }
-
-        function showSmartAlert(message, type = 'info') {
-            const alertsPanel = document.getElementById('alertsPanel');
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert-item alert-${type}`;
-            alertDiv.innerHTML = `
-                <div style="font-weight: 600; margin-bottom: 4px;">${message}</div>
-                <div style="font-size: 11px; color: #666;">${new Date().toLocaleTimeString('fr-FR')}</div>
-            `;
-            
-            alertsPanel.appendChild(alertDiv);
-            
-            // Supprimer après 10 secondes
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.remove();
-                }
-            }, 10000);
-            
-            // Limiter à 5 alertes max
-            const alerts = alertsPanel.querySelectorAll('.alert-item');
-            if (alerts.length > 5) {
-                alerts[0].remove();
-            }
-        }
-
-        // 6. PRÉVISIONS DE TRÉSORERIE
-        function updateForecast() {
-            try {
-                const forecast = calculateCashFlowForecast();
-                
-                document.getElementById('forecastSales').textContent = formatCurrency(forecast.predictedSales);
-                document.getElementById('forecastPayments').textContent = formatCurrency(forecast.predictedPayments);
-                document.getElementById('forecastBalance').textContent = formatCurrency(forecast.predictedBalance);
-                document.getElementById('forecastTrend').textContent = forecast.trend;
-            } catch (error) {
-                console.error('Erreur calcul prévisions:', error);
-            }
-        }
-
-        function calculateCashFlowForecast() {
-            const today = new Date();
-            const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-            
-            // Calculer les moyennes des 30 derniers jours
-            const recentSales = salesData.filter(sale => {
-                const saleDate = parseDate(sale.date);
-                return saleDate && saleDate >= thirtyDaysAgo;
-            });
-            
-            const recentPayments = paymentsData.filter(payment => {
-                const paymentDate = parseDate(payment.date);
-                return paymentDate && paymentDate >= thirtyDaysAgo;
-            });
-            
-            const avgDailySales = recentSales.length > 0 ? 
-                recentSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0) / 30 : 0;
-            
-            const avgDailyPayments = recentPayments.length > 0 ? 
-                recentPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0) / 30 : 0;
-            
-            // Prévisions pour les 30 prochains jours
-            const predictedSales = avgDailySales * 30;
-            const predictedPayments = avgDailyPayments * 30;
-            const predictedBalance = predictedSales - predictedPayments;
-            
-            // Calculer la tendance
-            const previousPeriodSales = salesData.filter(sale => {
-                const saleDate = parseDate(sale.date);
-                const sixtyDaysAgo = new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000);
-                return saleDate && saleDate >= sixtyDaysAgo && saleDate < thirtyDaysAgo;
-            });
-            
-            const previousAvg = previousPeriodSales.length > 0 ? 
-                previousPeriodSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0) / 30 : 0;
-            
-            let trendPercentage = 0;
-            if (previousAvg > 0) {
-                trendPercentage = ((avgDailySales - previousAvg) / previousAvg) * 100;
-            }
-            
-            const trend = trendPercentage > 0 ? `+${trendPercentage.toFixed(1)}%` : `${trendPercentage.toFixed(1)}%`;
-            
-            return {
-                predictedSales,
-                predictedPayments,
-                predictedBalance,
-                trend
-            };
-        }
-
-        // 7. GÉNÉRATION PDF
-        function generateInvoicePDF() {
-            try {
-                const client = document.getElementById('invoiceClient').value.trim();
-                const date = document.getElementById('invoiceDate').value;
-                const invoiceNumber = document.getElementById('invoiceNumber').value.trim() || `FAC-${Date.now()}`;
-                
-                if (!client || salesLines.length === 0) {
-                    showAlert('Veuillez remplir les informations de la facture', 'error');
-                    return;
-                }
-                
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                
-                // En-tête
-                doc.setFontSize(20);
-                doc.setTextColor(102, 126, 234);
-                doc.text('KAMLAC', 20, 30);
-                
-                doc.setFontSize(12);
-                doc.setTextColor(0, 0, 0);
-                doc.text('Gestion Commerciale', 20, 40);
-                
-                // Informations facture
-                doc.setFontSize(16);
-                doc.text(`FACTURE N° ${invoiceNumber}`, 120, 30);
-                
-                doc.setFontSize(10);
-                doc.text(`Date: ${new Date(date).toLocaleDateString('fr-FR')}`, 120, 40);
-                doc.text(`Client: ${client}`, 120, 50);
-                
-                // Ligne de séparation
-                doc.line(20, 60, 190, 60);
-                
-                // En-têtes du tableau
-                doc.setFontSize(10);
-                doc.setFont(undefined, 'bold');
-                doc.text('Produit', 20, 75);
-                doc.text('Qté', 100, 75);
-                doc.text('P.U.', 130, 75);
-                doc.text('Total', 160, 75);
-                
-                doc.line(20, 78, 190, 78);
-                
-                // Lignes de la facture
-                doc.setFont(undefined, 'normal');
-                let yPos = 88;
-                let totalInvoice = 0;
-                
-                salesLines.forEach(line => {
-                    if (line.product && line.quantity > 0 && line.unitPrice > 0) {
-                        doc.text(line.product.substring(0, 25), 20, yPos);
-                        doc.text(line.quantity.toString(), 100, yPos);
-                        doc.text(formatCurrency(line.unitPrice), 130, yPos);
-                        doc.text(formatCurrency(line.totalPrice), 160, yPos);
-                        
-                        totalInvoice += line.totalPrice;
-                        yPos += 10;
-                    }
-                });
-                
-                // Total
-                doc.line(20, yPos, 190, yPos);
-                yPos += 10;
-                doc.setFont(undefined, 'bold');
-                doc.text('TOTAL:', 130, yPos);
-                doc.text(formatCurrency(totalInvoice), 160, yPos);
-                
-                // Pied de page
-                doc.setFontSize(8);
-                doc.setFont(undefined, 'normal');
-                doc.text('Merci pour votre confiance - KAMLAC', 20, 280);
-                doc.text(`Généré le ${new Date().toLocaleString('fr-FR')}`, 140, 280);
-                
-                // Télécharger
-                doc.save(`Facture_${invoiceNumber}_${client.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
-                showAlert('📄 PDF généré avec succès', 'success');
-                
-            } catch (error) {
-                console.error('Erreur génération PDF:', error);
-                showAlert('Erreur lors de la génération PDF', 'error');
-            }
-        }
-
-        // ==== FONCTIONS EXISTANTES AMÉLIORÉES ====
 
         function loadFromLocalStorage() {
             salesData = JSON.parse(localStorage.getItem('kamlacSalesData') || '[]');
             paymentsData = JSON.parse(localStorage.getItem('kamlacPaymentsData') || '[]');
             productsData = JSON.parse(localStorage.getItem('kamlacProductsData') || '[]');
-            pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
         }
 
         function saveToLocalStorage() {
@@ -2713,7 +1793,6 @@
                     applyRecapFilters();
                     updateClientsOverview();
                     updateClientsSummaryTable();
-                    updateForecast();
                 }
                 updateCloudStatus('online', '☁️ Sync');
             });
@@ -2751,7 +1830,6 @@
                     updateClientsOverview();
                     applyRecapFilters();
                     updateClientsSummaryTable();
-                    updateForecast();
                 }
             });
 
@@ -2821,32 +1899,162 @@
             })).sort((a, b) => a.name.localeCompare(b.name));
         }
 
-        // Ancien système dropdown pour compatibilité
+        // Système de dropdown personnalisé
         function showCustomDropdown(input, type) {
-            // Rediriger vers le nouveau système de suggestions
-            showSmartSuggestions(input, type);
+            const dropdownId = input.id + 'Dropdown';
+            const dropdown = document.getElementById(dropdownId);
+            if (!dropdown) return;
+            
+            const inputValue = input.value.toLowerCase();
+            let items = [];
+            
+            if (type === 'clients') {
+                items = clientsList.filter(client => 
+                    client.toLowerCase().includes(inputValue)
+                );
+            } else if (type === 'products') {
+                items = productsList.filter(product => 
+                    product.name.toLowerCase().includes(inputValue) ||
+                    product.displayText.toLowerCase().includes(inputValue)
+                );
+            }
+            
+            // Afficher tous les éléments si l'input est vide ou si on clique sur la flèche
+            if (!inputValue || items.length > 0) {
+                dropdown.innerHTML = '';
+                const itemsToShow = inputValue ? items.slice(0, 10) : (type === 'clients' ? clientsList.slice(0, 10) : productsList.slice(0, 10));
+                
+                itemsToShow.forEach(item => {
+                    const option = document.createElement('div');
+                    option.className = 'custom-dropdown-option';
+                    
+                    if (type === 'clients') {
+                        option.textContent = item;
+                        option.onclick = () => selectDropdownOption(input, item, dropdown);
+                    } else if (type === 'products') {
+                        option.textContent = item.displayText;
+                        option.dataset.productId = item.id;
+                        option.dataset.productName = item.name;
+                        option.dataset.productPrice = item.price;
+                        option.onclick = () => selectProductFromDropdown(input, item, dropdown);
+                    }
+                    
+                    dropdown.appendChild(option);
+                });
+                dropdown.style.display = 'block';
+            } else {
+                dropdown.style.display = 'none';
+            }
         }
 
         function hideCustomDropdown(input) {
-            hideSmartSuggestions(input);
+            setTimeout(() => {
+                const dropdownId = input.id + 'Dropdown';
+                const dropdown = document.getElementById(dropdownId);
+                if (dropdown) {
+                    dropdown.style.display = 'none';
+                }
+            }, 200);
         }
 
-        function handleDropdownKeydown(event, input) {
-            handleSuggestionKeydown(event, input);
+        function toggleCustomDropdown(input, type) {
+            const dropdownId = input.id + 'Dropdown';
+            const dropdown = document.getElementById(dropdownId);
+            if (!dropdown) return;
+            
+            // Fermer tous les autres dropdowns ouverts
+            document.querySelectorAll('.custom-dropdown').forEach(dd => {
+                if (dd.id !== dropdownId) {
+                    dd.style.display = 'none';
+                }
+            });
+            
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+            } else {
+                // Effacer le contenu et afficher toute la liste
+                input.value = '';
+                showCustomDropdown(input, type);
+                // Focus après un petit délai pour éviter les conflits
+                setTimeout(() => {
+                    input.focus();
+                }, 50);
+            }
         }
 
+        // Fonction pour gérer les clics sur les flèches avec gestion des événements
         function handleDropdownArrowClick(event, inputId, type) {
             event.preventDefault();
             event.stopPropagation();
             const input = document.getElementById(inputId);
             if (input) {
-                input.value = '';
-                showSmartSuggestions(input, type);
-                input.focus();
+                toggleCustomDropdown(input, type);
             }
         }
 
-        // Navigation entre sections améliorée
+        function selectDropdownOption(input, value, dropdown) {
+            input.value = value;
+            dropdown.style.display = 'none';
+        }
+
+        function selectProductFromDropdown(input, product, dropdown) {
+            input.value = product.displayText;
+            dropdown.style.display = 'none';
+            
+            // Trouver la ligne correspondante et mettre à jour les données
+            const lineId = input.dataset.lineId;
+            if (lineId) {
+                const line = salesLines.find(l => l.id == lineId);
+                if (line) {
+                    line.productId = product.id;
+                    line.product = product.name;
+                    if (!line.priceManuallyEdited) {
+                        line.unitPrice = product.price;
+                    }
+                    line.totalPrice = line.quantity * line.unitPrice;
+                    renderSalesLines();
+                    updateInvoiceTotals();
+                }
+            }
+        }
+
+        function handleDropdownKeydown(event, input) {
+            const dropdownId = input.id + 'Dropdown';
+            const dropdown = document.getElementById(dropdownId);
+            if (!dropdown || dropdown.style.display === 'none') return;
+            
+            const options = dropdown.querySelectorAll('.custom-dropdown-option');
+            let selected = dropdown.querySelector('.custom-dropdown-option.selected');
+            
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if (!selected) {
+                    options[0]?.classList.add('selected');
+                } else {
+                    selected.classList.remove('selected');
+                    const next = selected.nextElementSibling || options[0];
+                    next.classList.add('selected');
+                }
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (!selected) {
+                    options[options.length - 1]?.classList.add('selected');
+                } else {
+                    selected.classList.remove('selected');
+                    const prev = selected.previousElementSibling || options[options.length - 1];
+                    prev.classList.add('selected');
+                }
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                if (selected) {
+                    selected.click();
+                }
+            } else if (event.key === 'Escape') {
+                dropdown.style.display = 'none';
+            }
+        }
+
+        // Navigation entre sections
         function showSection(sectionName) {
             document.querySelectorAll('.section').forEach(section => {
                 section.classList.remove('active');
@@ -2857,19 +2065,11 @@
             });
             
             document.getElementById(sectionName).classList.add('active');
-            
-            // Trouver le bon onglet à activer
-            const tabs = document.querySelectorAll('.nav-tab');
-            const sectionOrder = ['dashboard', 'clients', 'recap', 'sales', 'payments', 'settings'];
-            const sectionIndex = sectionOrder.indexOf(sectionName);
-            if (sectionIndex >= 0 && tabs[sectionIndex]) {
-                tabs[sectionIndex].classList.add('active');
-            }
+            event.target.classList.add('active');
             
             if (sectionName === 'dashboard') {
                 applyFilters();
                 updateClientsSummaryTable();
-                updateForecast();
             } else if (sectionName === 'clients') {
                 updateClientsOverview();
             } else if (sectionName === 'recap') {
@@ -2982,6 +2182,7 @@
         function showClientDetails(clientName) {
             // Basculer vers l'onglet récap
             showSection('recap');
+            document.querySelector('.nav-tab:nth-child(3)').classList.add('active');
             
             // Filtrer par client dans récap
             document.getElementById('recapClientFilter').value = clientName;
@@ -3200,7 +2401,7 @@
             
             saveToLocalStorage();
             
-            if (isFirebaseInitialized && isOnline) {
+            if (isFirebaseInitialized) {
                 try {
                     await db.collection('products').doc(product.id.toString()).set({
                         ...product,
@@ -3208,10 +2409,7 @@
                     });
                 } catch (error) {
                     console.error('Erreur sync produit:', error);
-                    addToPendingSync('update', 'products', product);
                 }
-            } else {
-                addToPendingSync('update', 'products', product);
             }
             
             updateProductsDisplay();
@@ -3226,15 +2424,12 @@
                 productsData = productsData.filter(p => p.id !== productId);
                 saveToLocalStorage();
                 
-                if (isFirebaseInitialized && isOnline) {
+                if (isFirebaseInitialized) {
                     try {
                         await db.collection('products').doc(productId.toString()).delete();
                     } catch (error) {
                         console.error('Erreur suppression produit:', error);
-                        addToPendingSync('delete', 'products', { id: productId });
                     }
-                } else {
-                    addToPendingSync('delete', 'products', { id: productId });
                 }
                 
                 updateProductsDisplay();
@@ -3276,6 +2471,8 @@
                 container.appendChild(productCard);
             });
         }
+
+        // Import produits - fonctions supprimées car import retiré
         
         // Gestion des lignes de vente
         function addSaleLine() {
@@ -3312,10 +2509,10 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Produit *</label>
-                            <div class="input-container smart-search">
-                                <input type="text" id="productLine${line.id}" data-line-id="${line.id}" placeholder="Rechercher un produit..." value="${line.product ? productsList.find(p => p.id == line.productId)?.displayText || line.product : ''}" oninput="showSmartSuggestions(this, 'products')" onblur="hideSmartSuggestions(this)" onkeydown="handleSuggestionKeydown(event, this)" required>
+                            <div class="input-container">
+                                <input type="text" id="productLine${line.id}" data-line-id="${line.id}" placeholder="Rechercher un produit..." value="${line.product ? productsList.find(p => p.id == line.productId)?.displayText || line.product : ''}" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)" required>
                                 <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'productLine${line.id}', 'products')">▼</span>
-                                <div class="search-suggestions" id="productLine${line.id}Suggestions"></div>
+                                <div class="custom-dropdown" id="productLine${line.id}Dropdown"></div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -3386,6 +2583,8 @@
             const totalValue = salesLines.reduce((sum, line) => sum + line.totalPrice, 0);
             const totalQuantity = salesLines.reduce((sum, line) => sum + line.quantity, 0);
             
+            console.log('Mise à jour totaux:', { totalLines, totalValue, totalQuantity }); // Debug
+            
             document.getElementById('totalLines').textContent = totalLines;
             document.getElementById('totalInvoice').textContent = formatCurrency(totalValue);
             
@@ -3393,6 +2592,9 @@
             const totalCartonsElement = document.getElementById('totalCartons');
             if (totalCartonsElement) {
                 totalCartonsElement.textContent = Math.round(totalQuantity);
+                console.log('Total cartons mis à jour:', Math.round(totalQuantity)); // Debug
+            } else {
+                console.error('Élément totalCartons non trouvé!'); // Debug
             }
         }
 
@@ -3432,7 +2634,7 @@
                 salesData.push(...newSales);
                 saveToLocalStorage();
                 
-                if (isFirebaseInitialized && isOnline) {
+                if (isFirebaseInitialized) {
                     const batch = db.batch();
                     newSales.forEach(sale => {
                         const docRef = db.collection('sales').doc(sale.id.toString());
@@ -3442,10 +2644,6 @@
                         });
                     });
                     await batch.commit();
-                } else {
-                    newSales.forEach(sale => {
-                        addToPendingSync('add', 'sales', sale);
-                    });
                 }
                 
                 const totalValue = newSales.reduce((sum, sale) => sum + sale.valeur, 0);
@@ -3474,7 +2672,6 @@
                 applyRecapFilters();
                 updateClientsOverview();
                 updateClientsSummaryTable();
-                updateForecast();
                 updateCloudStatus('online', '☁️ Sync');
                 
             } catch (error) {
@@ -3489,7 +2686,7 @@
             setTodayForNewInvoice();
             salesLines = [];
             addSaleLine();
-            updateInvoiceTotals();
+            updateInvoiceTotals(); // S'assurer que les totaux sont mis à jour
         }
 
         // Gestion des encaissements
@@ -3519,7 +2716,7 @@
             paymentsData.push(payment);
             saveToLocalStorage();
             
-            if (isFirebaseInitialized && isOnline) {
+            if (isFirebaseInitialized) {
                 try {
                     await db.collection('payments').doc(payment.id.toString()).set({
                         ...payment,
@@ -3527,10 +2724,7 @@
                     });
                 } catch (error) {
                     console.error('Erreur sync encaissement:', error);
-                    addToPendingSync('add', 'payments', payment);
                 }
-            } else {
-                addToPendingSync('add', 'payments', payment);
             }
             
             showAlert(`💰 Encaissement enregistré: ${formatCurrency(amount)}`, 'success');
@@ -3553,7 +2747,6 @@
             updateClientsOverview();
             applyRecapFilters();
             updateClientsSummaryTable();
-            updateForecast();
         }
 
         function clearPaymentForm() {
@@ -3584,15 +2777,12 @@
                 paymentsData = paymentsData.filter(p => p.id !== paymentId);
                 saveToLocalStorage();
                 
-                if (isFirebaseInitialized && isOnline) {
+                if (isFirebaseInitialized) {
                     try {
                         await db.collection('payments').doc(paymentId.toString()).delete();
                     } catch (error) {
                         console.error('Erreur suppression encaissement:', error);
-                        addToPendingSync('delete', 'payments', { id: paymentId });
                     }
-                } else {
-                    addToPendingSync('delete', 'payments', { id: paymentId });
                 }
                 
                 updateClientsList();
@@ -3600,7 +2790,6 @@
                 updateClientsOverview();
                 applyRecapFilters();
                 updateClientsSummaryTable();
-                updateForecast();
                 
                 // Afficher le nouveau solde du client si on a le nom
                 if (clientName) {
@@ -4163,7 +3352,6 @@
             updateProductsDisplay();
             updatePaymentsDisplay();
             updateClientsSummaryTable();
-            updateForecast();
             showAlert('📊 Données actualisées avec succès', 'success');
         }
 
@@ -4225,7 +3413,6 @@
                     productsData = [];
                     clientsList = [];
                     productsList = [];
-                    pendingSync = [];
                     saveToLocalStorage();
                     populateFilters();
                     populateRecapFilters();
@@ -4237,13 +3424,14 @@
                     updateProductsDisplay();
                     updatePaymentsDisplay();
                     updateClientsSummaryTable();
-                    updateForecast();
                     showAlert('Toutes les données ont été supprimées', 'warning');
                 }
             }
         }
 
-        function showAlert(message, type = 'success', duration = 4000) {
+        function showAlert(message, type = 'success') {
+            console.log('Affichage message:', message, type); // Debug
+            
             // Créer une zone d'alerte fixe en haut de la page
             let alertContainer = document.getElementById('alertContainer');
             if (!alertContainer) {
@@ -4317,7 +3505,7 @@
                 document.head.appendChild(style);
             }
             
-            // Supprimer après la durée spécifiée
+            // Supprimer après 5 secondes
             setTimeout(() => {
                 if (alertDiv && alertDiv.parentNode) {
                     alertDiv.style.animation = 'slideOut 0.3s ease-out';
@@ -4327,7 +3515,7 @@
                         }
                     }, 300);
                 }
-            }, duration);
+            }, 5000);
         }
 
         // Gestion de l'édition des ventes
@@ -4402,7 +3590,7 @@
             saveToLocalStorage();
             
             // Sync Firebase
-            if (isFirebaseInitialized && isOnline) {
+            if (isFirebaseInitialized) {
                 try {
                     await db.collection('sales').doc(editingSaleId.toString()).set({
                         ...updatedSale,
@@ -4410,10 +3598,7 @@
                     });
                 } catch (error) {
                     console.error('Erreur sync vente:', error);
-                    addToPendingSync('update', 'sales', updatedSale);
                 }
-            } else {
-                addToPendingSync('update', 'sales', updatedSale);
             }
             
             closeEditSaleModal();
@@ -4425,7 +3610,6 @@
             applyRecapFilters();
             updateClientsOverview();
             updateClientsSummaryTable();
-            updateForecast();
             
             // Calculer le nouveau solde du client après modification
             const clientBalance = getClientBalance(client);
@@ -4451,15 +3635,12 @@
                 salesData = salesData.filter(s => s.id !== saleId);
                 saveToLocalStorage();
                 
-                if (isFirebaseInitialized && isOnline) {
+                if (isFirebaseInitialized) {
                     try {
                         await db.collection('sales').doc(saleId.toString()).delete();
                     } catch (error) {
                         console.error('Erreur suppression vente:', error);
-                        addToPendingSync('delete', 'sales', { id: saleId });
                     }
-                } else {
-                    addToPendingSync('delete', 'sales', { id: saleId });
                 }
                 
                 populateFilters();
@@ -4470,7 +3651,6 @@
                 applyRecapFilters();
                 updateClientsOverview();
                 updateClientsSummaryTable();
-                updateForecast();
                 
                 // Afficher le nouveau solde du client si on a le nom
                 if (clientName) {
@@ -4548,7 +3728,7 @@
             saveToLocalStorage();
             
             // Sync Firebase
-            if (isFirebaseInitialized && isOnline) {
+            if (isFirebaseInitialized) {
                 try {
                     await db.collection('payments').doc(editingPaymentId.toString()).set({
                         ...updatedPayment,
@@ -4556,10 +3736,7 @@
                     });
                 } catch (error) {
                     console.error('Erreur sync encaissement:', error);
-                    addToPendingSync('update', 'payments', updatedPayment);
                 }
-            } else {
-                addToPendingSync('update', 'payments', updatedPayment);
             }
             
             closeEditPaymentModal();
@@ -4568,7 +3745,6 @@
             updateClientsOverview();
             updateClientsSummaryTable();
             updatePaymentsDisplay();
-            updateForecast();
             
             // Calculer le nouveau solde du client après modification
             const clientBalance = getClientBalance(client);
@@ -4660,361 +3836,6 @@
                 });
             }, 250);
         });
-
-        // Gestion des erreurs globales
-        window.addEventListener('error', function(e) {
-            console.error('Erreur globale:', e.error);
-            showAlert('Une erreur inattendue s\'est produite', 'error');
-        });
-
-        // Gestion des erreurs de promesses
-        window.addEventListener('unhandledrejection', function(e) {
-            console.error('Promesse rejetée:', e.reason);
-            showAlert('Erreur de synchronisation', 'warning');
-        });
-
-        // Fonctions utilitaires supplémentaires
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
-        // Version débouclée des filtres pour améliorer les performances
-        const debouncedApplyFilters = debounce(applyFilters, 300);
-        const debouncedApplyRecapFilters = debounce(applyRecapFilters, 300);
-
-        // Fonction pour détecter si l'utilisateur utilise un appareil mobile
-        function isMobile() {
-            return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        }
-
-        // Optimisations spécifiques mobiles
-        if (isMobile()) {
-            // Réduire la fréquence des mises à jour en temps réel sur mobile
-            const originalSetupRealtimeSync = setupRealtimeSync;
-            setupRealtimeSync = function() {
-                // Réduire la fréquence de sync sur mobile pour économiser la batterie
-                setTimeout(originalSetupRealtimeSync, 2000);
-            };
-            
-            // Désactiver certaines animations coûteuses sur mobile
-            document.body.classList.add('mobile-optimized');
-        }
-
-        // Cache intelligent pour les calculs coûteux
-        const calculationCache = new Map();
-        
-        function getCachedResult(key, calculationFunction, ttl = 60000) {
-            const cached = calculationCache.get(key);
-            const now = Date.now();
-            
-            if (cached && (now - cached.timestamp) < ttl) {
-                return cached.result;
-            }
-            
-            const result = calculationFunction();
-            calculationCache.set(key, { result, timestamp: now });
-            
-            // Nettoyer le cache périodiquement
-            if (calculationCache.size > 50) {
-                const oldestEntries = Array.from(calculationCache.entries())
-                    .sort(([,a], [,b]) => a.timestamp - b.timestamp)
-                    .slice(0, 10);
-                
-                oldestEntries.forEach(([key]) => calculationCache.delete(key));
-            }
-            
-            return result;
-        }
-
-        // Amélioration des performances de updateForecast avec cache
-        const originalUpdateForecast = updateForecast;
-        updateForecast = function() {
-            const cacheKey = `forecast_${salesData.length}_${paymentsData.length}`;
-            getCachedResult(cacheKey, originalUpdateForecast, 300000); // Cache 5 minutes
-        };
-
-        // Analytics et métriques de performance (optionnel)
-        function trackUserAction(action, details = {}) {
-            const event = {
-                action,
-                details,
-                timestamp: new Date().toISOString(),
-                userAgent: navigator.userAgent,
-                viewport: `${window.innerWidth}x${window.innerHeight}`
-            };
-            
-            // Stocker localement pour analyse (optionnel)
-            const analytics = JSON.parse(localStorage.getItem('kamlacAnalytics') || '[]');
-            analytics.push(event);
-            
-            // Garder seulement les 1000 derniers événements
-            if (analytics.length > 1000) {
-                analytics.splice(0, analytics.length - 1000);
-            }
-            
-            localStorage.setItem('kamlacAnalytics', JSON.stringify(analytics));
-        }
-
-        // Améliorer les fonctions existantes avec tracking
-        const originalSaveInvoice = saveInvoice;
-        saveInvoice = async function() {
-            const startTime = Date.now();
-            await originalSaveInvoice();
-            const duration = Date.now() - startTime;
-            trackUserAction('save_invoice', { duration, linesCount: salesLines.length });
-        };
-
-        const originalSavePayment = savePayment;
-        savePayment = async function() {
-            const startTime = Date.now();
-            await originalSavePayment();
-            const duration = Date.now() - startTime;
-            trackUserAction('save_payment', { duration });
-        };
-
-        // Fonction pour exporter les analytics (pour debugging)
-        function exportAnalytics() {
-            const analytics = JSON.parse(localStorage.getItem('kamlacAnalytics') || '[]');
-            const csvContent = [
-                'Action,Details,Timestamp,UserAgent,Viewport',
-                ...analytics.map(event => [
-                    event.action,
-                    JSON.stringify(event.details).replace(/"/g, '""'),
-                    event.timestamp,
-                    `"${event.userAgent}"`,
-                    event.viewport
-                ].join(','))
-            ].join('\n');
-            
-            downloadFile(csvContent, `kamlac_analytics_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
-            showAlert('📊 Analytics exportées', 'info');
-        }
-
-        // Fonction de diagnostic système
-        function runSystemDiagnostic() {
-            const diagnostic = {
-                timestamp: new Date().toISOString(),
-                browser: navigator.userAgent,
-                viewport: `${window.innerWidth}x${window.innerHeight}`,
-                online: navigator.onLine,
-                localStorage: {
-                    available: typeof Storage !== 'undefined',
-                    salesData: salesData.length,
-                    paymentsData: paymentsData.length,
-                    productsData: productsData.length,
-                    pendingSync: pendingSync.length
-                },
-                firebase: {
-                    initialized: isFirebaseInitialized,
-                    online: isOnline
-                },
-                performance: {
-                    charts: Object.keys(charts).length,
-                    cacheSize: calculationCache.size
-                }
-            };
-            
-            console.log('📊 Diagnostic KAMLAC:', diagnostic);
-            showAlert(`✅ Diagnostic OK - ${diagnostic.localStorage.salesData} ventes, ${diagnostic.localStorage.paymentsData} paiements`, 'success');
-            
-            return diagnostic;
-        }
-
-        // Raccourci pour le diagnostic (Ctrl+Shift+D)
-        document.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
-                e.preventDefault();
-                runSystemDiagnostic();
-            }
-        });
-
-        // Fonction de nettoyage automatique
-        function performMaintenance() {
-            // Nettoyer le cache
-            calculationCache.clear();
-            
-            // Nettoyer les analytics anciennes
-            const analytics = JSON.parse(localStorage.getItem('kamlacAnalytics') || '[]');
-            const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-            const recentAnalytics = analytics.filter(event => 
-                new Date(event.timestamp).getTime() > oneWeekAgo
-            );
-            localStorage.setItem('kamlacAnalytics', JSON.stringify(recentAnalytics));
-            
-            // Forcer la synchronisation si nécessaire
-            if (pendingSync.length > 0 && isOnline) {
-                syncPendingData();
-            }
-            
-            showAlert('🧹 Maintenance effectuée', 'info', 2000);
-        }
-
-        // Maintenance automatique toutes les heures
-        setInterval(performMaintenance, 60 * 60 * 1000);
-
-        // Message de bienvenue personnalisé
-        function showWelcomeMessage() {
-            const lastVisit = localStorage.getItem('lastVisit');
-            const now = new Date();
-            
-            if (!lastVisit) {
-                showAlert('👋 Bienvenue dans KAMLAC Pro ! Appuyez sur Ctrl+H pour voir les raccourcis', 'info', 6000);
-            } else {
-                const lastVisitDate = new Date(lastVisit);
-                const daysSince = Math.floor((now - lastVisitDate) / (1000 * 60 * 60 * 24));
-                
-                if (daysSince > 0) {
-                    showAlert(`🎉 Bon retour ! Dernière visite il y a ${daysSince} jour${daysSince > 1 ? 's' : ''}`, 'info', 4000);
-                }
-            }
-            
-            localStorage.setItem('lastVisit', now.toISOString());
-        }
-
-        // Afficher le message de bienvenue après initialisation
-        setTimeout(showWelcomeMessage, 2000);
-
-        // Fonction d'aide contextuelle
-        function showContextualHelp(section) {
-            const helpMessages = {
-                dashboard: "📊 Dashboard - Visualisez vos KPIs et tendances. Utilisez les filtres pour analyser des périodes spécifiques.",
-                clients: "👥 Clients - Gérez vos comptes clients, suivez les en-cours et l'historique des transactions.",
-                recap: "📋 Récapitulatif - Consultez l'historique détaillé de toutes vos ventes et encaissements.",
-                sales: "💼 Ventes - Créez de nouvelles factures. Ctrl+S pour sauvegarder, bouton PDF pour générer la facture.",
-                payments: "💰 Encaissements - Enregistrez vos paiements et suivez la trésorerie en temps réel.",
-                settings: "⚙️ Paramètres - Gérez votre catalogue produits et exportez vos données."
-            };
-            
-            const message = helpMessages[section] || "💡 Utilisez Ctrl+H pour voir tous les raccourcis disponibles";
-            showAlert(message, 'info', 5000);
-        }
-
-        // Ajouter l'aide contextuelle aux onglets
-        const originalShowSection = showSection;
-        showSection = function(sectionName) {
-            originalShowSection(sectionName);
-            
-            // Afficher l'aide après un délai si c'est la première fois
-            const helpShownKey = `help_shown_${sectionName}`;
-            if (!localStorage.getItem(helpShownKey)) {
-                setTimeout(() => showContextualHelp(sectionName), 1000);
-                localStorage.setItem(helpShownKey, 'true');
-            }
-        };
-
-        // Fonction pour réinitialiser l'aide
-        function resetHelp() {
-            const keys = Object.keys(localStorage).filter(key => key.startsWith('help_shown_'));
-            keys.forEach(key => localStorage.removeItem(key));
-            localStorage.removeItem('shortcutsShown');
-            showAlert('🔄 Aide réinitialisée - Les conseils réapparaîtront', 'info');
-        }
-
-        // Easter egg - Konami Code
-        let konamiCode = [];
-        const konamiSequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
-        
-        document.addEventListener('keydown', (e) => {
-            konamiCode.push(e.code);
-            
-            if (konamiCode.length > konamiSequence.length) {
-                konamiCode = konamiCode.slice(-konamiSequence.length);
-            }
-            
-            if (JSON.stringify(konamiCode) === JSON.stringify(konamiSequence)) {
-                konamiCode = [];
-                showAlert('🎮 Code Konami activé ! KAMLAC Pro Mode débloqué 🚀', 'success', 8000);
-                
-                // Activer des fonctionnalités cachées
-                document.body.style.background = 'linear-gradient(45deg, #667eea, #764ba2, #f093fb, #f5576c)';
-                document.body.style.backgroundSize = '400% 400%';
-                document.body.style.animation = 'gradientShift 3s ease infinite';
-                
-                // Ajouter l'animation CSS si elle n'existe pas
-                if (!document.querySelector('#konamiAnimation')) {
-                    const style = document.createElement('style');
-                    style.id = 'konamiAnimation';
-                    style.textContent = `
-                        @keyframes gradientShift {
-                            0% { background-position: 0% 50%; }
-                            50% { background-position: 100% 50%; }
-                            100% { background-position: 0% 50%; }
-                        }
-                    `;
-                    document.head.appendChild(style);
-                }
-                
-                // Remettre normal après 10 secondes
-                setTimeout(() => {
-                    document.body.style.background = '#f5f7fa';
-                    document.body.style.animation = '';
-                }, 10000);
-            }
-        });
-
-        // Fonction finale de validation de l'intégrité des données
-        function validateDataIntegrity() {
-            let issues = [];
-            
-            // Vérifier les ventes
-            salesData.forEach((sale, index) => {
-                if (!sale.client || !sale.date || !sale.valeur) {
-                    issues.push(`Vente #${index + 1}: données manquantes`);
-                }
-                if (sale.valeur < 0) {
-                    issues.push(`Vente #${index + 1}: montant négatif`);
-                }
-            });
-            
-            // Vérifier les paiements
-            paymentsData.forEach((payment, index) => {
-                if (!payment.client || !payment.date || !payment.amount) {
-                    issues.push(`Paiement #${index + 1}: données manquantes`);
-                }
-                if (payment.amount < 0) {
-                    issues.push(`Paiement #${index + 1}: montant négatif`);
-                }
-            });
-            
-            // Vérifier les produits
-            productsData.forEach((product, index) => {
-                if (!product.reference) {
-                    issues.push(`Produit #${index + 1}: référence manquante`);
-                }
-                if (product.price < 0) {
-                    issues.push(`Produit #${index + 1}: prix négatif`);
-                }
-            });
-            
-            if (issues.length > 0) {
-                console.warn('Issues de données détectées:', issues);
-                showAlert(`⚠️ ${issues.length} problème${issues.length > 1 ? 's' : ''} de données détecté${issues.length > 1 ? 's' : ''}`, 'warning');
-            }
-            
-            return issues;
-        }
-
-        // Validation périodique des données
-        setInterval(validateDataIntegrity, 5 * 60 * 1000); // Toutes les 5 minutes
-
-        console.log('🚀 KAMLAC Pro initialisé avec succès !');
-        console.log('💡 Fonctionnalités disponibles:');
-        console.log('   • Raccourcis clavier (Ctrl+H pour aide)');
-        console.log('   • Mode hors-ligne avec sync auto');
-        console.log('   • Recherche intelligente');
-        console.log('   • Génération PDF');
-        console.log('   • Prévisions de trésorerie');
-        console.log('   • Alertes automatiques');
-        console.log('   • Sauvegarde automatique');
-        console.log('📊 Utilisez runSystemDiagnostic() pour un diagnostic complet');
     </script>
 </body>
 </html>
