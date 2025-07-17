@@ -669,6 +669,26 @@
             overflow-y: auto;
         }
         
+        /* Style pour les détails clients expandables */
+        .client-details {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .client-details.expanded {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; max-height: 0; }
+            to { opacity: 1; max-height: 500px; }
+        }
+        
         .client-card {
             background: white;
             padding: 16px;
@@ -677,11 +697,42 @@
             border-left: 4px solid #667eea;
             transition: all 0.3s ease;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            cursor: pointer;
         }
         
         .client-card:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .client-transactions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .transactions-section h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .transaction-item {
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 12px;
+            border-left: 3px solid #e9ecef;
+        }
+        
+        .transaction-sale {
+            border-left-color: #28a745;
+        }
+        
+        .transaction-payment {
+            border-left-color: #17a2b8;
         }
         
         .client-header {
@@ -924,6 +975,10 @@
                 gap: 12px;
             }
             
+            .charts-grid > div:last-child {
+                grid-template-columns: 1fr !important;
+            }
+            
             .chart-container {
                 height: 200px;
             }
@@ -948,6 +1003,23 @@
             
             .client-stats {
                 grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .charts-grid > div:last-child {
+                grid-template-columns: 1fr !important;
+            }
+            
+            .client-transactions {
+                grid-template-columns: 1fr !important;
+            }
+            
+            .custom-dropdown {
+                max-height: 150px;
+                font-size: 12px;
+            }
+            
+            .custom-dropdown-option {
+                padding: 8px 10px;
             }
             
             .sale-line {
@@ -1074,24 +1146,6 @@
                 </div>
             </div>
             
-            <!-- Card En-cours clients (non filtrée) -->
-            <div class="clients-summary-card">
-                <h3 style="margin-bottom: 15px; color: #667eea;">👥 En-cours Clients (Toutes données)</h3>
-                <div class="clients-summary-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Client</th>
-                                <th>En-cours</th>
-                            </tr>
-                        </thead>
-                        <tbody id="clientsSummaryBody">
-                            <!-- Rempli dynamiquement -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
             <div class="charts-grid">
                 <div class="chart-card">
                     <h3 class="chart-title">📈 Évolution CA vs Encaissements</h3>
@@ -1099,16 +1153,34 @@
                         <canvas id="evolutionChart"></canvas>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <h3 class="chart-title">🏢 CA par Client</h3>
-                    <div class="chart-container">
-                        <canvas id="clientChart"></canvas>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                    <div class="chart-card">
+                        <h3 class="chart-title">📦 CA par Article</h3>
+                        <div class="chart-container">
+                            <canvas id="articleChart"></canvas>
+                        </div>
                     </div>
-                </div>
-                <div class="chart-card">
-                    <h3 class="chart-title">📦 CA par Article</h3>
-                    <div class="chart-container">
-                        <canvas id="articleChart"></canvas>
+                    <div class="chart-card">
+                        <h3 class="chart-title">🏢 CA par Client</h3>
+                        <div class="chart-container">
+                            <canvas id="clientChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="clients-summary-card">
+                        <h3 style="margin-bottom: 15px; color: #667eea;">👥 En-cours Clients (Toutes données)</h3>
+                        <div class="clients-summary-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Client</th>
+                                        <th>En-cours</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clientsSummaryBody">
+                                    <!-- Rempli dynamiquement -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1146,7 +1218,9 @@
                         </div>
                         <div class="filter-group">
                             <label for="recapInvoiceFilter">N° Facture</label>
-                            <input type="text" id="recapInvoiceFilter" placeholder="Numéro de facture" onchange="applyRecapFilters()" oninput="applyRecapFilters()">
+                            <select id="recapInvoiceFilter" onchange="applyRecapFilters()">
+                                <option value="">Toutes les factures</option>
+                            </select>
                         </div>
                         <div class="filter-group">
                             <label for="recapDateStart">Date début</label>
@@ -1400,24 +1474,7 @@
                                 <h3 style="color: #667eea;">📦 Gestion des Produits</h3>
                                 <p style="color: #666; margin-top: 5px; font-size: clamp(0.8rem, 2vw, 0.9rem);">Gérez votre catalogue de produits</p>
                             </div>
-                            <button class="btn btn-primary" onclick="showProductModal()">➕ Produit</button>
-                        </div>
-
-                        <div class="import-section">
-                            <h4 style="margin-bottom: 12px;">📁 Import Produits</h4>
-                            <p style="margin-bottom: 12px; color: #666; font-size: clamp(0.8rem, 2vw, 0.9rem);">
-                                Format: <strong>Référence, Prix CFA, Format, Marge, Marque</strong>
-                            </p>
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label>📊 Import Excel/CSV</label>
-                                    <input type="file" id="importProductsFile" accept=".xlsx,.xls,.csv" onchange="handleProductsImport()">
-                                </div>
-                                <div class="form-group">
-                                    <label>📋 Copier-Coller</label>
-                                    <button class="btn btn-primary" onclick="showProductsPasteModal()">📋 Coller</button>
-                                </div>
-                            </div>
+                            <button class="btn btn-primary" onclick="showProductModal()" style="padding: 16px 24px; font-size: 16px; font-weight: 700;">➕ Ajouter Produit</button>
                         </div>
 
                         <div class="stats-row">
@@ -1500,22 +1557,6 @@
             <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <button class="btn btn-primary" onclick="saveProduct()" style="flex: 1;">💾 Sauvegarder</button>
                 <button class="btn btn-secondary" onclick="closeProductModal()" style="flex: 1;">❌ Annuler</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal pour copier-coller produits -->
-    <div id="productsPasteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; backdrop-filter: blur(5px); padding: 10px;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; width: calc(100% - 20px); max-width: 500px; max-height: 80vh; overflow-y: auto;">
-            <h3 style="margin-bottom: 15px;">📋 Importer Produits</h3>
-            <p style="margin-bottom: 12px; color: #666; font-size: clamp(0.8rem, 2vw, 0.9rem);">
-                Format: <strong>Référence, Prix CFA, Format, Marge, Marque</strong><br>
-                Copiez depuis Excel et collez ci-dessous:
-            </p>
-            <textarea id="productsPasteArea" placeholder="Collez vos données ici..." style="width: 100%; height: 200px; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-family: monospace; font-size: 11px;"></textarea>
-            <div style="text-align: center; margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="processProductsPastedData()" style="flex: 1;">✅ Importer</button>
-                <button class="btn btn-warning" onclick="closeProductsPasteModal()" style="flex: 1;">❌ Annuler</button>
             </div>
         </div>
     </div>
@@ -2115,12 +2156,16 @@
             // Produits
             const products = [...new Set(salesData.map(sale => sale.product).filter(p => p))].sort();
             populateSelect('recapProductFilter', products, 'Tous les produits');
+            
+            // Factures
+            const invoices = [...new Set(salesData.map(sale => sale.invoice).filter(i => i))].sort();
+            populateSelect('recapInvoiceFilter', invoices, 'Toutes les factures');
         }
 
         function applyRecapFilters() {
             const clientFilter = document.getElementById('recapClientFilter').value;
             const productFilter = document.getElementById('recapProductFilter').value;
-            const invoiceFilter = document.getElementById('recapInvoiceFilter').value.trim().toLowerCase();
+            const invoiceFilter = document.getElementById('recapInvoiceFilter').value;
             const dateStart = document.getElementById('recapDateStart').value;
             const dateEnd = document.getElementById('recapDateEnd').value;
             
@@ -2130,7 +2175,7 @@
                 
                 if (clientFilter && sale.client !== clientFilter) include = false;
                 if (productFilter && sale.product !== productFilter) include = false;
-                if (invoiceFilter && (!sale.invoice || !sale.invoice.toLowerCase().includes(invoiceFilter))) include = false;
+                if (invoiceFilter && sale.invoice !== invoiceFilter) include = false;
                 
                 if (dateStart || dateEnd) {
                     const saleDate = parseDate(sale.date);
@@ -2383,92 +2428,8 @@
             });
         }
 
-        // Import produits
-        function showProductsPasteModal() {
-            document.getElementById('productsPasteModal').style.display = 'block';
-        }
-
-        function closeProductsPasteModal() {
-            document.getElementById('productsPasteModal').style.display = 'none';
-            document.getElementById('productsPasteArea').value = '';
-        }
-
-        function processProductsPastedData() {
-            const data = document.getElementById('productsPasteArea').value.trim();
-            if (!data) {
-                showAlert('Aucune donnée à importer', 'error');
-                return;
-            }
-            parseProductsData(data);
-            closeProductsPasteModal();
-        }
-
-        async function parseProductsData(data) {
-            const lines = data.split('\n');
-            let imported = 0;
-            let errors = 0;
-            
-            try {
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    
-                    const columns = line.split('\t');
-                    
-                    if (columns.length >= 2) {
-                        const product = {
-                            id: Date.now() + i + Math.random(),
-                            reference: columns[0] || '',
-                            price: parseFloat(columns[1]) || 0,
-                            format: columns[2] || '',
-                            margin: columns[3] || '',
-                            brand: columns[4] || ''
-                        };
-                        
-                        productsData.push(product);
-                        imported++;
-                    } else {
-                        errors++;
-                    }
-                }
-                
-                saveToLocalStorage();
-                
-                if (isFirebaseInitialized && imported > 0) {
-                    const batch = db.batch();
-                    productsData.slice(-imported).forEach(product => {
-                        const docRef = db.collection('products').doc(product.id.toString());
-                        batch.set(docRef, {
-                            ...product,
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    });
-                    await batch.commit();
-                }
-                
-                updateProductsDisplay();
-                updateProductsList();
-                populateRecapFilters();
-                showAlert(`Import: ${imported} produits, ${errors} erreurs`, 
-                         errors > 0 ? 'warning' : 'success');
-                
-            } catch (error) {
-                showAlert(`Erreur import: ${error.message}`, 'error');
-            }
-        }
-
-        function handleProductsImport() {
-            const fileInput = document.getElementById('importProductsFile');
-            const file = fileInput.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                parseProductsData(e.target.result);
-            };
-            reader.readAsText(file);
-        }
-
+        // Import produits - fonctions supprimées car import retiré
+        
         // Gestion des lignes de vente
         function addSaleLine() {
             const lineId = Date.now() + Math.random();
@@ -2833,10 +2794,13 @@
                         payments: 0,
                         balance: 0,
                         lastSale: null,
-                        lastPayment: null
+                        lastPayment: null,
+                        salesDetails: [],
+                        paymentsDetails: []
                     };
                 }
                 clientsData[sale.client].sales += sale.valeur || 0;
+                clientsData[sale.client].salesDetails.push(sale);
                 if (!clientsData[sale.client].lastSale || new Date(sale.date) > new Date(clientsData[sale.client].lastSale)) {
                     clientsData[sale.client].lastSale = sale.date;
                 }
@@ -2851,10 +2815,13 @@
                         payments: 0,
                         balance: 0,
                         lastSale: null,
-                        lastPayment: null
+                        lastPayment: null,
+                        salesDetails: [],
+                        paymentsDetails: []
                     };
                 }
                 clientsData[payment.client].payments += payment.amount || 0;
+                clientsData[payment.client].paymentsDetails.push(payment);
                 if (!clientsData[payment.client].lastPayment || new Date(payment.date) > new Date(clientsData[payment.client].lastPayment)) {
                     clientsData[payment.client].lastPayment = payment.date;
                 }
@@ -2863,6 +2830,9 @@
             // Calcul des soldes
             Object.values(clientsData).forEach(client => {
                 client.balance = client.sales - client.payments;
+                // Trier les détails par date (plus récent en premier)
+                client.salesDetails.sort((a, b) => new Date(b.date) - new Date(a.date));
+                client.paymentsDetails.sort((a, b) => new Date(b.date) - new Date(a.date));
             });
             
             // Affichage
@@ -2874,6 +2844,7 @@
             clients.forEach(client => {
                 const clientCard = document.createElement('div');
                 clientCard.className = 'client-card';
+                clientCard.onclick = () => toggleClientDetails(client.name);
                 
                 let balanceClass = 'balance-zero';
                 let balanceIcon = '✅';
@@ -2887,7 +2858,7 @@
                 
                 clientCard.innerHTML = `
                     <div class="client-header">
-                        <div class="client-name">${client.name}</div>
+                        <div class="client-name">${client.name} <span style="font-size: 12px; color: #666;">▼</span></div>
                         <div class="client-balance ${balanceClass}">
                             ${balanceIcon} ${formatCurrency(Math.abs(client.balance))}
                             ${client.balance > 0 ? ' (À recevoir)' : client.balance < 0 ? ' (Crédit)' : ' (Soldé)'}
@@ -2911,9 +2882,61 @@
                             <div class="client-stat-label">Dernier Paiement</div>
                         </div>
                     </div>
+                    <div class="client-details" id="details-${client.name.replace(/[^a-zA-Z0-9]/g, '')}">
+                        <div class="client-transactions">
+                            <div class="transactions-section">
+                                <h4>📦 Dernières Ventes (${client.salesDetails.length})</h4>
+                                ${client.salesDetails.slice(0, 5).map(sale => `
+                                    <div class="transaction-item transaction-sale">
+                                        <strong>${sale.date}</strong><br>
+                                        ${sale.product || 'Produit non spécifié'}<br>
+                                        Qté: ${sale.quantity || '-'} | ${formatCurrency(sale.valeur)}
+                                        ${sale.invoice ? `<br><small>Fact: ${sale.invoice}</small>` : ''}
+                                    </div>
+                                `).join('')}
+                                ${client.salesDetails.length > 5 ? `<div style="text-align: center; color: #666; font-size: 11px;">... et ${client.salesDetails.length - 5} autres</div>` : ''}
+                            </div>
+                            <div class="transactions-section">
+                                <h4>💰 Derniers Encaissements (${client.paymentsDetails.length})</h4>
+                                ${client.paymentsDetails.slice(0, 5).map(payment => `
+                                    <div class="transaction-item transaction-payment">
+                                        <strong>${payment.date}</strong><br>
+                                        ${formatCurrency(payment.amount)}<br>
+                                        ${payment.method}
+                                        ${payment.reference ? `<br><small>${payment.reference}</small>` : ''}
+                                    </div>
+                                `).join('')}
+                                ${client.paymentsDetails.length > 5 ? `<div style="text-align: center; color: #666; font-size: 11px;">... et ${client.paymentsDetails.length - 5} autres</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
                 `;
                 container.appendChild(clientCard);
             });
+        }
+
+        function toggleClientDetails(clientName) {
+            const detailsId = `details-${clientName.replace(/[^a-zA-Z0-9]/g, '')}`;
+            const detailsElement = document.getElementById(detailsId);
+            
+            if (detailsElement) {
+                if (detailsElement.classList.contains('expanded')) {
+                    detailsElement.classList.remove('expanded');
+                    detailsElement.style.display = 'none';
+                } else {
+                    // Fermer tous les autres détails
+                    document.querySelectorAll('.client-details.expanded').forEach(el => {
+                        el.classList.remove('expanded');
+                        el.style.display = 'none';
+                    });
+                    
+                    // Ouvrir celui-ci
+                    detailsElement.style.display = 'block';
+                    setTimeout(() => {
+                        detailsElement.classList.add('expanded');
+                    }, 10);
+                }
+            }
         }
 
         // Fonctions utilitaires
@@ -3706,15 +3729,11 @@
         // Gestion des clics modaux
         window.onclick = function(event) {
             const productModal = document.getElementById('productModal');
-            const productsPasteModal = document.getElementById('productsPasteModal');
             const editSaleModal = document.getElementById('editSaleModal');
             const editPaymentModal = document.getElementById('editPaymentModal');
             
             if (event.target === productModal) {
                 closeProductModal();
-            }
-            if (event.target === productsPasteModal) {
-                closeProductsPasteModal();
             }
             if (event.target === editSaleModal) {
                 closeEditSaleModal();
