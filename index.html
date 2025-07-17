@@ -725,14 +725,30 @@
             margin-bottom: 6px;
             font-size: 12px;
             border-left: 3px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .transaction-item:hover {
+            background: #f8f9fa;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
         }
         
         .transaction-sale {
             border-left-color: #28a745;
         }
         
+        .transaction-sale:hover {
+            border-left-color: #1e7e34;
+        }
+        
         .transaction-payment {
             border-left-color: #17a2b8;
+        }
+        
+        .transaction-payment:hover {
+            border-left-color: #117a8b;
         }
         
         .client-header {
@@ -1903,9 +1919,12 @@
                 );
             }
             
-            if (items.length > 0 && inputValue) {
+            // Afficher tous les éléments si l'input est vide ou si on clique sur la flèche
+            if (!inputValue || items.length > 0) {
                 dropdown.innerHTML = '';
-                items.slice(0, 10).forEach(item => {
+                const itemsToShow = inputValue ? items.slice(0, 10) : (type === 'clients' ? clientsList.slice(0, 10) : productsList.slice(0, 10));
+                
+                itemsToShow.forEach(item => {
                     const option = document.createElement('div');
                     option.className = 'custom-dropdown-option';
                     
@@ -1953,9 +1972,13 @@
             if (dropdown.style.display === 'block') {
                 dropdown.style.display = 'none';
             } else {
+                // Effacer le contenu et afficher toute la liste
                 input.value = '';
-                input.focus();
                 showCustomDropdown(input, type);
+                // Focus après un petit délai pour éviter les conflits
+                setTimeout(() => {
+                    input.focus();
+                }, 50);
             }
         }
 
@@ -2908,11 +2931,12 @@
                             <div class="transactions-section">
                                 <h4>📦 Dernières Ventes (${client.salesDetails.length})</h4>
                                 ${client.salesDetails.slice(0, 5).map(sale => `
-                                    <div class="transaction-item transaction-sale">
+                                    <div class="transaction-item transaction-sale" onclick="editSale(${sale.id})" title="Cliquer pour modifier">
                                         <strong>${sale.date}</strong><br>
                                         ${sale.product || 'Produit non spécifié'}<br>
                                         Qté: ${sale.quantity || '-'} | ${formatCurrency(sale.valeur)}
                                         ${sale.invoice ? `<br><small>Fact: ${sale.invoice}</small>` : ''}
+                                        <div style="text-align: right; margin-top: 4px; font-size: 10px; color: #667eea;">✏️ Modifier</div>
                                     </div>
                                 `).join('')}
                                 ${client.salesDetails.length > 5 ? `<div style="text-align: center; color: #666; font-size: 11px;">... et ${client.salesDetails.length - 5} autres</div>` : ''}
@@ -2920,11 +2944,12 @@
                             <div class="transactions-section">
                                 <h4>💰 Derniers Encaissements (${client.paymentsDetails.length})</h4>
                                 ${client.paymentsDetails.slice(0, 5).map(payment => `
-                                    <div class="transaction-item transaction-payment">
+                                    <div class="transaction-item transaction-payment" onclick="editPayment(${payment.id})" title="Cliquer pour modifier">
                                         <strong>${payment.date}</strong><br>
                                         ${formatCurrency(payment.amount)}<br>
                                         ${payment.method}
                                         ${payment.reference ? `<br><small>${payment.reference}</small>` : ''}
+                                        <div style="text-align: right; margin-top: 4px; font-size: 10px; color: #667eea;">✏️ Modifier</div>
                                     </div>
                                 `).join('')}
                                 ${client.paymentsDetails.length > 5 ? `<div style="text-align: center; color: #666; font-size: 11px;">... et ${client.paymentsDetails.length - 5} autres</div>` : ''}
