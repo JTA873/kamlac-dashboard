@@ -1520,6 +1520,40 @@
                 
                 <!-- Section Données -->
                 <div id="settings-data" class="settings-section">
+                    <!-- Import Encaissements en Masse -->
+                    <div class="import-section">
+                        <h3 style="margin-bottom: 15px;">💰 Import Encaissements en Masse</h3>
+                        <p style="color: #666; margin-bottom: 15px; font-size: clamp(0.8rem, 2vw, 0.9rem);">
+                            Copiez-collez vos données d'encaissement dans le format suivant :<br>
+                            <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 4px; font-size: 0.85em;">
+                                Date | Client | Montant
+                            </code>
+                        </p>
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-weight: 600; margin-bottom: 8px; display: block;">
+                                📋 Données à importer (une ligne par encaissement)
+                            </label>
+                            <textarea id="paymentsImportData" placeholder="Exemple :&#10;15/01/2025 | Client A | 50000&#10;16/01/2025 | Client B | 75000&#10;17/01/2025 | Client C | 120000&#10; | Client D | 25000&#10;18/01/2025 | | 30000" 
+                                style="width: 100%; height: 200px; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-family: monospace; font-size: 12px; resize: vertical;"
+                                oninput="validatePaymentsImport()"></textarea>
+                        </div>
+                        <div id="paymentsImportPreview" style="margin-bottom: 15px; display: none;">
+                            <h4 style="color: #667eea; margin-bottom: 10px;">👁️ Aperçu des données détectées :</h4>
+                            <div id="paymentsImportPreviewContent" style="background: #f8f9fa; padding: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn btn-primary" onclick="importPaymentsFromText()" id="importPaymentsBtn" disabled>
+                                📥 Importer Encaissements
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearPaymentsImport()">
+                                🗑️ Effacer
+                            </button>
+                            <button class="btn btn-info" onclick="showPaymentsImportHelp()">
+                                ❓ Aide
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Export et Gestion -->
                     <div class="import-section">
                         <h3 style="margin-bottom: 15px;">💾 Gestion des données</h3>
@@ -2472,8 +2506,221 @@
             });
         }
 
-        // Import produits - fonctions supprimées car import retiré
-        
+        // Import encaissements en masse
+        function validatePaymentsImport() {
+            const textarea = document.getElementById('paymentsImportData');
+            const preview = document.getElementById('paymentsImportPreview');
+            const previewContent = document.getElementById('paymentsImportPreviewContent');
+            const importBtn = document.getElementById('importPaymentsBtn');
+            
+            const text = textarea.value.trim();
+            
+            if (!text) {
+                preview.style.display = 'none';
+                importBtn.disabled = true;
+                return;
+            }
+            
+            const lines = text.split('\n').filter(line => line.trim());
+            const parsedPayments = [];
+            const errors = [];
+            
+            lines.forEach((line, index) => {
+                const parts = line.split('|').map(part => part.trim());
+                
+                // Accepter de 1 à 3 colonnes, aucune n'est obligatoire
+                const [dateStr = '', client = '', amountStr = ''] = parts;
+                
+                // Validation de la date (optionnelle)
+                let date = null;
+                if (dateStr) {
+                    if (dateStr.includes('/')) {
+                        const dateParts = dateStr.split('/');
+                        if (dateParts.length === 3) {
+                            const day = parseInt(dateParts[0]);
+                            const month = parseInt(dateParts[1]);
+                            const year = parseInt(dateParts[2]);
+                            date = new Date(year, month - 1, day);
+                        }
+                    } else {
+                        date = new Date(dateStr);
+                    }
+                    
+                    if (date && isNaN(date.getTime())) {
+                        errors.push(`Ligne ${index + 1}: Date invalide "${dateStr}"`);
+                        return;
+                    }
+                }
+                
+                // Validation du montant (optionnel)
+                let amount = 0;
+                if (amountStr) {
+                    amount = parseFloat(amountStr.replace(/[^\d.-]/g, ''));
+                    if (isNaN(amount) || amount < 0) {
+                        errors.push(`Ligne ${index + 1}: Montant invalide "${amountStr}"`);
+                        return;
+                    }
+                }
+                
+                // Créer l'encaissement avec des valeurs par défaut
+                parsedPayments.push({
+                    date: date ? date.toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR'),
+                    client: client || `Client ${index + 1}`,
+                    amount: amount,
+                    method: 'Espèces', // Valeur par défaut
+                    reference: '', // Vide par défaut
+                    notes: '' // Vide par défaut
+                });
+            });
+            
+            // Afficher l'aperçu
+            let previewHTML = '';
+            
+            if (errors.length > 0) {
+                previewHTML += '<div style="background: #f8d7da; color: #721c24; padding: 10px; border-radius: 6px; margin-bottom: 10px;">';
+                previewHTML += '<strong>⚠️ Erreurs détectées :</strong><br>';
+                previewHTML += errors.map(error => `• ${error}`).join('<br>');
+                previewHTML += '</div>';
+            }
+            
+            if (parsedPayments.length > 0) {
+                previewHTML += '<div style="background: #d4edda; color: #155724; padding: 10px; border-radius: 6px; margin-bottom: 10px;">';
+                previewHTML += `<strong>✅ ${parsedPayments.length} encaissement(s) détecté(s)</strong>`;
+                previewHTML += '</div>';
+                
+                previewHTML += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 11px;">';
+                previewHTML += '<thead><tr style="background: #667eea; color: white;">';
+                previewHTML += '<th style="padding: 8px; border: 1px solid #ddd;">Date</th>';
+                previewHTML += '<th style="padding: 8px; border: 1px solid #ddd;">Client</th>';
+                previewHTML += '<th style="padding: 8px; border: 1px solid #ddd;">Montant</th>';
+                previewHTML += '<th style="padding: 8px; border: 1px solid #ddd;">Mode</th>';
+                previewHTML += '</tr></thead><tbody>';
+                
+                parsedPayments.forEach(payment => {
+                    previewHTML += '<tr>';
+                    previewHTML += `<td style="padding: 6px; border: 1px solid #ddd;">${payment.date}</td>`;
+                    previewHTML += `<td style="padding: 6px; border: 1px solid #ddd;">${payment.client}</td>`;
+                    previewHTML += `<td style="padding: 6px; border: 1px solid #ddd;">${formatCurrency(payment.amount)}</td>`;
+                    previewHTML += `<td style="padding: 6px; border: 1px solid #ddd;">${payment.method}</td>`;
+                    previewHTML += '</tr>';
+                });
+                
+                previewHTML += '</tbody></table></div>';
+            }
+            
+            previewContent.innerHTML = previewHTML;
+            preview.style.display = 'block';
+            
+            // Activer le bouton d'import s'il y a des données valides et pas d'erreurs
+            importBtn.disabled = parsedPayments.length === 0 || errors.length > 0;
+            
+            // Stocker les données parsées pour l'import
+            window.parsedPaymentsToImport = parsedPayments;
+        }
+
+        async function importPaymentsFromText() {
+            const parsedPayments = window.parsedPaymentsToImport;
+            
+            if (!parsedPayments || parsedPayments.length === 0) {
+                showAlert('Aucune donnée valide à importer', 'error');
+                return;
+            }
+            
+            if (!confirm(`Importer ${parsedPayments.length} encaissement(s) ?`)) {
+                return;
+            }
+            
+            updateCloudStatus('syncing', '⬆️ Import en cours...');
+            
+            try {
+                // Créer les nouveaux encaissements
+                const newPayments = parsedPayments.map(payment => ({
+                    id: Date.now() + Math.random(),
+                    client: payment.client,
+                    date: payment.date,
+                    amount: payment.amount,
+                    method: payment.method,
+                    reference: payment.reference,
+                    notes: payment.notes
+                }));
+                
+                // Ajouter aux données existantes
+                paymentsData.push(...newPayments);
+                saveToLocalStorage();
+                
+                // Sync Firebase
+                if (isFirebaseInitialized) {
+                    const batch = db.batch();
+                    newPayments.forEach(payment => {
+                        const docRef = db.collection('payments').doc(payment.id.toString());
+                        batch.set(docRef, {
+                            ...payment,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+                    await batch.commit();
+                }
+                
+                // Calculer le total importé
+                const totalImported = newPayments.reduce((sum, payment) => sum + payment.amount, 0);
+                
+                showAlert(`✅ ${newPayments.length} encaissement(s) importé(s) avec succès ! Total: ${formatCurrency(totalImported)}`, 'success');
+                
+                // Nettoyer et actualiser
+                clearPaymentsImport();
+                updateClientsList();
+                updatePaymentsDisplay();
+                updateClientsOverview();
+                applyRecapFilters();
+                updateClientsSummaryTable();
+                updateCloudStatus('online', '☁️ Sync');
+                
+            } catch (error) {
+                console.error('Erreur import encaissements:', error);
+                showAlert(`Erreur lors de l'import: ${error.message}`, 'error');
+                updateCloudStatus('offline', '❌ Erreur');
+            }
+        }
+
+        function clearPaymentsImport() {
+            document.getElementById('paymentsImportData').value = '';
+            document.getElementById('paymentsImportPreview').style.display = 'none';
+            document.getElementById('importPaymentsBtn').disabled = true;
+            window.parsedPaymentsToImport = null;
+        }
+
+        function showPaymentsImportHelp() {
+            const helpMessage = `
+💰 AIDE - Import Encaissements en Masse
+
+📋 FORMAT ACCEPTÉ :
+Date | Client | Montant
+
+🔹 EXEMPLES :
+15/01/2025 | Client A | 50000
+16/01/2025 | Client B | 75000
+17/01/2025 | Client C | 120000
+| Client D | 25000
+18/01/2025 | | 30000
+
+📝 RÈGLES :
+• Séparez les colonnes par le symbole |
+• AUCUN CHAMP N'EST OBLIGATOIRE
+• Date au format DD/MM/YYYY (aujourd'hui si vide)
+• Client auto-généré si vide (Client 1, Client 2...)
+• Montant = 0 si vide ou invalide
+• Mode de paiement = "Espèces" par défaut
+
+💡 CONSEILS :
+• Copiez depuis Excel/Sheets en remplaçant les tabulations par |
+• Vérifiez l'aperçu avant d'importer
+• Les erreurs sont affichées en rouge
+• Vous pouvez importer même avec des données manquantes
+            `;
+            
+            showAlert(helpMessage, 'info');
+        }
+
         // Gestion des lignes de vente
         function addSaleLine() {
             const lineId = Date.now() + Math.random();
