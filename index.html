@@ -942,8 +942,224 @@
             color: white;
         }
 
-        .custom-dropdown-option:last-child {
-            border-bottom: none;
+        /* Styles pour le chat IA */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 70vh;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .chat-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            scroll-behavior: smooth;
+        }
+        
+        .chat-message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            animation: slideInMessage 0.3s ease-out;
+        }
+        
+        @keyframes slideInMessage {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .chat-message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .chat-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .chat-avatar.user {
+            background: #667eea;
+            color: white;
+        }
+        
+        .chat-avatar.ai {
+            background: #28a745;
+            color: white;
+        }
+        
+        .chat-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        
+        .chat-bubble.user {
+            background: #667eea;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .chat-bubble.ai {
+            background: white;
+            color: #333;
+            border: 1px solid #e9ecef;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .chat-input-container {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .chat-send-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+        
+        .chat-send-btn:hover {
+            background: #5a67d8;
+            transform: scale(1.05);
+        }
+        
+        .chat-send-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .chat-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .chat-suggestion {
+            background: white;
+            border: 1px solid #667eea;
+            color: #667eea;
+            padding: 8px 12px;
+            border-radius: 15px;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-suggestion:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: typingDot 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typingDot {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+        
+        .chat-stats {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 12px;
+            margin: 8px 0;
+            font-size: clamp(0.85rem, 2vw, 0.95rem);
+        }
+        
+        .chat-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+        }
+        
+        .chat-table th, .chat-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .chat-table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
         }
         
         /* Optimisations mobile */
@@ -1069,6 +1285,37 @@
                 min-width: 120px;
                 text-align: center;
             }
+            
+            .chat-container {
+                height: 60vh;
+            }
+            
+            .chat-bubble {
+                max-width: 85%;
+                font-size: 0.9rem;
+            }
+            
+            .chat-input {
+                font-size: 16px; /* Éviter le zoom sur iOS */
+            }
+            
+            .chat-suggestions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .chat-suggestion {
+                text-align: center;
+                margin-bottom: 8px;
+            }
+            
+            .chat-table {
+                font-size: 0.75rem;
+            }
+            
+            .chat-table th, .chat-table td {
+                padding: 6px 4px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -1093,6 +1340,22 @@
             .stats-row {
                 grid-template-columns: 1fr;
             }
+            
+            .chat-container {
+                height: 50vh;
+            }
+            
+            .chat-header {
+                padding: 12px 15px;
+            }
+            
+            .chat-input-container {
+                padding: 12px 15px;
+            }
+            
+            .chat-messages {
+                padding: 15px;
+            }
         }
     </style>
 </head>
@@ -1101,6 +1364,10 @@
         <div class="header">
             <h1>📊 KAMLAC - Suivi Clients</h1>
             <div class="last-update" id="lastUpdate">Dernière mise à jour: --</div>
+            <div style="margin-top: 8px; font-size: clamp(0.7rem, 1.8vw, 0.8rem); color: #666;">
+                <span>Version: <strong id="appVersion">2.1.0</strong></span>
+                <span style="margin-left: 15px;">Sync auto: <span id="autoSyncStatus">🟢 Actif</span></span>
+            </div>
             <span class="cloud-status" id="cloudStatus">🔄 Initialisation...</span>
         </div>
         <div class="nav-tabs">
@@ -1109,6 +1376,7 @@
             <button class="nav-tab" onclick="showSection('recap')">📋 Récap.</button>
             <button class="nav-tab" onclick="showSection('sales')">💼 + Vente</button>
             <button class="nav-tab" onclick="showSection('payments')">💰 + Encaisser</button>
+            <button class="nav-tab" onclick="showSection('chat')">🤖 Assistant IA</button>
             <button class="nav-tab" onclick="showSection('settings')">⚙️ Paramètres</button>
         </div>
         
@@ -1481,6 +1749,51 @@
             </div>
         </div>
         
+        <!-- Chat IA Section -->
+        <div id="chat" class="section">
+            <div class="card">
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <span>🤖</span>
+                        <div>
+                            <div style="font-size: 1.1rem;">Assistant IA KAMLAC</div>
+                            <div style="font-size: 0.85rem; opacity: 0.9;">Posez-moi des questions sur vos données</div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-message">
+                            <div class="chat-avatar ai">🤖</div>
+                            <div class="chat-bubble ai">
+                                <strong>Bonjour ! 👋</strong><br><br>
+                                Je suis votre assistant IA pour analyser vos données KAMLAC. Je peux vous aider avec :
+                                <br><br>
+                                📊 <strong>Analyses de CA</strong> : "Quel est mon CA des 2 derniers mois ?"<br>
+                                🏆 <strong>Top produits/clients</strong> : "Qui est mon meilleur client ?"<br>
+                                📈 <strong>Comparaisons</strong> : "Compare les ventes de Client A et Client B"<br>
+                                💰 <strong>Encaissements</strong> : "Quel est mon en-cours total ?"<br>
+                                📅 <strong>Périodes</strong> : "Quelles sont mes ventes cette semaine ?"
+                                <br><br>
+                                <div class="chat-suggestions">
+                                    <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon CA total ?')">CA total</div>
+                                    <div class="chat-suggestion" onclick="sendSuggestion('Qui est mon meilleur client ?')">Meilleur client</div>
+                                    <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon top produit ?')">Top produit</div>
+                                    <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon en-cours total ?')">En-cours total</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input-container">
+                        <input type="text" class="chat-input" id="chatInput" placeholder="Tapez votre question ici..." onkeypress="handleChatKeyPress(event)">
+                        <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">
+                            ➤
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Settings Section -->
         <div id="settings" class="section">
             <div class="card">
@@ -1579,7 +1892,14 @@
                                 <label>Synchronisation</label>
                                 <button class="btn btn-info" onclick="forceSyncFromFirebase()">🔄 Forcer Sync</button>
                                 <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    💡 Résout les problèmes de sync mobile
+                                    💡 Résout les problèmes de sync
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label>Mise à jour forcée</label>
+                                <button class="btn btn-warning" onclick="forceAppUpdate()">🚀 Forcer MAJ</button>
+                                <small style="color: #856404; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    ⚡ Force tous les appareils à se mettre à jour
                                 </small>
                             </div>
                             <div class="form-group">
@@ -1733,6 +2053,10 @@
         let clientsList = [];
         let productsList = [];
 
+        // Version de l'application - À incrémenter à chaque mise à jour
+        const APP_VERSION = "2.1.0";
+        let autoSyncInterval = null;
+
         // Configuration Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBuR-B_bOyMtN1xnSQCCsxfJWydzg9mvs",
@@ -1751,6 +2075,11 @@
 
         function initializeApp() {
             console.log('Initialisation de l\'application...');
+            
+            // Afficher la version
+            document.getElementById('appVersion').textContent = APP_VERSION;
+            document.getElementById('autoSyncStatus').innerHTML = '🟢 Actif';
+            
             setDefaultDates();
             updateLastUpdateTime();
             
@@ -1795,11 +2124,189 @@
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.firestore();
                 isFirebaseInitialized = true;
+                
+                // Vérifier la version et forcer la mise à jour si nécessaire
+                checkAppVersion();
+                
+                // Synchronisation automatique au démarrage
+                autoSyncOnStartup();
+                
+                // Configuration de la synchronisation temps réel
                 setupRealtimeSync();
+                
+                // Synchronisation automatique périodique (toutes les 5 minutes)
+                startAutoSync();
+                
                 updateCloudStatus('online', '☁️ Sync');
             } catch (error) {
                 console.error('Erreur Firebase:', error);
                 updateCloudStatus('offline', '❌ Offline');
+            }
+        }
+
+        // Vérification automatique de la version de l'application
+        async function checkAppVersion() {
+            try {
+                const versionDoc = await db.collection('system').doc('version').get();
+                
+                if (versionDoc.exists) {
+                    const latestVersion = versionDoc.data().version;
+                    const forceUpdate = versionDoc.data().forceUpdate || false;
+                    
+                    if (latestVersion !== APP_VERSION) {
+                        console.log(`Version locale: ${APP_VERSION}, Version serveur: ${latestVersion}`);
+                        
+                        if (forceUpdate) {
+                            // Forcer la mise à jour
+                            showAlert(`🔄 Nouvelle version détectée (${latestVersion}). Mise à jour forcée...`, 'info');
+                            setTimeout(() => {
+                                window.location.reload(true); // Forcer le rechargement depuis le serveur
+                            }, 2000);
+                            return;
+                        } else {
+                            // Proposer la mise à jour
+                            showAlert(`ℹ️ Nouvelle version disponible (${latestVersion}). Veuillez actualiser la page.`, 'warning');
+                        }
+                    }
+                } else {
+                    // Créer le document de version s'il n'existe pas
+                    await db.collection('system').doc('version').set({
+                        version: APP_VERSION,
+                        forceUpdate: false,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+            } catch (error) {
+                console.error('Erreur vérification version:', error);
+            }
+        }
+
+        // Synchronisation automatique au démarrage
+        async function autoSyncOnStartup() {
+            try {
+                updateCloudStatus('syncing', '🔄 Vérification données...');
+                
+                // Compter les éléments dans Firebase
+                const salesSnapshot = await db.collection('sales').get();
+                const paymentsSnapshot = await db.collection('payments').get();
+                const productsSnapshot = await db.collection('products').get();
+                
+                const firebaseCounts = {
+                    sales: salesSnapshot.size,
+                    payments: paymentsSnapshot.size,
+                    products: productsSnapshot.size
+                };
+                
+                const localCounts = {
+                    sales: salesData.length,
+                    payments: paymentsData.length,
+                    products: productsData.length
+                };
+                
+                // Vérifier s'il y a des différences
+                const needsSync = 
+                    firebaseCounts.sales !== localCounts.sales ||
+                    firebaseCounts.payments !== localCounts.payments ||
+                    firebaseCounts.products !== localCounts.products;
+                
+                if (needsSync) {
+                    console.log('Différences détectées:', { firebase: firebaseCounts, local: localCounts });
+                    showAlert(`🔄 Synchronisation automatique en cours...\nFirebase: ${firebaseCounts.sales} ventes, ${firebaseCounts.payments} encaissements\nLocal: ${localCounts.sales} ventes, ${localCounts.payments} encaissements`, 'info');
+                    
+                    await performAutoSync();
+                } else {
+                    console.log('Données synchronisées:', localCounts);
+                }
+                
+            } catch (error) {
+                console.error('Erreur auto-sync démarrage:', error);
+            }
+        }
+
+        // Effectuer la synchronisation automatique
+        async function performAutoSync() {
+            try {
+                // Vider les données locales
+                salesData = [];
+                paymentsData = [];
+                productsData = [];
+                
+                // Charger depuis Firebase
+                const salesSnapshot = await db.collection('sales').get();
+                salesSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    delete data.lastUpdated;
+                    salesData.push(data);
+                });
+                
+                const paymentsSnapshot = await db.collection('payments').get();
+                paymentsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    delete data.lastUpdated;
+                    paymentsData.push(data);
+                });
+                
+                const productsSnapshot = await db.collection('products').get();
+                productsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    delete data.lastUpdated;
+                    productsData.push(data);
+                });
+                
+                // Sauvegarder localement
+                saveToLocalStorage();
+                
+                // Mettre à jour l'interface
+                populateFilters();
+                populateRecapFilters();
+                updateClientsList();
+                updateProductsList();
+                applyFilters();
+                applyRecapFilters();
+                updateClientsOverview();
+                updateProductsDisplay();
+                updatePaymentsDisplay();
+                updateClientsSummaryTable();
+                
+                showAlert(`✅ Synchronisation automatique réussie !\n📊 ${salesData.length} ventes, 💰 ${paymentsData.length} encaissements`, 'success');
+                
+            } catch (error) {
+                console.error('Erreur auto-sync:', error);
+                showAlert(`Erreur synchronisation: ${error.message}`, 'error');
+            }
+        }
+
+        // Démarrer la synchronisation automatique périodique
+        function startAutoSync() {
+            // Synchronisation automatique toutes les 5 minutes
+            autoSyncInterval = setInterval(async () => {
+                if (isFirebaseInitialized) {
+                    try {
+                        updateCloudStatus('syncing', '🔄 Sync auto...');
+                        
+                        // Vérifier rapidement s'il y a des différences
+                        const salesSnapshot = await db.collection('sales').get();
+                        const paymentsSnapshot = await db.collection('payments').get();
+                        
+                        if (salesSnapshot.size !== salesData.length || paymentsSnapshot.size !== paymentsData.length) {
+                            console.log('Auto-sync: différences détectées, synchronisation...');
+                            await performAutoSync();
+                        }
+                        
+                        updateCloudStatus('online', '☁️ Sync');
+                    } catch (error) {
+                        console.error('Erreur auto-sync périodique:', error);
+                        updateCloudStatus('offline', '❌ Offline');
+                    }
+                }
+            }, 300000); // 5 minutes
+        }
+
+        // Arrêter la synchronisation automatique
+        function stopAutoSync() {
+            if (autoSyncInterval) {
+                clearInterval(autoSyncInterval);
+                autoSyncInterval = null;
             }
         }
 
@@ -2131,6 +2638,524 @@
             }
         }
 
+        // Variables globales pour le chat
+        let chatHistory = [];
+
+        // Gestion du chat IA
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        function sendSuggestion(message) {
+            document.getElementById('chatInput').value = message;
+            sendChatMessage();
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Ajouter le message utilisateur
+            addChatMessage(message, 'user');
+            input.value = '';
+            
+            // Désactiver le bouton temporairement
+            const sendBtn = document.getElementById('chatSendBtn');
+            sendBtn.disabled = true;
+            
+            // Afficher l'indicateur de frappe
+            showTypingIndicator();
+            
+            // Analyser et répondre après un délai réaliste
+            setTimeout(() => {
+                const response = analyzeQuestion(message);
+                hideTypingIndicator();
+                addChatMessage(response, 'ai');
+                sendBtn.disabled = false;
+            }, 1500 + Math.random() * 1000); // 1.5-2.5 secondes
+        }
+
+        function addChatMessage(message, sender) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = `chat-avatar ${sender}`;
+            avatar.textContent = sender === 'user' ? '👤' : '🤖';
+            
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${sender}`;
+            bubble.innerHTML = message;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(bubble);
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll vers le bas
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Sauvegarder l'historique
+            chatHistory.push({ message, sender, timestamp: new Date() });
+        }
+
+        function showTypingIndicator() {
+            const messagesContainer = document.getElementById('chatMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'chat-message';
+            typingDiv.id = 'typingIndicator';
+            
+            typingDiv.innerHTML = `
+                <div class="chat-avatar ai">🤖</div>
+                <div class="chat-bubble ai">
+                    <div class="typing-indicator">
+                        <span>Assistant IA en train d'analyser</span>
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // Analyseur de questions intelligent
+        function analyzeQuestion(question) {
+            const q = question.toLowerCase();
+            
+            // Analyser le type de question et extraire les informations
+            try {
+                // Questions sur le CA
+                if (q.includes('ca') || q.includes('chiffre') || q.includes('affaires') || q.includes('revenus')) {
+                    return analyzeRevenueQuestion(q);
+                }
+                
+                // Questions sur les clients
+                if (q.includes('client') || q.includes('meilleur') || q.includes('top client')) {
+                    return analyzeClientQuestion(q);
+                }
+                
+                // Questions sur les produits
+                if (q.includes('produit') || q.includes('article') || q.includes('top produit')) {
+                    return analyzeProductQuestion(q);
+                }
+                
+                // Questions sur les encaissements
+                if (q.includes('encaiss') || q.includes('en-cours') || q.includes('encours') || q.includes('crédit') || q.includes('solde')) {
+                    return analyzePaymentQuestion(q);
+                }
+                
+                // Questions sur les périodes
+                if (q.includes('mois') || q.includes('semaine') || q.includes('trimestre') || q.includes('année') || q.includes('période')) {
+                    return analyzePeriodQuestion(q);
+                }
+                
+                // Questions de comparaison
+                if (q.includes('compar') || q.includes('vs') || q.includes('entre') || q.includes('différence')) {
+                    return analyzeComparisonQuestion(q);
+                }
+                
+                // Question générale sur les statistiques
+                if (q.includes('stat') || q.includes('résumé') || q.includes('bilan') || q.includes('synthèse')) {
+                    return generateGeneralStats();
+                }
+                
+                // Aide
+                if (q.includes('aide') || q.includes('help') || q.includes('comment') || q.includes('que peux')) {
+                    return generateHelpMessage();
+                }
+                
+                // Réponse par défaut avec suggestions
+                return generateDefaultResponse(question);
+                
+            } catch (error) {
+                console.error('Erreur analyse question:', error);
+                return "❌ <strong>Erreur d'analyse</strong><br><br>Désolé, j'ai rencontré une erreur en analysant votre question. Pouvez-vous la reformuler ?";
+            }
+        }
+
+        function analyzeRevenueQuestion(question) {
+            const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+            const salesCount = salesData.length;
+            
+            // Détection de période
+            if (question.includes('2 mois') || question.includes('deux mois')) {
+                const twoMonthsAgo = new Date();
+                twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+                const recentSales = salesData.filter(sale => {
+                    const saleDate = parseDate(sale.date);
+                    return saleDate && saleDate >= twoMonthsAgo;
+                });
+                const recentRevenue = recentSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+                
+                return `📊 <strong>CA des 2 derniers mois</strong><br><br>
+                💰 <strong>${formatCurrency(recentRevenue)}</strong><br>
+                📦 ${recentSales.length} ventes réalisées<br>
+                📈 Moyenne par vente: ${formatCurrency(recentRevenue / (recentSales.length || 1))}<br><br>
+                <div class="chat-stats">
+                    📊 Part du CA total: ${((recentRevenue / totalRevenue) * 100).toFixed(1)}%
+                </div>`;
+            }
+            
+            if (question.includes('mois') && question.includes('cours')) {
+                const now = new Date();
+                const currentMonthSales = salesData.filter(sale => {
+                    const saleDate = parseDate(sale.date);
+                    return saleDate && 
+                           saleDate.getMonth() === now.getMonth() && 
+                           saleDate.getFullYear() === now.getFullYear();
+                });
+                const currentMonthRevenue = currentMonthSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+                
+                return `📅 <strong>CA du mois en cours</strong><br><br>
+                💰 <strong>${formatCurrency(currentMonthRevenue)}</strong><br>
+                📦 ${currentMonthSales.length} ventes ce mois<br>
+                📈 Moyenne journalière: ${formatCurrency(currentMonthRevenue / new Date().getDate())}<br><br>
+                <div class="chat-stats">
+                    📊 Progression: ${currentMonthSales.length} ventes sur ${now.getDate()} jours
+                </div>`;
+            }
+            
+            // CA total par défaut
+            return `💰 <strong>Chiffre d'affaires total</strong><br><br>
+            💰 <strong>${formatCurrency(totalRevenue)}</strong><br>
+            📦 ${salesCount} ventes au total<br>
+            📈 Moyenne par vente: ${formatCurrency(totalRevenue / (salesCount || 1))}<br><br>
+            <div class="chat-stats">
+                🏆 Plus grosse vente: ${formatCurrency(Math.max(...salesData.map(s => s.valeur || 0)))}<br>
+                📉 Plus petite vente: ${formatCurrency(Math.min(...salesData.map(s => s.valeur || 0)))}
+            </div>`;
+        }
+
+        function analyzeClientQuestion(question) {
+            // Calculer les ventes par client
+            const clientStats = {};
+            salesData.forEach(sale => {
+                if (!clientStats[sale.client]) {
+                    clientStats[sale.client] = { sales: 0, revenue: 0, count: 0 };
+                }
+                clientStats[sale.client].revenue += sale.valeur || 0;
+                clientStats[sale.client].count++;
+            });
+            
+            // Trier par revenus
+            const sortedClients = Object.entries(clientStats)
+                .sort(([,a], [,b]) => b.revenue - a.revenue);
+            
+            if (question.includes('meilleur') || question.includes('top')) {
+                const topClients = sortedClients.slice(0, 5);
+                
+                let response = `🏆 <strong>Top 5 des meilleurs clients</strong><br><br>`;
+                
+                topClients.forEach(([client, stats], index) => {
+                    const medal = ['🥇', '🥈', '🥉', '🏅', '🏅'][index];
+                    response += `${medal} <strong>${client}</strong><br>`;
+                    response += `💰 ${formatCurrency(stats.revenue)} (${stats.count} ventes)<br><br>`;
+                });
+                
+                const topClient = topClients[0];
+                const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+                const topClientPercentage = ((topClient[1].revenue / totalRevenue) * 100).toFixed(1);
+                
+                response += `<div class="chat-stats">
+                    🎯 ${topClient[0]} représente ${topClientPercentage}% de votre CA total
+                </div>`;
+                
+                return response;
+            }
+            
+            // Liste générale des clients
+            return `👥 <strong>Analyse des clients</strong><br><br>
+            📊 ${Object.keys(clientStats).length} clients au total<br><br>
+            <table class="chat-table">
+                <tr><th>Client</th><th>CA</th><th>Ventes</th></tr>
+                ${sortedClients.slice(0, 10).map(([client, stats]) => 
+                    `<tr><td>${client}</td><td>${formatCurrency(stats.revenue)}</td><td>${stats.count}</td></tr>`
+                ).join('')}
+            </table>`;
+        }
+
+        function analyzeProductQuestion(question) {
+            // Calculer les ventes par produit
+            const productStats = {};
+            salesData.forEach(sale => {
+                const product = sale.product || 'Produit non spécifié';
+                if (!productStats[product]) {
+                    productStats[product] = { revenue: 0, quantity: 0, count: 0 };
+                }
+                productStats[product].revenue += sale.valeur || 0;
+                productStats[product].quantity += parseFloat(sale.quantity) || 0;
+                productStats[product].count++;
+            });
+            
+            // Trier par revenus
+            const sortedProducts = Object.entries(productStats)
+                .sort(([,a], [,b]) => b.revenue - a.revenue);
+            
+            if (question.includes('top') || question.includes('meilleur')) {
+                const topProducts = sortedProducts.slice(0, 5);
+                
+                let response = `🏆 <strong>Top 5 des produits</strong><br><br>`;
+                
+                topProducts.forEach(([product, stats], index) => {
+                    const medal = ['🥇', '🥈', '🥉', '🏅', '🏅'][index];
+                    response += `${medal} <strong>${product}</strong><br>`;
+                    response += `💰 ${formatCurrency(stats.revenue)} (${Math.round(stats.quantity)} unités)<br><br>`;
+                });
+                
+                return response;
+            }
+            
+            return `📦 <strong>Analyse des produits</strong><br><br>
+            📊 ${Object.keys(productStats).length} produits vendus<br><br>
+            <table class="chat-table">
+                <tr><th>Produit</th><th>CA</th><th>Quantité</th></tr>
+                ${sortedProducts.slice(0, 8).map(([product, stats]) => 
+                    `<tr><td>${product}</td><td>${formatCurrency(stats.revenue)}</td><td>${Math.round(stats.quantity)}</td></tr>`
+                ).join('')}
+            </table>`;
+        }
+
+        function analyzePaymentQuestion(question) {
+            const totalSales = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+            const totalPayments = paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const totalOutstanding = totalSales - totalPayments;
+            
+            // Calculer les en-cours par client
+            const clientBalances = {};
+            
+            // Ajouter les ventes
+            salesData.forEach(sale => {
+                if (!clientBalances[sale.client]) {
+                    clientBalances[sale.client] = { sales: 0, payments: 0, balance: 0 };
+                }
+                clientBalances[sale.client].sales += sale.valeur || 0;
+            });
+            
+            // Soustraire les encaissements
+            paymentsData.forEach(payment => {
+                if (!clientBalances[payment.client]) {
+                    clientBalances[payment.client] = { sales: 0, payments: 0, balance: 0 };
+                }
+                clientBalances[payment.client].payments += payment.amount || 0;
+            });
+            
+            // Calculer les balances
+            Object.keys(clientBalances).forEach(client => {
+                clientBalances[client].balance = clientBalances[client].sales - clientBalances[client].payments;
+            });
+            
+            // Clients avec en-cours positif
+            const clientsWithOutstanding = Object.entries(clientBalances)
+                .filter(([, balance]) => balance.balance > 0)
+                .sort(([,a], [,b]) => b.balance - a.balance);
+            
+            let response = `💰 <strong>Analyse des encaissements</strong><br><br>
+            📊 <strong>Vue d'ensemble :</strong><br>
+            💰 Total ventes: ${formatCurrency(totalSales)}<br>
+            ✅ Total encaissé: ${formatCurrency(totalPayments)}<br>
+            ⚠️ En-cours total: ${formatCurrency(totalOutstanding)}<br><br>`;
+            
+            if (clientsWithOutstanding.length > 0) {
+                response += `🔴 <strong>Clients avec en-cours :</strong><br><br>`;
+                response += `<table class="chat-table">
+                    <tr><th>Client</th><th>En-cours</th></tr>
+                    ${clientsWithOutstanding.slice(0, 10).map(([client, balance]) => 
+                        `<tr><td>${client}</td><td style="color: #dc3545; font-weight: 600;">${formatCurrency(balance.balance)}</td></tr>`
+                    ).join('')}
+                </table>`;
+            } else {
+                response += `✅ <strong>Excellente nouvelle !</strong><br>Aucun client n'a d'en-cours. Tous vos comptes sont soldés ! 🎉`;
+            }
+            
+            return response;
+        }
+
+        function analyzePeriodQuestion(question) {
+            const now = new Date();
+            let startDate, endDate, periodName;
+            
+            if (question.includes('semaine')) {
+                // Cette semaine
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(now.getDate() - now.getDay());
+                startDate = startOfWeek;
+                endDate = now;
+                periodName = "cette semaine";
+            } else if (question.includes('mois')) {
+                // Ce mois
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                endDate = now;
+                periodName = "ce mois";
+            } else if (question.includes('trimestre')) {
+                // Ce trimestre
+                const quarter = Math.floor(now.getMonth() / 3);
+                startDate = new Date(now.getFullYear(), quarter * 3, 1);
+                endDate = now;
+                periodName = "ce trimestre";
+            } else {
+                // Cette année par défaut
+                startDate = new Date(now.getFullYear(), 0, 1);
+                endDate = now;
+                periodName = "cette année";
+            }
+            
+            const periodSales = salesData.filter(sale => {
+                const saleDate = parseDate(sale.date);
+                return saleDate && saleDate >= startDate && saleDate <= endDate;
+            });
+            
+            const periodPayments = paymentsData.filter(payment => {
+                const paymentDate = parseDate(payment.date);
+                return paymentDate && paymentDate >= startDate && paymentDate <= endDate;
+            });
+            
+            const periodRevenue = periodSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+            const periodPaymentsTotal = periodPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            
+            return `📅 <strong>Analyse pour ${periodName}</strong><br><br>
+            💰 CA: ${formatCurrency(periodRevenue)}<br>
+            📦 ${periodSales.length} ventes réalisées<br>
+            💳 ${formatCurrency(periodPaymentsTotal)} encaissés<br>
+            📈 Moyenne par vente: ${formatCurrency(periodRevenue / (periodSales.length || 1))}<br><br>
+            <div class="chat-stats">
+                📊 Période: ${startDate.toLocaleDateString('fr-FR')} → ${endDate.toLocaleDateString('fr-FR')}
+            </div>`;
+        }
+
+        function analyzeComparisonQuestion(question) {
+            // Extraire les noms de clients de la question
+            const words = question.split(/\s+/);
+            const possibleClients = clientsList.filter(client => {
+                return words.some(word => 
+                    client.toLowerCase().includes(word.toLowerCase()) || 
+                    word.toLowerCase().includes(client.toLowerCase())
+                );
+            });
+            
+            if (possibleClients.length >= 2) {
+                const client1 = possibleClients[0];
+                const client2 = possibleClients[1];
+                
+                const client1Sales = salesData.filter(sale => sale.client === client1);
+                const client2Sales = salesData.filter(sale => sale.client === client2);
+                
+                const client1Revenue = client1Sales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+                const client2Revenue = client2Sales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+                
+                const winner = client1Revenue > client2Revenue ? client1 : client2;
+                const difference = Math.abs(client1Revenue - client2Revenue);
+                
+                return `⚖️ <strong>Comparaison : ${client1} vs ${client2}</strong><br><br>
+                🥇 <strong>Gagnant : ${winner}</strong><br><br>
+                📊 <strong>${client1} :</strong><br>
+                💰 ${formatCurrency(client1Revenue)} (${client1Sales.length} ventes)<br><br>
+                📊 <strong>${client2} :</strong><br>
+                💰 ${formatCurrency(client2Revenue)} (${client2Sales.length} ventes)<br><br>
+                <div class="chat-stats">
+                    📈 Écart: ${formatCurrency(difference)}<br>
+                    📊 Ratio: ${(Math.max(client1Revenue, client2Revenue) / Math.min(client1Revenue, client2Revenue)).toFixed(1)}:1
+                </div>`;
+            }
+            
+            return "🤔 <strong>Comparaison</strong><br><br>Je n'ai pas pu identifier clairement les deux éléments à comparer dans votre question. Pouvez-vous préciser ?<br><br>Exemple : <em>\"Compare les ventes de AFRICA LEYRI et SMC\"</em>";
+        }
+
+        function generateGeneralStats() {
+            const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+            const totalPayments = paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const totalOutstanding = totalRevenue - totalPayments;
+            
+            // Top client
+            const clientStats = {};
+            salesData.forEach(sale => {
+                clientStats[sale.client] = (clientStats[sale.client] || 0) + sale.valeur;
+            });
+            const topClient = Object.entries(clientStats).sort(([,a], [,b]) => b - a)[0];
+            
+            // Top produit
+            const productStats = {};
+            salesData.forEach(sale => {
+                const product = sale.product || 'Non spécifié';
+                productStats[product] = (productStats[product] || 0) + sale.valeur;
+            });
+            const topProduct = Object.entries(productStats).sort(([,a], [,b]) => b - a)[0];
+            
+            return `📈 <strong>Synthèse générale de votre activité</strong><br><br>
+            💰 <strong>Financier :</strong><br>
+            • CA total: ${formatCurrency(totalRevenue)}<br>
+            • Encaissé: ${formatCurrency(totalPayments)}<br>
+            • En-cours: ${formatCurrency(totalOutstanding)}<br><br>
+            
+            🏆 <strong>Champions :</strong><br>
+            • Meilleur client: ${topClient ? topClient[0] : 'N/A'} (${formatCurrency(topClient ? topClient[1] : 0)})<br>
+            • Top produit: ${topProduct ? topProduct[0] : 'N/A'} (${formatCurrency(topProduct ? topProduct[1] : 0)})<br><br>
+            
+            📊 <strong>Volumes :</strong><br>
+            • ${salesData.length} ventes réalisées<br>
+            • ${paymentsData.length} encaissements<br>
+            • ${Object.keys(clientStats).length} clients actifs<br>
+            • ${Object.keys(productStats).length} produits vendus`;
+        }
+
+        function generateHelpMessage() {
+            return `🤖 <strong>Comment puis-je vous aider ?</strong><br><br>
+            Je peux analyser vos données KAMLAC et répondre à différents types de questions :<br><br>
+            
+            💰 <strong>Questions financières :</strong><br>
+            • "Quel est mon CA total ?"<br>
+            • "Quel est mon CA des 2 derniers mois ?"<br>
+            • "Quel est mon en-cours total ?"<br><br>
+            
+            🏆 <strong>Top performances :</strong><br>
+            • "Qui est mon meilleur client ?"<br>
+            • "Quel est mon top produit ?"<br>
+            • "Top 5 des clients"<br><br>
+            
+            📊 <strong>Analyses par période :</strong><br>
+            • "Mes ventes cette semaine"<br>
+            • "CA du mois en cours"<br>
+            • "Bilan du trimestre"<br><br>
+            
+            ⚖️ <strong>Comparaisons :</strong><br>
+            • "Compare Client A et Client B"<br>
+            • "Différence entre ces deux produits"<br><br>
+            
+            📈 <strong>Statistiques générales :</strong><br>
+            • "Résumé de mon activité"<br>
+            • "Bilan général"<br><br>
+            
+            Posez-moi votre question en langage naturel ! 😊`;
+        }
+
+        function generateDefaultResponse(question) {
+            return `🤔 <strong>Je n'ai pas bien compris votre question</strong><br><br>
+            Vous avez demandé : <em>"${question}"</em><br><br>
+            Voici quelques suggestions pour reformuler :<br><br>
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon CA total ?')">CA total</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Qui est mon meilleur client ?')">Meilleur client</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Mes ventes ce mois')">Ventes du mois</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('En-cours clients')">En-cours</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Aide')">Aide</div>
+            </div>`;
+        }
+
         // Navigation entre sections
         function showSection(sectionName) {
             document.querySelectorAll('.section').forEach(section => {
@@ -2155,6 +3180,11 @@
                 updatePaymentsDisplay();
             } else if (sectionName === 'settings') {
                 updateProductsDisplay();
+            } else if (sectionName === 'chat') {
+                // Focus sur l'input de chat
+                setTimeout(() => {
+                    document.getElementById('chatInput').focus();
+                }, 100);
             }
         }
 
@@ -3699,6 +4729,61 @@ Date [ESPACES] Client [ESPACES] Montant
             showAlert('📊 Données actualisées avec succès', 'success');
         }
 
+        // Forcer la mise à jour de l'application sur tous les appareils
+        async function forceAppUpdate() {
+            if (!isFirebaseInitialized) {
+                showAlert('Firebase non initialisé. Impossible de forcer la mise à jour.', 'error');
+                return;
+            }
+            
+            const newVersion = prompt(`🚀 Forcer la mise à jour sur tous les appareils ?\n\nVersion actuelle: ${APP_VERSION}\nEntrez la nouvelle version (ex: 2.2.0):`);
+            
+            if (newVersion && newVersion.trim()) {
+                if (confirm(`⚡ ATTENTION !\n\nCela va forcer TOUS les appareils connectés à recharger l'application.\n\nNouvelle version: ${newVersion.trim()}\n\nContinuer ?`)) {
+                    try {
+                        updateCloudStatus('syncing', '🚀 Mise à jour forcée...');
+                        
+                        await db.collection('system').doc('version').set({
+                            version: newVersion.trim(),
+                            forceUpdate: true,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedBy: 'Admin',
+                            previousVersion: APP_VERSION
+                        });
+                        
+                        updateCloudStatus('online', '☁️ Sync');
+                        showAlert(`✅ Mise à jour forcée activée !\n\n🔄 Tous les appareils vont se mettre à jour vers la version ${newVersion.trim()}\n\n⏱️ Cette page va se recharger dans 3 secondes...`, 'success');
+                        
+                        // Recharger cette page aussi après 3 secondes
+                        setTimeout(() => {
+                            window.location.reload(true);
+                        }, 3000);
+                        
+                    } catch (error) {
+                        console.error('Erreur lors de la mise à jour forcée:', error);
+                        updateCloudStatus('offline', '❌ Erreur');
+                        showAlert(`Erreur lors de la mise à jour forcée: ${error.message}`, 'error');
+                    }
+                }
+            }
+        }
+
+        // Désactiver la mise à jour forcée (pour les administrateurs)
+        async function disableForceUpdate() {
+            if (!isFirebaseInitialized) return;
+            
+            try {
+                await db.collection('system').doc('version').update({
+                    forceUpdate: false,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                showAlert('🔓 Mise à jour forcée désactivée', 'info');
+            } catch (error) {
+                console.error('Erreur désactivation force update:', error);
+            }
+        }
+
         // Forcer la synchronisation depuis Firebase (résout les problèmes de cache mobile)
         async function forceSyncFromFirebase() {
             if (!isFirebaseInitialized) {
@@ -4249,6 +5334,19 @@ Date [ESPACES] Client [ESPACES] Montant
                 });
             }, 250);
         });
+
+        // Nettoyage lors de la fermeture de la page
+        window.addEventListener('beforeunload', function() {
+            stopAutoSync();
+        });
+
+        // Mise à jour du statut de synchronisation automatique
+        function updateAutoSyncStatus(active) {
+            const statusElement = document.getElementById('autoSyncStatus');
+            if (statusElement) {
+                statusElement.innerHTML = active ? '🟢 Actif' : '🔴 Arrêté';
+            }
+        }
     </script>
 </body>
 </html>
