@@ -1764,22 +1764,8 @@
                     <div class="chat-messages" id="chatMessages">
                         <div class="chat-message">
                             <div class="chat-avatar ai">🤖</div>
-                            <div class="chat-bubble ai">
-                                <strong>Bonjour ! 👋</strong><br><br>
-                                Je suis votre assistant IA pour analyser vos données KAMLAC. Je peux vous aider avec :
-                                <br><br>
-                                📊 <strong>Analyses de CA</strong> : "Quel est mon CA des 2 derniers mois ?"<br>
-                                🏆 <strong>Top produits/clients</strong> : "Qui est mon meilleur client ?"<br>
-                                📈 <strong>Comparaisons</strong> : "Compare les ventes de Client A et Client B"<br>
-                                💰 <strong>Encaissements</strong> : "Quel est mon en-cours total ?"<br>
-                                📅 <strong>Périodes</strong> : "Quelles sont mes ventes cette semaine ?"
-                                <br><br>
-                                <div class="chat-suggestions">
-                                    <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon CA total ?')">CA total</div>
-                                    <div class="chat-suggestion" onclick="sendSuggestion('Qui est mon meilleur client ?')">Meilleur client</div>
-                                    <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon top produit ?')">Top produit</div>
-                                    <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon en-cours total ?')">En-cours total</div>
-                                </div>
+                            <div class="chat-bubble ai" id="welcomeMessage">
+                                <!-- Le message d'accueil sera généré dynamiquement -->
                             </div>
                         </div>
                     </div>
@@ -2422,7 +2408,703 @@
                     updateProductsList();
                     populateRecapFilters();
                 }
+        // Analyses approfondies par période ou produit
+        function handleAnalyzePeriodCommand(question) {
+            const period = extractPeriodFromQuestion(question);
+            const entity = extractEntityFromQuestion(question); // client ou produit
+            
+            return generateDeepAnalysis(period, entity, question);
+        }
+
+        function extractPeriodFromQuestion(question) {
+            const q = question.toLowerCase();
+            const now = new Date();
+            
+            if (q.includes('cette semaine')) {
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(now.getDate() - now.getDay());
+                return { start: startOfWeek, end: now, name: 'cette semaine' };
+            }
+            
+            if (q.includes('ce mois')) {
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                return { start: startOfMonth, end: now, name: 'ce mois' };
+            }
+            
+            if (q.includes('3 mois') || q.includes('trimestre')) {
+                const threeMonthsAgo = new Date(now);
+                threeMonthsAgo.setMonth(now.getMonth() - 3);
+                return { start: threeMonthsAgo, end: now, name: 'ces 3 derniers mois' };
+            }
+            
+            if (q.includes('6 mois')) {
+                const sixMonthsAgo = new Date(now);
+                sixMonthsAgo.setMonth(now.getMonth() - 6);
+                return { start: sixMonthsAgo, end: now, name: 'ces 6 derniers mois' };
+            }
+            
+            if (q.includes('année')) {
+                const startOfYear = new Date(now.getFullYear(), 0, 1);
+                return { start: startOfYear, end: now, name: 'cette année' };
+            }
+            
+            // Par défaut : ce mois
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            return { start: startOfMonth, end: now, name: 'ce mois' };
+        }
+
+        function extractEntityFromQuestion(question) {
+            const q = question.toLowerCase();
+            
+            // Chercher un client spécifique
+            for (let client of clientsList) {
+                if (q.includes(client.toLowerCase())) {
+                    return { type: 'client', name: client };
+                }
+            }
+            
+            // Chercher un produit spécifique
+            const products = [...new Set(salesData.map(s => s.product).filter(p => p))];
+            for (let product of products) {
+                if (q.includes(product.toLowerCase())) {
+                    return { type: 'product', name: product };
+                }
+            }
+            
+            return null;
+        }
+
+        function generateDeepAnalysis(period, entity, question) {
+            const filteredSales = salesData.filter(sale => {
+                const saleDate = parseDate(sale.date);
+                return saleDate && saleDate >= period.start && saleDate <= period.end;
             });
+            
+            const filteredPayments = paymentsData.filter(payment => {
+                const paymentDate = parseDate(payment.date);
+                return paymentDate && paymentDate >= period.start && paymentDate <= period.end;
+            });
+            
+            if (entity) {
+                return generateEntityAnalysis(filteredSales, filteredPayments, entity, period);
+            } else {
+                return generatePeriodAnalysis(filteredSales, filteredPayments, period);
+            }
+        }
+
+        function generateEntityAnalysis(sales, payments, entity, period) {
+            let entitySales = sales;
+            let entityPayments = payments;
+            
+            if (entity.type === 'client') {
+                entitySales = sales.filter(s => s.client === entity.name);
+                entityPayments = payments.filter(p => p.client === entity.name);
+            } else if (entity.type === 'product') {
+                entitySales = sales.filter(s => s.product === entity.name);
+            }
+            
+            const totalRevenue = entitySales.reduce((sum, s) => sum + (s.valeur || 0), 0);
+            const totalPayments = entityPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+            const avgSale = totalRevenue / (entitySales.length || 1);
+            const totalQuantity = entitySales.reduce((sum, s) => sum + (parseFloat(s.quantity) || 0), 0);
+            
+            return `🔍 <strong>Analyse approfondie : ${entity.name}</strong><br>
+            📅 <strong>Période :</strong> ${period.name}<br><br>
+            
+            💰 <strong>Performances financières :</strong><br>
+            • CA généré : ${formatCurrency(totalRevenue)}<br>
+            • Nombre de ventes : ${entitySales.length}<br>
+            • Vente moyenne : ${formatCurrency(avgSale)}<br>
+            ${entity.type === 'client' ? `• Encaissements : ${formatCurrency(totalPayments)}<br>• Solde : ${formatCurrency(totalRevenue - totalPayments)}<br>` : ''}
+            ${entity.type === 'product' ? `• Quantité vendue : ${Math.round(totalQuantity)} unités<br>` : ''}
+            
+            <div class="chat-stats">
+                📊 <strong>Détails par ${entity.type === 'client' ? 'vente' : 'transaction'} :</strong><br>
+                <table class="chat-table">
+                    <tr><th>Date</th><th>${entity.type === 'client' ? 'Produit' : 'Client'}</th><th>Montant</th></tr>
+                    ${entitySales.slice(0, 10).map(sale => 
+                        `<tr><td>${sale.date}</td><td>${entity.type === 'client' ? (sale.product || 'N/A') : sale.client}</td><td>${formatCurrency(sale.valeur)}</td></tr>`
+                    ).join('')}
+                </table>
+                ${entitySales.length > 10 ? `<em>... et ${entitySales.length - 10} autres transactions</em>` : ''}
+            </div>
+            
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Graphique ${entity.name} ${period.name}')">Voir graphique</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Comparer avec autres ${entity.type}s')">Comparer</div>
+        // Fonctions utilitaires pour l'assistant IA avancé
+
+        // Supprimer une note
+        async function deleteNote(noteId) {
+            try {
+                chatNotes = chatNotes.filter(note => note.id != noteId);
+                
+                if (isFirebaseInitialized) {
+                    await db.collection('notes').doc(noteId.toString()).delete();
+                }
+                
+                addChatMessage(`✅ <strong>Note supprimée</strong><br><br>La note a été supprimée de votre carnet.`, 'ai');
+                
+            } catch (error) {
+                console.error('Erreur suppression note:', error);
+                addChatMessage(`❌ <strong>Erreur</strong><br><br>Impossible de supprimer la note : ${error.message}`, 'ai');
+            }
+        }
+
+        // Charger les notes depuis Firebase au démarrage
+        async function loadNotesFromFirebase() {
+            if (!isFirebaseInitialized) return;
+            
+            try {
+                const notesSnapshot = await db.collection('notes').orderBy('timestamp', 'desc').limit(50).get();
+                chatNotes = [];
+                
+                notesSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    chatNotes.push({
+                        id: doc.id,
+                        content: data.content,
+                        date: data.date,
+                        timestamp: data.timestamp
+                    });
+                });
+                
+                console.log(`${chatNotes.length} notes chargées depuis Firebase`);
+            } catch (error) {
+                console.error('Erreur chargement notes:', error);
+            }
+        }
+
+        // Charger l'historique du chat depuis Firebase
+        async function loadChatHistoryFromFirebase() {
+            if (!isFirebaseInitialized) return;
+            
+            try {
+                const sessionId = getSessionId();
+                const chatSnapshot = await db.collection('chat_history')
+                    .where('sessionId', '==', sessionId)
+                    .orderBy('timestamp', 'desc')
+                    .limit(20)
+                    .get();
+                
+                const messages = [];
+                chatSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    messages.push({
+                        message: data.message,
+                        sender: data.sender,
+                        timestamp: data.timestamp
+                    });
+                });
+                
+                // Afficher les derniers messages (en ordre chronologique)
+                messages.reverse().forEach(msg => {
+                    if (msg.sender && msg.message) {
+                        addChatMessage(msg.message, msg.sender);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Erreur chargement historique chat:', error);
+            }
+        }
+
+        // Exporter un graphique
+        function exportChart(chartId) {
+            const canvas = document.getElementById(chartId);
+            if (!canvas) return;
+            
+            // Créer un lien de téléchargement
+            const link = document.createElement('a');
+            link.download = `graphique_kamlac_${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            
+            addChatMessage(`📥 <strong>Graphique exporté</strong><br><br>Le graphique a été téléchargé au format PNG.`, 'ai');
+        }
+
+        // Afficher les données d'un graphique
+        function showChartData(chartId) {
+            addChatMessage(`📊 <strong>Données du graphique</strong><br><br>Les données sont visibles dans le tableau ci-dessus. Vous pouvez demander une analyse plus détaillée ou un export CSV.`, 'ai');
+        }
+
+        // Copier un email dans le presse-papiers
+        function copyEmailToClipboard(type, clientName, balance) {
+            let emailText = '';
+            
+            switch(type) {
+                case 'relance':
+                    emailText = `Objet: Rappel - Solde en cours\n\nBonjour ${clientName},\n\nNous vous rappelons qu'un solde de ${formatCurrency(balance)} reste en cours sur votre compte.\n\nMerci de bien vouloir régulariser cette situation dans les meilleurs délais.\n\nCordialement,\nL'équipe KAMLAC`;
+                    break;
+                default:
+                    emailText = 'Template non disponible';
+            }
+            
+            // Copier dans le presse-papiers
+            navigator.clipboard.writeText(emailText).then(() => {
+                addChatMessage(`📋 <strong>Email copié</strong><br><br>Le texte de l'email a été copié dans votre presse-papiers.`, 'ai');
+            }).catch(err => {
+                addChatMessage(`❌ <strong>Erreur de copie</strong><br><br>Impossible de copier dans le presse-papiers : ${err.message}`, 'ai');
+            });
+        }
+
+        // Export de données filtrées
+        function exportFilteredData() {
+            addChatMessage(`📥 <strong>Export de données filtrées</strong><br><br>
+            Choisissez le type d'export :<br><br>
+            
+            <div style="display: grid; gap: 8px; margin: 15px 0;">
+                <button class="btn btn-primary" onclick="exportCurrentFilters()" style="text-align: left;">
+                    🎯 Exporter les données actuellement filtrées du dashboard
+                </button>
+                <button class="btn btn-info" onclick="exportRecapFilters()" style="text-align: left;">
+                    📋 Exporter les données filtrées du récapitulatif
+                </button>
+                <button class="btn btn-success" onclick="exportCustomPeriod()" style="text-align: left;">
+                    📅 Exporter une période personnalisée
+                </button>
+            </div>`, 'ai');
+        }
+
+        function exportCurrentFilters() {
+            // Utiliser les données filtrées du dashboard
+            const headers = ['Client', 'Date', 'N° Facture', 'Produit', 'Quantité', 'Prix Unitaire', 'Valeur Total'];
+            const csvContent = [
+                headers.join(','),
+                ...filteredData.map(sale => [
+                    `"${sale.client}"`,
+                    sale.date,
+                    `"${sale.invoice || ''}"`,
+                    `"${sale.product || ''}"`,
+                    sale.quantity || '',
+                    sale.unitPrice || '',
+                    sale.valeur
+                ].join(','))
+            ].join('\n');
+            
+            downloadFile(csvContent, `kamlac_ventes_filtrees_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+            addChatMessage(`✅ <strong>Export terminé</strong><br><br>📊 ${filteredData.length} ventes filtrées exportées`, 'ai');
+        }
+
+        function exportRecapFilters() {
+            // Utiliser les données filtrées du récapitulatif
+            const headers = ['Client', 'Date', 'N° Facture', 'Produit', 'Quantité', 'Prix Unitaire', 'Valeur Total'];
+            const csvContent = [
+                headers.join(','),
+                ...filteredRecapSales.map(sale => [
+                    `"${sale.client}"`,
+                    sale.date,
+                    `"${sale.invoice || ''}"`,
+                    `"${sale.product || ''}"`,
+                    sale.quantity || '',
+                    sale.unitPrice || '',
+                    sale.valeur
+                ].join(','))
+            ].join('\n');
+            
+            downloadFile(csvContent, `kamlac_recap_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+            addChatMessage(`✅ <strong>Export terminé</strong><br><br>📊 ${filteredRecapSales.length} ventes du récapitulatif exportées`, 'ai');
+        }
+
+        // Gestion des commandes de mise à jour et suppression
+        function handleUpdateDataCommand(question) {
+            return `⚠️ <strong>Modification de données</strong><br><br>
+            Pour des raisons de sécurité, les modifications directes via chat ne sont pas activées.<br><br>
+            
+            📋 <strong>Pour modifier des données :</strong><br>
+            1. Utilisez l'onglet "📋 Récap." pour trouver l'élément<br>
+            2. Cliquez sur le bouton "✏️" de modification<br>
+            3. Ou utilisez la recherche avancée pour localiser précisément<br><br>
+            
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Chercher la vente à modifier')">Rechercher vente</div>
+                <div class="chat-suggestion" onclick="showSection('recap'); document.querySelector('.nav-tab:nth-child(3)').click();">Aller au récapitulatif</div>
+            </div>`;
+        }
+
+        function handleDeleteDataCommand(question) {
+            return `⚠️ <strong>Suppression de données</strong><br><br>
+            Pour des raisons de sécurité, les suppressions directes via chat ne sont pas activées.<br><br>
+            
+            📋 <strong>Pour supprimer des données :</strong><br>
+            1. Utilisez l'onglet "📋 Récap." pour trouver l'élément<br>
+            2. Cliquez sur le bouton "🗑️" de suppression<br>
+            3. Confirmez la suppression<br><br>
+            
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Chercher la donnée à supprimer')">Rechercher</div>
+                <div class="chat-suggestion" onclick="showSection('recap'); document.querySelector('.nav-tab:nth-child(3)').click();">Aller au récapitulatif</div>
+            </div>`;
+        }
+
+        // Initialisation de l'assistant IA au démarrage de l'application
+        function initializeAIAssistant() {
+            // Charger les notes et l'historique depuis Firebase
+            setTimeout(() => {
+                if (isFirebaseInitialized) {
+                    loadNotesFromFirebase();
+                    // Ne pas charger l'historique pour éviter de polluer le chat au démarrage
+                    // loadChatHistoryFromFirebase();
+                }
+            }, 2000);
+        }
+
+        // Messages d'accueil personnalisés selon l'heure
+        function getPersonalizedWelcomeMessage() {
+            const hour = new Date().getHours();
+            let greeting = '';
+            
+            if (hour < 12) {
+                greeting = 'Bonjour ! ☀️';
+            } else if (hour < 18) {
+                greeting = 'Bon après-midi ! 🌤️';
+            } else {
+                greeting = 'Bonsoir ! 🌙';
+            }
+            
+            const stats = {
+                totalSales: salesData.length,
+                totalRevenue: salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0),
+                totalClients: new Set(salesData.map(s => s.client)).size
+            };
+            
+            return `${greeting}<br><br>
+            Je suis votre assistant IA pour analyser vos données KAMLAC.<br><br>
+            
+            📊 <strong>État actuel de votre activité :</strong><br>
+            • ${stats.totalSales} ventes réalisées<br>
+            • ${formatCurrency(stats.totalRevenue)} de CA total<br>
+            • ${stats.totalClients} clients actifs<br><br>
+            
+            Je peux vous aider avec :
+            <br><br>
+            🎯 <strong>Actions directes</strong> : Créer ventes, encaissements, emails<br>
+            📊 <strong>Analyses poussées</strong> : Graphiques, statistiques, comparaisons<br>
+            📝 <strong>Gestion</strong> : Notes, rappels, recherche avancée<br>
+            📥 <strong>Exports</strong> : Données CSV, graphiques PNG<br><br>
+            
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon meilleur client ?')">Meilleur client</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Créer une vente de 50000 CFA')">Créer vente</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Graphique des ventes ce mois')">Graphique mois</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Aide complète')">Aide complète</div>
+            </div>`;
+        }
+
+        function generatePeriodAnalysis(sales, payments, period) {
+            const totalRevenue = sales.reduce((sum, s) => sum + (s.valeur || 0), 0);
+            const totalPayments = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+            
+            // Analyse par client pour la période
+            const clientStats = {};
+            sales.forEach(sale => {
+                if (!clientStats[sale.client]) {
+                    clientStats[sale.client] = { revenue: 0, count: 0 };
+                }
+                clientStats[sale.client].revenue += sale.valeur || 0;
+                clientStats[sale.client].count++;
+            });
+            
+            const topClients = Object.entries(clientStats)
+                .sort(([,a], [,b]) => b.revenue - a.revenue)
+                .slice(0, 5);
+            
+            // Analyse par produit
+            const productStats = {};
+            sales.forEach(sale => {
+                const product = sale.product || 'Non spécifié';
+                if (!productStats[product]) {
+                    productStats[product] = { revenue: 0, quantity: 0 };
+                }
+                productStats[product].revenue += sale.valeur || 0;
+                productStats[product].quantity += parseFloat(sale.quantity) || 0;
+            });
+            
+            const topProducts = Object.entries(productStats)
+                .sort(([,a], [,b]) => b.revenue - a.revenue)
+                .slice(0, 5);
+            
+            return `📊 <strong>Analyse complète - ${period.name}</strong><br><br>
+            
+            💰 <strong>Vue d'ensemble :</strong><br>
+            • CA total : ${formatCurrency(totalRevenue)}<br>
+            • Encaissements : ${formatCurrency(totalPayments)}<br>
+            • Nombre de ventes : ${sales.length}<br>
+            • Vente moyenne : ${formatCurrency(totalRevenue / (sales.length || 1))}<br>
+            • Taux d'encaissement : ${((totalPayments / totalRevenue) * 100).toFixed(1)}%<br><br>
+            
+            🏆 <strong>Top 5 clients :</strong><br>
+            <table class="chat-table">
+                <tr><th>Client</th><th>CA</th><th>Ventes</th></tr>
+                ${topClients.map(([client, stats]) => 
+                    `<tr><td>${client}</td><td>${formatCurrency(stats.revenue)}</td><td>${stats.count}</td></tr>`
+                ).join('')}
+            </table><br>
+            
+            🏆 <strong>Top 5 produits :</strong><br>
+            <table class="chat-table">
+                <tr><th>Produit</th><th>CA</th><th>Quantité</th></tr>
+                ${topProducts.map(([product, stats]) => 
+                    `<tr><td>${product}</td><td>${formatCurrency(stats.revenue)}</td><td>${Math.round(stats.quantity)}</td></tr>`
+                ).join('')}
+            </table>
+            
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Graphique évolution ${period.name}')">Voir évolution</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Exporter données ${period.name}')">Exporter</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Comparer avec période précédente')">Comparer périodes</div>
+            </div>`;
+        }
+
+        // Gestion des exports via commandes
+        function handleExportDataCommand(question) {
+            const q = question.toLowerCase();
+            
+            if (q.includes('vente')) {
+                exportToCSV();
+                return "📥 <strong>Export des ventes lancé</strong><br><br>Le fichier CSV des ventes va être téléchargé automatiquement.";
+            }
+            
+            if (q.includes('encaissement') || q.includes('paiement')) {
+                exportPaymentsToCSV();
+                return "📥 <strong>Export des encaissements lancé</strong><br><br>Le fichier CSV des encaissements va être téléchargé automatiquement.";
+            }
+            
+            return `📥 <strong>Options d'export disponibles</strong><br><br>
+            <div style="display: grid; gap: 8px; margin: 15px 0;">
+                <button class="btn btn-success" onclick="exportToCSV()" style="text-align: left;">
+                    📊 Exporter toutes les ventes (CSV)
+                </button>
+                <button class="btn btn-primary" onclick="exportPaymentsToCSV()" style="text-align: left;">
+                    💰 Exporter tous les encaissements (CSV)
+                </button>
+                <button class="btn btn-info" onclick="exportFilteredData()" style="text-align: left;">
+                    🎯 Exporter données filtrées
+                </button>
+            </div>`;
+        }
+
+        // Recherche avancée dans les données
+        function handleSearchDataCommand(question) {
+            const searchTerm = extractSearchTerm(question);
+            const searchResults = performAdvancedSearch(searchTerm);
+            
+            return formatSearchResults(searchResults, searchTerm);
+        }
+
+        function extractSearchTerm(question) {
+            const keywords = ['chercher', 'trouver', 'rechercher', 'voir'];
+            
+            for (let keyword of keywords) {
+                const index = question.toLowerCase().indexOf(keyword);
+                if (index !== -1) {
+                    return question.substring(index + keyword.length).trim();
+                }
+            }
+            
+            return question;
+        }
+
+        function performAdvancedSearch(term) {
+            const results = {
+                sales: [],
+                payments: [],
+                clients: [],
+                products: []
+            };
+            
+            const termLower = term.toLowerCase();
+            
+            // Recherche dans les ventes
+            results.sales = salesData.filter(sale => 
+                sale.client?.toLowerCase().includes(termLower) ||
+                sale.product?.toLowerCase().includes(termLower) ||
+                sale.invoice?.toLowerCase().includes(termLower) ||
+                sale.date?.includes(termLower)
+            );
+            
+            // Recherche dans les encaissements
+            results.payments = paymentsData.filter(payment =>
+                payment.client?.toLowerCase().includes(termLower) ||
+                payment.method?.toLowerCase().includes(termLower) ||
+                payment.reference?.toLowerCase().includes(termLower) ||
+                payment.date?.includes(termLower)
+            );
+            
+            // Recherche de clients
+            results.clients = clientsList.filter(client =>
+                client.toLowerCase().includes(termLower)
+            );
+            
+            // Recherche de produits
+            const products = [...new Set(salesData.map(s => s.product).filter(p => p))];
+            results.products = products.filter(product =>
+                product.toLowerCase().includes(termLower)
+            );
+            
+            return results;
+        }
+
+        function formatSearchResults(results, term) {
+            let response = `🔍 <strong>Résultats de recherche pour "${term}"</strong><br><br>`;
+            
+            const totalResults = results.sales.length + results.payments.length + results.clients.length + results.products.length;
+            
+            if (totalResults === 0) {
+                return response + `❌ Aucun résultat trouvé.<br><br>
+                <div class="chat-suggestions">
+                    <div class="chat-suggestion" onclick="sendSuggestion('Voir tous les clients')">Tous les clients</div>
+                    <div class="chat-suggestion" onclick="sendSuggestion('Voir tous les produits')">Tous les produits</div>
+                </div>`;
+            }
+            
+            response += `📊 <strong>${totalResults} résultat(s) trouvé(s)</strong><br><br>`;
+            
+            if (results.clients.length > 0) {
+                response += `👥 <strong>Clients (${results.clients.length}) :</strong><br>`;
+                results.clients.slice(0, 5).forEach(client => {
+                    const clientData = getClientBalance(client);
+                    response += `• ${client} (En-cours: ${formatCurrency(clientData)})<br>`;
+                });
+                if (results.clients.length > 5) response += `<em>... et ${results.clients.length - 5} autres</em><br>`;
+                response += '<br>';
+            }
+            
+            if (results.products.length > 0) {
+                response += `📦 <strong>Produits (${results.products.length}) :</strong><br>`;
+                results.products.slice(0, 5).forEach(product => {
+                    response += `• ${product}<br>`;
+                });
+                if (results.products.length > 5) response += `<em>... et ${results.products.length - 5} autres</em><br>`;
+                response += '<br>';
+            }
+            
+            if (results.sales.length > 0) {
+                response += `📊 <strong>Ventes (${results.sales.length}) :</strong><br>`;
+                response += '<table class="chat-table"><tr><th>Date</th><th>Client</th><th>Montant</th></tr>';
+                results.sales.slice(0, 5).forEach(sale => {
+                    response += `<tr><td>${sale.date}</td><td>${sale.client}</td><td>${formatCurrency(sale.valeur)}</td></tr>`;
+                });
+                response += '</table>';
+                if (results.sales.length > 5) response += `<em>... et ${results.sales.length - 5} autres ventes</em><br>`;
+                response += '<br>';
+            }
+            
+            if (results.payments.length > 0) {
+                response += `💰 <strong>Encaissements (${results.payments.length}) :</strong><br>`;
+                response += '<table class="chat-table"><tr><th>Date</th><th>Client</th><th>Montant</th></tr>';
+                results.payments.slice(0, 5).forEach(payment => {
+                    response += `<tr><td>${payment.date}</td><td>${payment.client}</td><td>${formatCurrency(payment.amount)}</td></tr>`;
+                });
+                response += '</table>';
+                if (results.payments.length > 5) response += `<em>... et ${results.payments.length - 5} autres encaissements</em><br>`;
+            }
+            
+            return response;
+        }
+
+        // Messages d'aide et réponses par défaut améliorés
+        function generateAdvancedHelpMessage() {
+            return `🤖 <strong>Assistant IA KAMLAC - Guide complet</strong><br><br>
+            Je suis votre assistant intelligent capable d'analyser vos données et d'effectuer des actions. Voici tout ce que je peux faire :<br><br>
+            
+            🎯 <strong>ACTIONS DIRECTES :</strong><br><br>
+            
+            💼 <strong>Gestion des ventes :</strong><br>
+            • "Créer une vente de 50000 CFA pour AFRICA LEYRI"<br>
+            • "Vendre 10 cartons de produit X à SMC"<br>
+            • "Facturer 75000 à WALID EZZEDINE"<br><br>
+            
+            💰 <strong>Gestion des encaissements :</strong><br>
+            • "Encaisser 120000 CFA de HARATI"<br>
+            • "J'ai reçu 50000 par virement de SMC"<br>
+            • "Enregistrer paiement 75000 espèces de DIENE"<br><br>
+            
+            📧 <strong>Emails automatiques :</strong><br>
+            • "Envoyer mail de relance à AFRICA LEYRI"<br>
+            • "Envoyer facture à SMC"<br>
+            • "Mail de remerciement à WALID EZZEDINE"<br><br>
+            
+            📝 <strong>Notes et rappels :</strong><br>
+            • "Noter que AFRICA LEYRI préfère les virements"<br>
+            • "Rappel : appeler SMC demain"<br>
+            • "Retenir que le prix produit X a augmenté"<br><br>
+            
+            📊 <strong>Graphiques dynamiques :</strong><br>
+            • "Graphique des ventes par client"<br>
+            • "Courbe d'évolution du CA ce mois"<br>
+            • "Diagramme secteurs des produits"<br><br>
+            
+            🔍 <strong>ANALYSES AVANCÉES :</strong><br><br>
+            
+            📈 <strong>Analyses temporelles :</strong><br>
+            • "Analyser en détail ce mois"<br>
+            • "Approfondir les 3 derniers mois"<br>
+            • "Détails de cette semaine"<br><br>
+            
+            🎯 <strong>Analyses ciblées :</strong><br>
+            • "Analyser AFRICA LEYRI en détail"<br>
+            • "Approfondir le produit X"<br>
+            • "Performance de SMC ce trimestre"<br><br>
+            
+            🔍 <strong>Recherche avancée :</strong><br>
+            • "Chercher toutes les ventes de janvier"<br>
+            • "Trouver les encaissements par chèque"<br>
+            • "Voir factures AFRICA LEYRI"<br><br>
+            
+            ⚙️ <strong>UTILITAIRES :</strong><br><br>
+            
+            📥 <strong>Exports :</strong><br>
+            • "Exporter les ventes"<br>
+            • "Télécharger encaissements"<br><br>
+            
+            📋 <strong>Gestion des données :</strong><br>
+            • "Mes notes" / "Voir rappels"<br>
+            • "Statistiques générales"<br>
+            • "Résumé de l'activité"<br><br>
+            
+            💡 <strong>Conseils d'utilisation :</strong><br>
+            • Parlez-moi en langage naturel<br>
+            • Soyez précis dans vos demandes<br>
+            • Je mémorise le contexte de notre conversation<br>
+            • Utilisez les boutons de suggestion pour débuter<br><br>
+            
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Créer une vente de 50000 CFA pour AFRICA LEYRI')">Test création vente</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Graphique des ventes par client')">Test graphique</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Analyser ce mois en détail')">Test analyse</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Noter un rappel important')">Test note</div>
+            </div>`;
+        }
+
+        function generateAdvancedDefaultResponse(question) {
+            return `🤔 <strong>Je n'ai pas bien compris votre demande</strong><br><br>
+            Vous avez dit : <em>"${question}"</em><br><br>
+            
+            Voici ce que je peux faire pour vous aider :<br><br>
+            
+            🎯 <strong>Actions possibles :</strong><br>
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Créer une vente')">Créer vente</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Encaisser un paiement')">Encaisser</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Envoyer un email')">Envoyer email</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Créer une note')">Prendre note</div>
+            </div><br>
+            
+            📊 <strong>Analyses disponibles :</strong><br>
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Mon CA total')">CA total</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Meilleur client')">Top client</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Graphique des ventes')">Graphique</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Analyser ce mois')">Analyse mois</div>
+            </div><br>
+            
+            🔍 <strong>Recherche et utilitaires :</strong><br>
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Chercher AFRICA LEYRI')">Rechercher</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Mes notes')">Voir notes</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Aide complète')">Aide complète</div>
+            </div>`;
         }
 
         // Gestion de la liste des clients
@@ -2640,8 +3322,25 @@
 
         // Variables globales pour le chat
         let chatHistory = [];
+        let chatNotes = [];
+        let pendingActions = [];
 
-        // Gestion du chat IA
+        // Assistant IA avancé - Actions et commandes
+        const AI_COMMANDS = {
+            // Actions de données
+            CREATE_SALE: ['créer', 'ajouter', 'nouvelle vente', 'vendre', 'facturer'],
+            CREATE_PAYMENT: ['encaisser', 'paiement', 'recevoir', 'encaissement'],
+            SEND_EMAIL: ['envoyer mail', 'email', 'envoyer message', 'mail'],
+            CREATE_NOTE: ['noter', 'rappel', 'note', 'mémoriser', 'retenir'],
+            GENERATE_CHART: ['graphique', 'courbe', 'diagramme', 'chart', 'visualiser'],
+            ANALYZE_PERIOD: ['analyser', 'analyse', 'détails', 'approfondir'],
+            EXPORT_DATA: ['exporter', 'télécharger', 'export', 'sauvegarder'],
+            SEARCH_DATA: ['chercher', 'trouver', 'rechercher', 'voir'],
+            UPDATE_DATA: ['modifier', 'changer', 'mettre à jour', 'corriger'],
+            DELETE_DATA: ['supprimer', 'effacer', 'retirer', 'annuler']
+        };
+
+        // Gestion du chat IA avancé
         function handleChatKeyPress(event) {
             if (event.key === 'Enter') {
                 sendChatMessage();
@@ -2663,6 +3362,9 @@
             addChatMessage(message, 'user');
             input.value = '';
             
+            // Sauvegarder dans l'historique Firebase
+            saveChatToFirebase(message, 'user');
+            
             // Désactiver le bouton temporairement
             const sendBtn = document.getElementById('chatSendBtn');
             sendBtn.disabled = true;
@@ -2672,11 +3374,36 @@
             
             // Analyser et répondre après un délai réaliste
             setTimeout(() => {
-                const response = analyzeQuestion(message);
+                const response = analyzeAdvancedQuestion(message);
                 hideTypingIndicator();
                 addChatMessage(response, 'ai');
+                saveChatToFirebase(response, 'ai');
                 sendBtn.disabled = false;
-            }, 1500 + Math.random() * 1000); // 1.5-2.5 secondes
+            }, 1500 + Math.random() * 1000);
+        }
+
+        // Sauvegarder les conversations dans Firebase
+        async function saveChatToFirebase(message, sender) {
+            if (!isFirebaseInitialized) return;
+            
+            try {
+                await db.collection('chat_history').add({
+                    message: message,
+                    sender: sender,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    sessionId: getSessionId()
+                });
+            } catch (error) {
+                console.error('Erreur sauvegarde chat:', error);
+            }
+        }
+
+        // Obtenir un ID de session unique
+        function getSessionId() {
+            if (!localStorage.getItem('kamlacSessionId')) {
+                localStorage.setItem('kamlacSessionId', Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+            }
+            return localStorage.getItem('kamlacSessionId');
         }
 
         function addChatMessage(message, sender) {
@@ -2699,7 +3426,7 @@
             // Scroll vers le bas
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
-            // Sauvegarder l'historique
+            // Sauvegarder l'historique local
             chatHistory.push({ message, sender, timestamp: new Date() });
         }
 
@@ -2734,59 +3461,785 @@
             }
         }
 
-        // Analyseur de questions intelligent
-        function analyzeQuestion(question) {
+        // Analyseur de questions avancé avec actions
+        function analyzeAdvancedQuestion(question) {
             const q = question.toLowerCase();
             
-            // Analyser le type de question et extraire les informations
             try {
-                // Questions sur le CA
+                // 1. Détection des intentions d'actions
+                if (detectActionIntent(q, AI_COMMANDS.CREATE_SALE)) {
+                    return handleCreateSaleCommand(question);
+                }
+                
+                if (detectActionIntent(q, AI_COMMANDS.CREATE_PAYMENT)) {
+                    return handleCreatePaymentCommand(question);
+                }
+                
+                if (detectActionIntent(q, AI_COMMANDS.SEND_EMAIL)) {
+                    return handleSendEmailCommand(question);
+                }
+                
+                if (detectActionIntent(q, AI_COMMANDS.CREATE_NOTE)) {
+                    return handleCreateNoteCommand(question);
+                }
+                
+                if (detectActionIntent(q, AI_COMMANDS.GENERATE_CHART)) {
+                    return handleGenerateChartCommand(question);
+                }
+                
+                if (detectActionIntent(q, AI_COMMANDS.ANALYZE_PERIOD)) {
+                    return handleAnalyzePeriodCommand(question);
+                }
+                
+                if (detectActionIntent(q, AI_COMMANDS.EXPORT_DATA)) {
+                    return handleExportDataCommand(question);
+                }
+                
+                if (detectActionIntent(q, AI_COMMANDS.SEARCH_DATA)) {
+                    return handleSearchDataCommand(question);
+                }
+                
+                if (detectActionIntent(q, AI_COMMANDS.UPDATE_DATA)) {
+                    return handleUpdateDataCommand(question);
+                }
+                
+                if (detectActionIntent(q, AI_COMMANDS.DELETE_DATA)) {
+                    return handleDeleteDataCommand(question);
+                }
+                
+                // 2. Questions d'analyse (code existant amélioré)
                 if (q.includes('ca') || q.includes('chiffre') || q.includes('affaires') || q.includes('revenus')) {
                     return analyzeRevenueQuestion(q);
                 }
                 
-                // Questions sur les clients
                 if (q.includes('client') || q.includes('meilleur') || q.includes('top client')) {
                     return analyzeClientQuestion(q);
                 }
                 
-                // Questions sur les produits
                 if (q.includes('produit') || q.includes('article') || q.includes('top produit')) {
                     return analyzeProductQuestion(q);
                 }
                 
-                // Questions sur les encaissements
                 if (q.includes('encaiss') || q.includes('en-cours') || q.includes('encours') || q.includes('crédit') || q.includes('solde')) {
                     return analyzePaymentQuestion(q);
                 }
                 
-                // Questions sur les périodes
                 if (q.includes('mois') || q.includes('semaine') || q.includes('trimestre') || q.includes('année') || q.includes('période')) {
                     return analyzePeriodQuestion(q);
                 }
                 
-                // Questions de comparaison
                 if (q.includes('compar') || q.includes('vs') || q.includes('entre') || q.includes('différence')) {
                     return analyzeComparisonQuestion(q);
                 }
                 
-                // Question générale sur les statistiques
                 if (q.includes('stat') || q.includes('résumé') || q.includes('bilan') || q.includes('synthèse')) {
                     return generateGeneralStats();
                 }
                 
-                // Aide
                 if (q.includes('aide') || q.includes('help') || q.includes('comment') || q.includes('que peux')) {
-                    return generateHelpMessage();
+                    return generateAdvancedHelpMessage();
                 }
                 
-                // Réponse par défaut avec suggestions
-                return generateDefaultResponse(question);
+                // 3. Gestion des notes et rappels
+                if (q.includes('mes notes') || q.includes('rappels')) {
+                    return showMyNotes();
+                }
+                
+                return generateAdvancedDefaultResponse(question);
                 
             } catch (error) {
-                console.error('Erreur analyse question:', error);
+                console.error('Erreur analyse question avancée:', error);
                 return "❌ <strong>Erreur d'analyse</strong><br><br>Désolé, j'ai rencontré une erreur en analysant votre question. Pouvez-vous la reformuler ?";
             }
+        }
+
+        // Détection d'intention d'action
+        function detectActionIntent(question, keywords) {
+            return keywords.some(keyword => question.includes(keyword));
+        }
+
+        // Gestion des commandes de création de vente
+        function handleCreateSaleCommand(question) {
+            const entities = extractEntitiesFromQuestion(question);
+            
+            if (entities.action === 'incomplete') {
+                return generateSaleCreationForm(entities);
+            }
+            
+            // Si toutes les informations sont présentes, créer la vente
+            if (entities.client && entities.amount) {
+                return confirmSaleCreation(entities);
+            }
+            
+            return `🛒 <strong>Création de vente</strong><br><br>
+            J'ai détecté que vous voulez créer une vente. Pour cela, j'ai besoin de :<br><br>
+            📋 <strong>Informations requises :</strong><br>
+            • Client (ex: "AFRICA LEYRI")<br>
+            • Montant ou produit + quantité<br>
+            • Date (optionnel, aujourd'hui par défaut)<br><br>
+            <strong>Exemple :</strong> <em>"Créer une vente de 50000 CFA pour AFRICA LEYRI"</em><br>
+            ou <em>"Vendre 10 cartons de produit X à SMC"</em><br><br>
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Créer une vente de 50000 CFA pour AFRICA LEYRI')">Exemple vente simple</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Aller à l\\'onglet ventes')">Onglet ventes</div>
+            </div>`;
+        }
+
+        // Gestion des commandes d'encaissement
+        function handleCreatePaymentCommand(question) {
+            const entities = extractEntitiesFromQuestion(question);
+            
+            if (entities.client && entities.amount) {
+                return confirmPaymentCreation(entities);
+            }
+            
+            return `💰 <strong>Création d'encaissement</strong><br><br>
+            J'ai détecté que vous voulez enregistrer un encaissement. Pour cela, j'ai besoin de :<br><br>
+            📋 <strong>Informations requises :</strong><br>
+            • Client<br>
+            • Montant<br>
+            • Mode de paiement (optionnel)<br><br>
+            <strong>Exemple :</strong> <em>"Encaisser 75000 CFA de SMC"</em><br>
+            ou <em>"J'ai reçu 120000 par virement de WALID EZZEDINE"</em><br><br>
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Encaisser 75000 CFA de SMC')">Exemple encaissement</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Aller à l\\'onglet encaissements')">Onglet encaissements</div>
+            </div>`;
+        }
+
+        // Extraction d'entités depuis la question
+        function extractEntitiesFromQuestion(question) {
+            const entities = {
+                client: null,
+                amount: null,
+                product: null,
+                quantity: null,
+                date: null,
+                method: null,
+                action: 'incomplete'
+            };
+            
+            // Extraire le montant
+            const amountMatch = question.match(/(\d+(?:\s?\d+)*)\s*(?:cfa|francs?|euros?|€|\$)?/i);
+            if (amountMatch) {
+                entities.amount = parseInt(amountMatch[1].replace(/\s/g, ''));
+            }
+            
+            // Extraire la quantité
+            const quantityMatch = question.match(/(\d+)\s*(?:cartons?|unités?|pièces?|kg|litres?)/i);
+            if (quantityMatch) {
+                entities.quantity = parseInt(quantityMatch[1]);
+            }
+            
+            // Extraire le client (chercher dans la liste des clients existants)
+            clientsList.forEach(client => {
+                const clientWords = client.toLowerCase().split(' ');
+                const questionLower = question.toLowerCase();
+                
+                if (clientWords.some(word => questionLower.includes(word)) || questionLower.includes(client.toLowerCase())) {
+                    entities.client = client;
+                }
+            });
+            
+            // Extraire le mode de paiement
+            const paymentMethods = ['espèces', 'chèque', 'virement', 'mobile money', 'carte'];
+            paymentMethods.forEach(method => {
+                if (question.toLowerCase().includes(method)) {
+                    entities.method = method.charAt(0).toUpperCase() + method.slice(1);
+                }
+            });
+            
+            return entities;
+        }
+
+        // Confirmation de création de vente
+        function confirmSaleCreation(entities) {
+            const saleData = {
+                client: entities.client,
+                amount: entities.amount,
+                date: new Date().toLocaleDateString('fr-FR'),
+                product: entities.product || 'Produit via IA',
+                quantity: entities.quantity || 1,
+                unitPrice: entities.amount / (entities.quantity || 1),
+                invoice: `FAC-IA-${Date.now()}`
+            };
+            
+            return `✅ <strong>Confirmation de création de vente</strong><br><br>
+            📋 <strong>Détails de la vente :</strong><br>
+            • Client: <strong>${saleData.client}</strong><br>
+            • Montant: <strong>${formatCurrency(saleData.amount)}</strong><br>
+            • Date: <strong>${saleData.date}</strong><br>
+            • Facture: <strong>${saleData.invoice}</strong><br><br>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 15px;">
+                <button class="btn btn-success" onclick="executeSaleCreation(${JSON.stringify(saleData).replace(/"/g, '&quot;')})" style="flex: 1; min-width: 120px;">
+                    ✅ Confirmer
+                </button>
+                <button class="btn btn-secondary" onclick="addChatMessage('❌ Création de vente annulée', 'ai')" style="flex: 1; min-width: 120px;">
+                    ❌ Annuler
+                </button>
+            </div>`;
+        }
+
+        // Confirmation de création d'encaissement
+        function confirmPaymentCreation(entities) {
+            const paymentData = {
+                client: entities.client,
+                amount: entities.amount,
+                date: new Date().toLocaleDateString('fr-FR'),
+                method: entities.method || 'Espèces',
+                reference: `REF-IA-${Date.now()}`
+            };
+            
+            return `✅ <strong>Confirmation de création d'encaissement</strong><br><br>
+            📋 <strong>Détails de l'encaissement :</strong><br>
+            • Client: <strong>${paymentData.client}</strong><br>
+            • Montant: <strong>${formatCurrency(paymentData.amount)}</strong><br>
+            • Date: <strong>${paymentData.date}</strong><br>
+            • Mode: <strong>${paymentData.method}</strong><br>
+            • Référence: <strong>${paymentData.reference}</strong><br><br>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 15px;">
+                <button class="btn btn-success" onclick="executePaymentCreation(${JSON.stringify(paymentData).replace(/"/g, '&quot;')})" style="flex: 1; min-width: 120px;">
+                    ✅ Confirmer
+                </button>
+                <button class="btn btn-secondary" onclick="addChatMessage('❌ Création d\\'encaissement annulée', 'ai')" style="flex: 1; min-width: 120px;">
+                    ❌ Annuler
+                </button>
+            </div>`;
+        }
+
+        // Exécution de la création de vente
+        async function executeSaleCreation(saleData) {
+            try {
+                const newSale = {
+                    id: Date.now() + Math.random(),
+                    client: saleData.client,
+                    date: saleData.date,
+                    invoice: saleData.invoice,
+                    product: saleData.product,
+                    quantity: saleData.quantity,
+                    unitPrice: saleData.unitPrice,
+                    valeur: saleData.amount
+                };
+                
+                salesData.push(newSale);
+                saveToLocalStorage();
+                
+                if (isFirebaseInitialized) {
+                    await db.collection('sales').doc(newSale.id.toString()).set({
+                        ...newSale,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                
+                // Mettre à jour l'interface
+                updateClientsList();
+                applyFilters();
+                updateClientsOverview();
+                updateClientsSummaryTable();
+                
+                addChatMessage(`🎉 <strong>Vente créée avec succès !</strong><br><br>
+                📊 <strong>Vente ajoutée :</strong><br>
+                • Client: ${saleData.client}<br>
+                • Montant: ${formatCurrency(saleData.amount)}<br>
+                • Facture: ${saleData.invoice}<br><br>
+                ✅ Les données ont été mises à jour dans tous les tableaux de bord.`, 'ai');
+                
+            } catch (error) {
+                console.error('Erreur création vente:', error);
+                addChatMessage(`❌ <strong>Erreur lors de la création</strong><br><br>
+                Une erreur s'est produite : ${error.message}`, 'ai');
+            }
+        }
+
+        // Exécution de la création d'encaissement
+        async function executePaymentCreation(paymentData) {
+            try {
+                const newPayment = {
+                    id: Date.now() + Math.random(),
+                    client: paymentData.client,
+                    date: paymentData.date,
+                    amount: paymentData.amount,
+                    method: paymentData.method,
+                    reference: paymentData.reference,
+                    notes: 'Créé via Assistant IA'
+                };
+                
+                paymentsData.push(newPayment);
+                saveToLocalStorage();
+                
+                if (isFirebaseInitialized) {
+                    await db.collection('payments').doc(newPayment.id.toString()).set({
+                        ...newPayment,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                
+                // Mettre à jour l'interface
+                updateClientsList();
+                updatePaymentsDisplay();
+                updateClientsOverview();
+                updateClientsSummaryTable();
+                
+                const clientBalance = getClientBalance(paymentData.client);
+                let balanceMessage = '';
+                if (clientBalance > 0) {
+                    balanceMessage = `<br>💰 Nouveau solde client: ${formatCurrency(clientBalance)} (à recevoir)`;
+                } else if (clientBalance < 0) {
+                    balanceMessage = `<br>💳 Nouveau solde client: ${formatCurrency(Math.abs(clientBalance))} (crédit)`;
+                } else {
+                    balanceMessage = `<br>✅ Client soldé !`;
+                }
+                
+                addChatMessage(`🎉 <strong>Encaissement créé avec succès !</strong><br><br>
+                📊 <strong>Encaissement ajouté :</strong><br>
+                • Client: ${paymentData.client}<br>
+                • Montant: ${formatCurrency(paymentData.amount)}<br>
+                • Mode: ${paymentData.method}<br>
+                • Référence: ${paymentData.reference}${balanceMessage}<br><br>
+                ✅ Les données ont été mises à jour dans tous les tableaux de bord.`, 'ai');
+                
+        // Gestion de l'envoi d'emails
+        function handleSendEmailCommand(question) {
+            const entities = extractEmailEntitiesFromQuestion(question);
+            
+            return `📧 <strong>Assistant Email</strong><br><br>
+            J'ai détecté que vous voulez envoyer un email. Voici les options disponibles :<br><br>
+            
+            📋 <strong>Templates disponibles :</strong><br><br>
+            
+            <div style="display: grid; gap: 10px; margin: 15px 0;">
+                <button class="btn btn-primary" onclick="generateEmailTemplate('relance')" style="text-align: left; padding: 12px;">
+                    💰 <strong>Relance de paiement</strong><br>
+                    <small>Pour clients avec en-cours</small>
+                </button>
+                
+                <button class="btn btn-info" onclick="generateEmailTemplate('facture')" style="text-align: left; padding: 12px;">
+                    📄 <strong>Envoi de facture</strong><br>
+                    <small>Confirmation de commande</small>
+                </button>
+                
+                <button class="btn btn-success" onclick="generateEmailTemplate('remerciement')" style="text-align: left; padding: 12px;">
+                    🙏 <strong>Remerciements</strong><br>
+                    <small>Après encaissement</small>
+                </button>
+                
+                <button class="btn btn-warning" onclick="generateEmailTemplate('personnalise')" style="text-align: left; padding: 12px;">
+                    ✏️ <strong>Email personnalisé</strong><br>
+                    <small>Message libre</small>
+                </button>
+            </div>
+            
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Relancer AFRICA LEYRI pour paiement')">Relancer un client</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Envoyer facture à SMC')">Envoyer facture</div>
+            </div>`;
+        }
+
+        // Génération de templates d'emails
+        function generateEmailTemplate(type) {
+            const clientsWithOutstanding = getClientsWithOutstanding();
+            
+            switch(type) {
+                case 'relance':
+                    return generatePaymentReminderEmail(clientsWithOutstanding);
+                case 'facture':
+                    return generateInvoiceEmail();
+                case 'remerciement':
+                    return generateThankYouEmail();
+                case 'personnalise':
+                    return generateCustomEmail();
+                default:
+                    return "Template non trouvé";
+            }
+        }
+
+        function generatePaymentReminderEmail(clients) {
+            if (clients.length === 0) {
+                addChatMessage(`✅ <strong>Aucune relance nécessaire</strong><br><br>
+                Tous vos clients sont à jour dans leurs paiements ! 🎉`, 'ai');
+                return;
+            }
+            
+            let emailContent = `📧 <strong>Template - Relance de paiement</strong><br><br>`;
+            
+            clients.slice(0, 5).forEach((client, index) => {
+                emailContent += `
+                <div style="border: 1px solid #e9ecef; border-radius: 8px; padding: 12px; margin: 10px 0; background: #f8f9fa;">
+                    <strong>📧 À : ${client.name}</strong> (En-cours: ${formatCurrency(client.balance)})<br><br>
+                    
+                    <em>Objet: Rappel - Solde en cours</em><br><br>
+                    
+                    Bonjour ${client.name},<br><br>
+                    
+                    Nous vous rappelons qu'un solde de <strong>${formatCurrency(client.balance)}</strong> 
+                    reste en cours sur votre compte.<br><br>
+                    
+                    Merci de bien vouloir régulariser cette situation dans les meilleurs délais.<br><br>
+                    
+                    Cordialement,<br>
+                    L'équipe KAMLAC
+                    
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-success" onclick="simulateEmailSend('${client.name}', 'relance')" style="margin-right: 5px;">📤 Envoyer</button>
+                        <button class="btn btn-secondary" onclick="copyEmailToClipboard('relance', '${client.name}', '${client.balance}')">📋 Copier</button>
+                    </div>
+                </div>`;
+            });
+            
+            addChatMessage(emailContent, 'ai');
+        }
+
+        function getClientsWithOutstanding() {
+            const clientBalances = {};
+            
+            salesData.forEach(sale => {
+                if (!clientBalances[sale.client]) {
+                    clientBalances[sale.client] = { sales: 0, payments: 0, balance: 0 };
+                }
+                clientBalances[sale.client].sales += sale.valeur || 0;
+            });
+            
+            paymentsData.forEach(payment => {
+                if (!clientBalances[payment.client]) {
+                    clientBalances[payment.client] = { sales: 0, payments: 0, balance: 0 };
+                }
+                clientBalances[payment.client].payments += payment.amount || 0;
+            });
+            
+            return Object.entries(clientBalances)
+                .map(([name, data]) => ({
+                    name,
+                    balance: data.sales - data.payments
+                }))
+                .filter(client => client.balance > 0)
+                .sort((a, b) => b.balance - a.balance);
+        }
+
+        // Simulation d'envoi d'email
+        function simulateEmailSend(clientName, type) {
+            addChatMessage(`✅ <strong>Email envoyé avec succès !</strong><br><br>
+            📧 <strong>Destinataire :</strong> ${clientName}<br>
+            📄 <strong>Type :</strong> ${type}<br>
+            ⏰ <strong>Envoyé le :</strong> ${new Date().toLocaleString('fr-FR')}<br><br>
+            <em>Note : Ceci est une simulation. Dans un environnement de production, l'email serait réellement envoyé.</em>`, 'ai');
+        }
+
+        // Gestion des notes et rappels
+        function handleCreateNoteCommand(question) {
+            const noteContent = extractNoteContent(question);
+            
+            if (noteContent) {
+                return confirmNoteCreation(noteContent);
+            }
+            
+            return `📝 <strong>Création de note/rappel</strong><br><br>
+            J'ai détecté que vous voulez créer une note. Précisez le contenu :<br><br>
+            
+            <strong>Exemples :</strong><br>
+            • <em>"Noter que AFRICA LEYRI préfère les virements"</em><br>
+            • <em>"Rappel : appeler SMC demain"</em><br>
+            • <em>"Retenir que le prix produit X a augmenté"</em><br><br>
+            
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Noter que AFRICA LEYRI préfère les virements')">Exemple note client</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Rappel appeler SMC demain')">Exemple rappel</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Voir mes notes')">Voir mes notes</div>
+            </div>`;
+        }
+
+        function extractNoteContent(question) {
+            // Extraire le contenu de la note après les mots-clés
+            const keywords = ['noter que', 'rappel', 'retenir que', 'note:', 'mémoriser que'];
+            
+            for (let keyword of keywords) {
+                const index = question.toLowerCase().indexOf(keyword);
+                if (index !== -1) {
+                    return question.substring(index + keyword.length).trim();
+                }
+            }
+            
+            return null;
+        }
+
+        function confirmNoteCreation(content) {
+            const noteData = {
+                id: Date.now() + Math.random(),
+                content: content,
+                date: new Date().toLocaleDateString('fr-FR'),
+                timestamp: new Date()
+            };
+            
+            return `✅ <strong>Confirmation de création de note</strong><br><br>
+            📝 <strong>Contenu :</strong> "${content}"<br>
+            📅 <strong>Date :</strong> ${noteData.date}<br><br>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 15px;">
+                <button class="btn btn-success" onclick="executeNoteCreation('${content.replace(/'/g, '\\\'')}')" style="flex: 1; min-width: 120px;">
+                    ✅ Sauvegarder
+                </button>
+                <button class="btn btn-secondary" onclick="addChatMessage('❌ Création de note annulée', 'ai')" style="flex: 1; min-width: 120px;">
+                    ❌ Annuler
+                </button>
+            </div>`;
+        }
+
+        // Exécution de la création de note
+        async function executeNoteCreation(content) {
+            try {
+                const note = {
+                    id: Date.now() + Math.random(),
+                    content: content,
+                    date: new Date().toLocaleDateString('fr-FR'),
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                chatNotes.push(note);
+                
+                if (isFirebaseInitialized) {
+                    await db.collection('notes').doc(note.id.toString()).set(note);
+                }
+                
+                addChatMessage(`✅ <strong>Note sauvegardée !</strong><br><br>
+                📝 "${content}"<br><br>
+                ✅ La note a été ajoutée à votre carnet de notes personnel.`, 'ai');
+                
+            } catch (error) {
+                console.error('Erreur création note:', error);
+                addChatMessage(`❌ <strong>Erreur lors de la sauvegarde</strong><br><br>
+                Une erreur s'est produite : ${error.message}`, 'ai');
+            }
+        }
+
+        // Affichage des notes
+        function showMyNotes() {
+            if (chatNotes.length === 0) {
+                return `📝 <strong>Carnet de notes vide</strong><br><br>
+                Vous n'avez encore aucune note sauvegardée.<br><br>
+                <div class="chat-suggestions">
+                    <div class="chat-suggestion" onclick="sendSuggestion('Noter que AFRICA LEYRI préfère les virements')">Créer une note</div>
+                </div>`;
+            }
+            
+            let notesHTML = `📚 <strong>Vos notes et rappels</strong><br><br>`;
+            
+            chatNotes.slice(-10).reverse().forEach((note, index) => {
+                notesHTML += `
+                <div style="border-left: 3px solid #667eea; padding: 10px; margin: 8px 0; background: #f8f9fa;">
+                    <strong>📝 ${note.date}</strong><br>
+                    ${note.content}
+                    <div style="margin-top: 8px;">
+                        <button class="btn btn-danger" onclick="deleteNote('${note.id}')" style="padding: 4px 8px; font-size: 11px;">🗑️ Supprimer</button>
+                    </div>
+                </div>`;
+            });
+            
+            if (chatNotes.length > 10) {
+                notesHTML += `<br><em>... et ${chatNotes.length - 10} notes plus anciennes</em>`;
+            }
+            
+            return notesHTML;
+        }
+
+        // Génération de graphiques dynamiques
+        function handleGenerateChartCommand(question) {
+            const chartType = detectChartType(question);
+            const period = detectPeriod(question);
+            
+            return generateDynamicChart(chartType, period, question);
+        }
+
+        function detectChartType(question) {
+            const q = question.toLowerCase();
+            
+            if (q.includes('évolution') || q.includes('courbe') || q.includes('ligne')) return 'line';
+            if (q.includes('secteur') || q.includes('camembert') || q.includes('pie')) return 'pie';
+            if (q.includes('barre') || q.includes('colonne') || q.includes('bar')) return 'bar';
+            if (q.includes('radar') || q.includes('araignée')) return 'radar';
+            
+            return 'auto'; // Choix automatique selon les données
+        }
+
+        function detectPeriod(question) {
+            const q = question.toLowerCase();
+            
+            if (q.includes('semaine')) return 'week';
+            if (q.includes('mois') || q.includes('mensuel')) return 'month';
+            if (q.includes('trimestre')) return 'quarter';
+            if (q.includes('année') || q.includes('annuel')) return 'year';
+            if (q.includes('jour') || q.includes('quotidien')) return 'day';
+            
+            return 'month'; // Par défaut
+        }
+
+        function generateDynamicChart(chartType, period, question) {
+            const chartId = 'dynamicChart_' + Date.now();
+            const chartData = prepareChartData(period, question);
+            
+            let chartHTML = `📊 <strong>Graphique généré</strong><br><br>
+            <div style="background: white; padding: 15px; border-radius: 10px; margin: 10px 0;">
+                <canvas id="${chartId}" style="max-height: 300px;"></canvas>
+            </div>
+            
+            <div style="margin-top: 10px;">
+                <button class="btn btn-primary" onclick="exportChart('${chartId}')" style="margin-right: 5px;">💾 Télécharger</button>
+                <button class="btn btn-info" onclick="showChartData('${chartId}')">📋 Voir données</button>
+            </div>`;
+            
+            // Créer le graphique après un délai pour que le HTML soit rendu
+            setTimeout(() => {
+                createDynamicChart(chartId, chartType, chartData);
+            }, 500);
+            
+            return chartHTML;
+        }
+
+        function prepareChartData(period, question) {
+            const q = question.toLowerCase();
+            
+            // Analyser si c'est pour les clients, produits, ou évolution temporelle
+            if (q.includes('client')) {
+                return prepareClientChartData();
+            } else if (q.includes('produit')) {
+                return prepareProductChartData();
+            } else {
+                return preparePeriodChartData(period);
+            }
+        }
+
+        function prepareClientChartData() {
+            const clientData = {};
+            salesData.forEach(sale => {
+                clientData[sale.client] = (clientData[sale.client] || 0) + sale.valeur;
+            });
+            
+            const sortedClients = Object.entries(clientData)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 10);
+            
+            return {
+                labels: sortedClients.map(([name]) => name),
+                data: sortedClients.map(([,value]) => value),
+                title: 'Chiffre d\'affaires par client'
+            };
+        }
+
+        function prepareProductChartData() {
+            const productData = {};
+            salesData.forEach(sale => {
+                const product = sale.product || 'Non spécifié';
+                productData[product] = (productData[product] || 0) + sale.valeur;
+            });
+            
+            const sortedProducts = Object.entries(productData)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 10);
+            
+            return {
+                labels: sortedProducts.map(([name]) => name),
+                data: sortedProducts.map(([,value]) => value),
+                title: 'Chiffre d\'affaires par produit'
+            };
+        }
+
+        function preparePeriodChartData(period) {
+            const periodData = {};
+            
+            salesData.forEach(sale => {
+                const date = parseDate(sale.date);
+                if (!date) return;
+                
+                let periodKey;
+                switch(period) {
+                    case 'day':
+                        periodKey = date.toLocaleDateString('fr-FR');
+                        break;
+                    case 'week':
+                        const weekStart = new Date(date);
+                        weekStart.setDate(date.getDate() - date.getDay());
+                        periodKey = 'Semaine ' + weekStart.toLocaleDateString('fr-FR');
+                        break;
+                    case 'month':
+                        periodKey = date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
+                        break;
+                    case 'quarter':
+                        const quarter = Math.floor(date.getMonth() / 3) + 1;
+                        periodKey = `T${quarter} ${date.getFullYear()}`;
+                        break;
+                    case 'year':
+                        periodKey = date.getFullYear().toString();
+                        break;
+                    default:
+                        periodKey = date.toLocaleDateString('fr-FR');
+                }
+                
+                periodData[periodKey] = (periodData[periodKey] || 0) + sale.valeur;
+            });
+            
+            const sortedPeriods = Object.entries(periodData).sort(([a], [b]) => {
+                // Tri chronologique basique
+                return a.localeCompare(b);
+            });
+            
+            return {
+                labels: sortedPeriods.map(([period]) => period),
+                data: sortedPeriods.map(([,value]) => value),
+                title: `Évolution du CA par ${period === 'day' ? 'jour' : period === 'week' ? 'semaine' : period === 'month' ? 'mois' : period === 'quarter' ? 'trimestre' : 'année'}`
+            };
+        }
+
+        function createDynamicChart(chartId, chartType, chartData) {
+            const ctx = document.getElementById(chartId);
+            if (!ctx) return;
+            
+            // Déterminer le type de graphique automatiquement si nécessaire
+            if (chartType === 'auto') {
+                chartType = chartData.labels.length > 7 ? 'line' : 'bar';
+            }
+            
+            new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: chartData.title,
+                        data: chartData.data,
+                        backgroundColor: chartType === 'line' ? 'rgba(102, 126, 234, 0.1)' : [
+                            '#667eea', '#764ba2', '#f093fb', '#f5576c',
+                            '#4facfe', '#00f2fe', '#43e97b', '#38f9d7',
+                            '#ffeaa7', '#fab1a0'
+                        ],
+                        borderColor: '#667eea',
+                        borderWidth: 2,
+                        fill: chartType === 'line'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: chartData.title,
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        legend: {
+                            display: chartType !== 'pie'
+                        }
+                    },
+                    scales: chartType === 'pie' ? undefined : {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         function analyzeRevenueQuestion(question) {
