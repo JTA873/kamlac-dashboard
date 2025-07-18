@@ -1237,9 +1237,9 @@
                             </select>
                         </div>
                         <div class="filter-group">
-                            <label for="recapInvoiceFilter">N° Facture</label>
-                            <select id="recapInvoiceFilter" onchange="applyRecapFilters()">
-                                <option value="">Toutes les factures</option>
+                            <label for="recapReferenceFilter">Référence</label>
+                            <select id="recapReferenceFilter" onchange="applyRecapFilters()">
+                                <option value="">Toutes les références</option>
                             </select>
                         </div>
                         <div class="filter-group">
@@ -1251,7 +1251,13 @@
                             <input type="date" id="recapDateEnd" onchange="applyRecapFilters()">
                         </div>
                         <div class="filter-group">
-                            <button class="btn btn-warning" onclick="resetRecapFilters()">🗑️ Reset</button>
+                            <button class="btn btn-info" onclick="setRecapAllTimeFilters()">📅 Toutes périodes</button>
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn btn-warning" onclick="setRecapCurrentMonth()">📅 Mois en cours</button>
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn btn-secondary" onclick="resetRecapFilters()">🗑️ Reset</button>
                         </div>
                     </div>
                 </div>
@@ -1568,6 +1574,13 @@
                             <div class="form-group">
                                 <label>Encaissements</label>
                                 <button class="btn btn-primary" onclick="exportPaymentsToCSV()">💰 Export Encaisse</button>
+                            </div>
+                            <div class="form-group">
+                                <label>Synchronisation</label>
+                                <button class="btn btn-info" onclick="forceSyncFromFirebase()">🔄 Forcer Sync</button>
+                                <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    💡 Résout les problèmes de sync mobile
+                                </small>
                             </div>
                             <div class="form-group">
                                 <label>Réinitialiser</label>
@@ -1924,6 +1937,33 @@
             });
             
             clientsList = Array.from(allClients).sort();
+            
+            // Mettre à jour toutes les listes déroulantes de clients
+            updateAllClientDropdowns();
+        }
+
+        function updateAllClientDropdowns() {
+            // Dashboard
+            populateSelect('clientFilter', clientsList, 'Tous les clients');
+            
+            // Récapitulatif  
+            populateSelect('recapClientFilter', clientsList, 'Tous les clients');
+            
+            // Conserver les valeurs sélectionnées
+            const currentDashboardClient = document.getElementById('clientFilter')?.value;
+            const currentRecapClient = document.getElementById('recapClientFilter')?.value;
+            
+            // Repeupler
+            populateSelect('clientFilter', clientsList, 'Tous les clients');
+            populateSelect('recapClientFilter', clientsList, 'Tous les clients');
+            
+            // Restaurer les valeurs si elles existent encore
+            if (currentDashboardClient && clientsList.includes(currentDashboardClient)) {
+                document.getElementById('clientFilter').value = currentDashboardClient;
+            }
+            if (currentRecapClient && clientsList.includes(currentRecapClient)) {
+                document.getElementById('recapClientFilter').value = currentRecapClient;
+            }
         }
 
         // Gestion de la liste des produits
@@ -2238,15 +2278,15 @@
             const products = [...new Set(salesData.map(sale => sale.product).filter(p => p))].sort();
             populateSelect('recapProductFilter', products, 'Tous les produits');
             
-            // Factures
-            const invoices = [...new Set(salesData.map(sale => sale.invoice).filter(i => i))].sort();
-            populateSelect('recapInvoiceFilter', invoices, 'Toutes les factures');
+            // Références des encaissements
+            const references = [...new Set(paymentsData.map(payment => payment.reference).filter(r => r))].sort();
+            populateSelect('recapReferenceFilter', references, 'Toutes les références');
         }
 
         function applyRecapFilters() {
             const clientFilter = document.getElementById('recapClientFilter').value;
             const productFilter = document.getElementById('recapProductFilter').value;
-            const invoiceFilter = document.getElementById('recapInvoiceFilter').value;
+            const referenceFilter = document.getElementById('recapReferenceFilter').value;
             const dateStart = document.getElementById('recapDateStart').value;
             const dateEnd = document.getElementById('recapDateEnd').value;
             
@@ -2256,7 +2296,6 @@
                 
                 if (clientFilter && sale.client !== clientFilter) include = false;
                 if (productFilter && sale.product !== productFilter) include = false;
-                if (invoiceFilter && sale.invoice !== invoiceFilter) include = false;
                 
                 if (dateStart || dateEnd) {
                     const saleDate = parseDate(sale.date);
@@ -2274,6 +2313,7 @@
                 let include = true;
                 
                 if (clientFilter && payment.client !== clientFilter) include = false;
+                if (referenceFilter && payment.reference !== referenceFilter) include = false;
                 
                 if (dateStart || dateEnd) {
                     const paymentDate = parseDate(payment.date);
@@ -2289,10 +2329,27 @@
             updateRecapDisplay();
         }
 
+        function setRecapAllTimeFilters() {
+            document.getElementById('recapDateStart').value = '';
+            document.getElementById('recapDateEnd').value = '';
+            applyRecapFilters();
+            showAlert('Filtres récap étendus à toutes les périodes', 'success');
+        }
+
+        function setRecapCurrentMonth() {
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('recapDateStart').value = formatDate(firstDayOfMonth);
+            document.getElementById('recapDateEnd').value = formatDate(today);
+            applyRecapFilters();
+            showAlert('Filtres récap appliqués au mois en cours', 'success');
+        }
+
         function resetRecapFilters() {
             document.getElementById('recapClientFilter').value = '';
             document.getElementById('recapProductFilter').value = '';
-            document.getElementById('recapInvoiceFilter').value = '';
+            document.getElementById('recapReferenceFilter').value = '';
             document.getElementById('recapDateStart').value = '';
             document.getElementById('recapDateEnd').value = '';
             applyRecapFilters();
@@ -2332,7 +2389,7 @@
                 const dateA = parseDate(a.date);
                 const dateB = parseDate(b.date);
                 return dateB - dateA;
-            }).slice(0, 100);
+            }); // Suppression de la limite .slice(0, 100)
             
             sortedSales.forEach(sale => {
                 const row = tbody.insertRow();
@@ -2352,6 +2409,12 @@
                     </td>
                 `;
             });
+            
+            // Afficher le nombre total de lignes
+            if (sortedSales.length > 50) {
+                const row = tbody.insertRow(0);
+                row.innerHTML = `<td colspan="8" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedSales.length} ventes affichées</td>`;
+            }
         }
 
         function updatePaymentsRecapTable() {
@@ -2362,7 +2425,7 @@
                 const dateA = parseDate(a.date);
                 const dateB = parseDate(b.date);
                 return dateB - dateA;
-            }).slice(0, 100);
+            }); // Suppression de la limite .slice(0, 100)
             
             sortedPayments.forEach(payment => {
                 const row = tbody.insertRow();
@@ -2380,6 +2443,12 @@
                     </td>
                 `;
             });
+            
+            // Afficher le nombre total de lignes
+            if (sortedPayments.length > 50) {
+                const row = tbody.insertRow(0);
+                row.innerHTML = `<td colspan="6" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedPayments.length} encaissements affichés</td>`;
+            }
         }
 
         // Gestion des produits
@@ -3628,6 +3697,75 @@ Date [ESPACES] Client [ESPACES] Montant
             updatePaymentsDisplay();
             updateClientsSummaryTable();
             showAlert('📊 Données actualisées avec succès', 'success');
+        }
+
+        // Forcer la synchronisation depuis Firebase (résout les problèmes de cache mobile)
+        async function forceSyncFromFirebase() {
+            if (!isFirebaseInitialized) {
+                showAlert('Firebase non initialisé. Impossible de synchroniser.', 'error');
+                return;
+            }
+            
+            if (confirm('🔄 Forcer la synchronisation depuis Firebase ?\n\nCela va remplacer les données locales par celles du cloud.')) {
+                updateCloudStatus('syncing', '🔄 Synchronisation forcée...');
+                
+                try {
+                    // Vider le localStorage
+                    localStorage.removeItem('kamlacSalesData');
+                    localStorage.removeItem('kamlacPaymentsData');
+                    localStorage.removeItem('kamlacProductsData');
+                    
+                    // Vider les variables
+                    salesData = [];
+                    paymentsData = [];
+                    productsData = [];
+                    
+                    // Charger depuis Firebase
+                    const salesSnapshot = await db.collection('sales').get();
+                    salesSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        delete data.lastUpdated;
+                        salesData.push(data);
+                    });
+                    
+                    const paymentsSnapshot = await db.collection('payments').get();
+                    paymentsSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        delete data.lastUpdated;
+                        paymentsData.push(data);
+                    });
+                    
+                    const productsSnapshot = await db.collection('products').get();
+                    productsSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        delete data.lastUpdated;
+                        productsData.push(data);
+                    });
+                    
+                    // Sauvegarder dans localStorage
+                    saveToLocalStorage();
+                    
+                    // Mettre à jour l'interface
+                    populateFilters();
+                    populateRecapFilters();
+                    updateClientsList();
+                    updateProductsList();
+                    applyFilters();
+                    applyRecapFilters();
+                    updateClientsOverview();
+                    updateProductsDisplay();
+                    updatePaymentsDisplay();
+                    updateClientsSummaryTable();
+                    
+                    updateCloudStatus('online', '☁️ Sync');
+                    showAlert(`✅ Synchronisation réussie !\n📊 ${salesData.length} ventes\n💰 ${paymentsData.length} encaissements\n📦 ${productsData.length} produits`, 'success');
+                    
+                } catch (error) {
+                    console.error('Erreur lors de la synchronisation forcée:', error);
+                    updateCloudStatus('offline', '❌ Erreur');
+                    showAlert(`Erreur de synchronisation: ${error.message}`, 'error');
+                }
+            }
         }
 
         // Export
