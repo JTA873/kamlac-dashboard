@@ -2658,88 +2658,78 @@
         let pendingAction = null;
 
         // Assistant IA avancé - Analyseur d'intentions
-        function analyzeQuestion(question) {
-            const q = question.toLowerCase();
-            
-            try {
-                // PRIORITÉ 1: Actions directes avec mots-clés spécifiques
-                if ((q.startsWith('note') || q.startsWith('rappel') || q.startsWith('mémo')) || 
-                    (q.includes('note :') || q.includes('rappel :') || q.includes('mémo :'))) {
-                    return handleNoteAction(question);
-                }
-                
-                if (q.includes('encaiss') && (q.includes('pour') || q.includes('client')) && 
-                    !q.includes('quel') && !q.includes('total') && !q.includes('analyse')) {
-                    return handlePaymentAction(question);
-                }
-                
-                if ((q.includes('créer') || q.includes('vendre') || q.includes('vente')) && 
-                    (q.includes('client') || q.includes('produit')) && !q.includes('analyse')) {
-                    return handleSaleAction(question);
-                }
-                
-                if ((q.includes('mail') || q.includes('email') || q.includes('envoyer')) && 
-                    !q.includes('analyse')) {
-                    return handleEmailAction(question);
-                }
-                
-                if ((q.includes('graphique') || q.includes('graph') || q.includes('courbe') || q.includes('visualis')) && 
-                    !q.includes('analyse')) {
-                    return handleChartAction(question);
-                }
-                
-                // PRIORITÉ 2: Analyses avancées avec contexte spécifique
-                if (q.includes('analys') && (q.includes('période') || q.includes('du') || q.includes('entre'))) {
-                    return handleAdvancedPeriodAnalysis(question);
-                }
-                
-                if (q.includes('analys') && q.includes('produit')) {
-                    return handleProductAnalysis(question);
-                }
-                
-                // PRIORITÉ 3: Questions analytiques générales (avec protection contre les faux positifs)
-                if ((q.includes('ca') || q.includes('chiffre')) && !q.includes('note') && !q.includes('rappel')) {
-                    return analyzeRevenueQuestion(q);
-                }
-                
-                if ((q.includes('client') || q.includes('meilleur')) && 
-                    !q.includes('note') && !q.includes('rappel') && !q.includes('encaiss') && 
-                    (q.includes('qui') || q.includes('quel') || q.includes('top') || q.includes('meilleur'))) {
-                    return analyzeClientQuestion(q);
-                }
-                
-                if ((q.includes('produit') || q.includes('top')) && 
-                    !q.includes('note') && !q.includes('créer') && !q.includes('vendre') &&
-                    (q.includes('qui') || q.includes('quel') || q.includes('top') || q.includes('meilleur'))) {
-                    return analyzeProductQuestion(q);
-                }
-                
-                if ((q.includes('encours') || q.includes('en-cours')) && !q.includes('note')) {
-                    return analyzePaymentQuestion(q);
-                }
-                
-                if ((q.includes('stat') || q.includes('résumé') || q.includes('bilan')) && !q.includes('note')) {
-                    return generateGeneralStats();
-                }
-                
-                if (q.includes('aide') || q.includes('help') || q.includes('que peux')) {
-                    return generateAdvancedHelpMessage();
-                }
-                
-                // Gestion spéciale pour "voir mes notes"
-                if (q.includes('voir') && q.includes('note')) {
-                    return showAllNotes();
-                }
-                
-                return generateDefaultResponse(question);
-                
-            } catch (error) {
-                console.error('Erreur analyse:', error);
-                return "❌ Erreur d'analyse. Reformulez votre demande.";
-            }
-        }
+function analyzeQuestion(question) {
+    const q = question.toLowerCase();
 
-        // Actions directes - Encaissement
+    // PRIORITÉ 1: Actions directes avec mots-clés spécifiques (prise de note)
+    if ((q.startsWith('note') || q.startsWith('rappel') || q.startsWith('mémo')) || 
+        (q.includes('note :') || q.includes('rappel :') || q.includes('mémo :'))) {
+        return handleNoteAction(question);
+    }
+
+    // PRIORITÉ 2: Encaissement
+    if (q.includes('encaiss') && (q.includes('pour') || q.includes('client')) && 
+        !q.includes('quel') && !q.includes('total') && !q.includes('analyse')) {
+        return handlePaymentAction(question);
+    }
+
+    // PRIORITÉ 3: Vente
+    if ((q.includes('créer') || q.includes('vendre') || q.includes('vente')) && 
+        (q.includes('client') || q.includes('produit')) && !q.includes('analyse')) {
+        return handleSaleAction(question);
+    }
+
+    // PRIORITÉ 4: Email
+    if ((q.includes('mail') || q.includes('email') || q.includes('envoyer')) && 
+        !q.includes('analyse')) {
+        return handleEmailAction(question);
+    }
+
+    // PRIORITÉ 5: Graphiques
+    if ((q.includes('graphique') || q.includes('graph') || q.includes('courbe') || q.includes('visualis')) && 
+        !q.includes('analyse')) {
+        return handleChartAction(question);
+    }
+
+    // PRIORITÉ 6: Analyses avancées
+    if (q.includes('analys') && (q.includes('période') || q.includes('du') || q.includes('entre'))) {
+        return handleAdvancedPeriodAnalysis(question);
+    }
+    if (q.includes('analys') && q.includes('produit')) {
+        return handleProductAnalysis(question);
+    }
+
+    // PRIORITÉ 7: Questions analytiques générales
+    if ((q.includes('ca') || q.includes('chiffre')) && !q.includes('note') && !q.includes('rappel')) {
+        return analyzeRevenueQuestion(q);
+    }
+    if ((q.includes('client') || q.includes('meilleur')) && 
+        !q.includes('note') && !q.includes('rappel') && !q.includes('encaiss') && 
+        (q.includes('qui') || q.includes('quel') || q.includes('top') || q.includes('meilleur'))) {
+        return analyzeClientQuestion(q);
+    }
+    if ((q.includes('produit') || q.includes('top')) && 
+        !q.includes('note') && !q.includes('créer') && !q.includes('vendre') &&
+        (q.includes('qui') || q.includes('quel') || q.includes('top') || q.includes('meilleur'))) {
+        return analyzeProductQuestion(q);
+    }
+    if ((q.includes('encours') || q.includes('en-cours')) && !q.includes('note')) {
+        return analyzePaymentQuestion(q);
+    }
+    if ((q.includes('stat') || q.includes('résumé') || q.includes('bilan')) && !q.includes('note')) {
+        return generateGeneralStats();
+    }
+    if (q.includes('aide') || q.includes('help') || q.includes('que peux')) {
+        return generateAdvancedHelpMessage();
+    }
+    // Gestion spéciale pour "voir mes notes"
+    if (q.includes('voir') && q.includes('note')) {
+        return showAllNotes();
+    }
+
+    // Réponse par défaut
+    return generateDefaultResponse(question);
+}        // Actions directes - Encaissement
         function handlePaymentAction(question) {
             const amountMatch = question.match(/(\d+(?:[.,]\d+)?)/);
             const clientMatch = extractClientFromText(question);
@@ -3322,65 +3312,7 @@
             }
         }
 
-        // Analyseur de questions intelligent
-        function analyzeQuestion(question) {
-            const q = question.toLowerCase();
-            
-            // Analyser le type de question et extraire les informations
-            try {
-                // Questions sur le CA
-                if (q.includes('ca') || q.includes('chiffre') || q.includes('affaires') || q.includes('revenus')) {
-                    return analyzeRevenueQuestion(q);
-                }
-                
-                // Questions sur les clients
-                if (q.includes('client') || q.includes('meilleur') || q.includes('top client')) {
-                    return analyzeClientQuestion(q);
-                }
-                
-                // Questions sur les produits
-                if (q.includes('produit') || q.includes('article') || q.includes('top produit')) {
-                    return analyzeProductQuestion(q);
-                }
-                
-                // Questions sur les encaissements
-                if (q.includes('encaiss') || q.includes('en-cours') || q.includes('encours') || q.includes('crédit') || q.includes('solde')) {
-                    return analyzePaymentQuestion(q);
-                }
-                
-                // Questions sur les périodes
-                if (q.includes('mois') || q.includes('semaine') || q.includes('trimestre') || q.includes('année') || q.includes('période')) {
-                    return analyzePeriodQuestion(q);
-                }
-                
-                // Questions de comparaison
-                if (q.includes('compar') || q.includes('vs') || q.includes('entre') || q.includes('différence')) {
-                    return analyzeComparisonQuestion(q);
-                }
-                
-                // Question générale sur les statistiques
-                if (q.includes('stat') || q.includes('résumé') || q.includes('bilan') || q.includes('synthèse')) {
-                    return generateGeneralStats();
-                }
-                
-                // Aide
-                if (q.includes('aide') || q.includes('help') || q.includes('comment') || q.includes('que peux')) {
-                    return generateHelpMessage();
-                }
-                
-                // Réponse par défaut avec suggestions
-                return generateDefaultResponse(question);
-                
-            } catch (error) {
-                console.error('Erreur analyse question:', error);
-                return "❌ <strong>Erreur d'analyse</strong><br><br>Désolé, j'ai rencontré une erreur en analysant votre question. Pouvez-vous la reformuler ?";
-            }
-        }
-
-        function analyzeRevenueQuestion(question) {
-            const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
-            const salesCount = salesData.length;
-            
+       
             // Détection de période
             if (question.includes('2 mois') || question.includes('deux mois')) {
                 const twoMonthsAgo = new Date();
