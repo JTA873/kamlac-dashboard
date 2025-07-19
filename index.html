@@ -2648,17 +2648,18 @@
             const q = question.toLowerCase();
             
             try {
-                // Actions directes
+                // Actions directes - PRIORITÉ MAXIMALE
+                if (q.startsWith('note :') || q.startsWith('rappel :') || q.startsWith('mémo :') || 
+                    q.includes('note :') || q.includes('rappel :') || q.includes('mémo :')) {
+                    return handleNoteAction(question);
+                }
+                
                 if (q.includes('encaiss') && (q.includes('pour') || q.includes('client'))) {
                     return handlePaymentAction(question);
                 }
                 
                 if ((q.includes('créer') || q.includes('vendre') || q.includes('vente')) && (q.includes('client') || q.includes('produit'))) {
                     return handleSaleAction(question);
-                }
-                
-                if (q.includes('note') || q.includes('rappel') || q.includes('mémo')) {
-                    return handleNoteAction(question);
                 }
                 
                 if (q.includes('mail') || q.includes('email') || q.includes('envoyer')) {
@@ -2678,9 +2679,9 @@
                     return handleProductAnalysis(question);
                 }
                 
-                // Questions analytiques existantes (simplifiées)
+                // Questions analytiques (après les actions directes)
                 if (q.includes('ca') || q.includes('chiffre')) return analyzeRevenueQuestion(q);
-                if (q.includes('client') || q.includes('meilleur')) return analyzeClientQuestion(q);
+                if (q.includes('client') && (q.includes('meilleur') || q.includes('top'))) return analyzeClientQuestion(q);
                 if (q.includes('produit') || q.includes('top')) return analyzeProductQuestion(q);
                 if (q.includes('encours') || q.includes('en-cours')) return analyzePaymentQuestion(q);
                 if (q.includes('stat') || q.includes('résumé')) return generateGeneralStats();
