@@ -2653,68 +2653,81 @@
         }
 
         // Variables globales pour le chat
-let chatHistory = [];
-let aiNotes = [];
-let pendingAction = null;
+        let chatHistory = [];
+        let aiNotes = [];
+        let pendingAction = null;
 
-// Assistant IA - Analyseur d'intentions corrigé
-function analyzeQuestion(question) {
+        // Assistant IA avancé - Analyseur d'intentions
+        function analyzeQuestion(question) {
     const q = question.toLowerCase().trim();
     
     try {
-        // PRIORITÉ ABSOLUE 1: Actions directes avec détection précise
-        
-        // Détection STRICTE des notes/rappels
-        if (isNoteCommand(q)) {
+        // PRIORITÉ 1: Détection STRICTE des notes
+        if (q.startsWith('note ') || q.startsWith('rappel ') || q.startsWith('mémo ') ||
+            q.includes('note :') || q.includes('rappel :') || q.includes('mémo :')) {
             return handleNoteAction(question);
         }
         
-        // Détection STRICTE des encaissements avec action
-        if (isPaymentCommand(q)) {
+        // PRIORITÉ 2: Détection STRICTE des encaissements avec action
+        if (q.includes('encaiss') && !q.includes('total') && !q.includes('quel') && 
+            !q.includes('analyse') && !q.includes('historique') &&
+            (q.includes('pour') || q.includes('client') || /\d+/.test(q))) {
             return handlePaymentAction(question);
         }
         
-        // Détection STRICTE des créations de ventes
-        if (isSaleCommand(q)) {
+        // PRIORITÉ 3: Détection STRICTE des ventes
+        if ((q.includes('créer') || q.includes('vendre') || q.includes('ajouter')) && 
+            (q.includes('vente') || q.includes('client') || q.includes('produit')) &&
+            !q.includes('analyse') && !q.includes('total') && !q.includes('quel')) {
             return handleSaleAction(question);
         }
         
-        // PRIORITÉ 2: Visualisations et graphiques
-        if (isChartCommand(q)) {
+        // PRIORITÉ 4: Graphiques
+        if ((q.includes('graphique') || q.includes('graph') || q.includes('courbe') || q.includes('visualis')) &&
+            !q.includes('analyse')) {
             return handleChartAction(question);
         }
         
-        // PRIORITÉ 3: Analyses spécialisées (protection contre faux positifs)
-        if (isAdvancedAnalysisCommand(q)) {
-            return handleAdvancedAnalysis(question);
+        // PRIORITÉ 5: Analyses avancées
+        if (q.includes('analys') && (q.includes('période') || q.includes('produit') || q.includes('du') || q.includes('entre'))) {
+            if (q.includes('période')) return handleAdvancedPeriodAnalysis(question);
+            if (q.includes('produit')) return handleProductAnalysis(question);
         }
         
-        // PRIORITÉ 4: Questions analytiques standards
-        if (isRevenueQuestion(q)) {
+        // PRIORITÉ 6: Questions analytiques standards (avec protection)
+        if ((q.includes('ca') || q.includes('chiffre') || q.includes('revenus')) &&
+            !q.includes('note') && !q.includes('encaiss')) {
             return analyzeRevenueQuestion(q);
         }
         
-        if (isClientQuestion(q)) {
+        if ((q.includes('client') || q.includes('meilleur')) &&
+            !q.includes('note') && !q.includes('encaiss') && !q.includes('créer') &&
+            (q.includes('qui') || q.includes('quel') || q.includes('top') || q.includes('meilleur'))) {
             return analyzeClientQuestion(q);
         }
         
-        if (isProductQuestion(q)) {
+        if ((q.includes('produit') || q.includes('article') || q.includes('top')) &&
+            !q.includes('note') && !q.includes('créer') && !q.includes('vendre') &&
+            (q.includes('qui') || q.includes('quel') || q.includes('top') || q.includes('meilleur'))) {
             return analyzeProductQuestion(q);
         }
         
-        if (isPaymentAnalysisQuestion(q)) {
+        if ((q.includes('encours') || q.includes('en-cours') || q.includes('solde')) &&
+            !q.includes('note') && !q.includes('encaiss')) {
             return analyzePaymentQuestion(q);
         }
         
-        if (isPeriodQuestion(q)) {
+        if ((q.includes('mois') || q.includes('semaine') || q.includes('trimestre') || q.includes('année')) &&
+            !q.includes('note')) {
             return analyzePeriodQuestion(q);
         }
         
-        if (isGeneralStatsQuestion(q)) {
+        if ((q.includes('stat') || q.includes('résumé') || q.includes('bilan') || q.includes('synthèse')) &&
+            !q.includes('note')) {
             return generateGeneralStats();
         }
         
-        if (isHelpQuestion(q)) {
+        if (q.includes('aide') || q.includes('help') || q.includes('comment') || q.includes('que peux')) {
             return generateAdvancedHelpMessage();
         }
         
@@ -2731,456 +2744,1010 @@ function analyzeQuestion(question) {
     }
 }
 
-// Fonctions de détection STRICTE pour éviter les faux positifs
-
-function isNoteCommand(q) {
-    // Doit commencer par note/rappel/mémo OU contenir "note :" explicitement
-    return (
-        q.startsWith('note ') || 
-        q.startsWith('rappel ') || 
-        q.startsWith('mémo ') ||
-        q.includes('note :') || 
-        q.includes('rappel :') || 
-        q.includes('mémo :')
-    );
-}
-
-function isPaymentCommand(q) {
-    // Doit contenir "encaiss" ET avoir des indices d'action (pour, client, montant)
-    return (
-        q.includes('encaiss') && 
-        !q.includes('total') && 
-        !q.includes('quel') && 
-        !q.includes('analyse') &&
-        !q.includes('historique') &&
-        (q.includes('pour') || q.includes('client') || /\d+/.test(q))
-    );
-}
-
-function isSaleCommand(q) {
-    // Doit contenir des verbes d'action ET pas de mots d'analyse
-    return (
-        (q.includes('créer') || q.includes('vendre') || q.includes('ajouter')) && 
-        (q.includes('vente') || q.includes('client') || q.includes('produit')) &&
-        !q.includes('analyse') &&
-        !q.includes('total') &&
-        !q.includes('quel')
-    );
-}
-
-function isChartCommand(q) {
-    return (
-        (q.includes('graphique') || q.includes('graph') || q.includes('courbe') || q.includes('visualis')) &&
-        !q.includes('analyse')
-    );
-}
-
-function isAdvancedAnalysisCommand(q) {
-    return (
-        q.includes('analys') && 
-        (q.includes('période') || q.includes('produit') || q.includes('du') || q.includes('entre'))
-    );
-}
-
-function isRevenueQuestion(q) {
-    return (
-        (q.includes('ca') || q.includes('chiffre') || q.includes('revenus')) &&
-        !isNoteCommand(q) &&
-        !isPaymentCommand(q)
-    );
-}
-
-function isClientQuestion(q) {
-    return (
-        (q.includes('client') || q.includes('meilleur')) &&
-        !isNoteCommand(q) &&
-        !isPaymentCommand(q) &&
-        !isSaleCommand(q) &&
-        (q.includes('qui') || q.includes('quel') || q.includes('top') || q.includes('meilleur'))
-    );
-}
-
-function isProductQuestion(q) {
-    return (
-        (q.includes('produit') || q.includes('article') || q.includes('top')) &&
-        !isNoteCommand(q) &&
-        !isSaleCommand(q) &&
-        (q.includes('qui') || q.includes('quel') || q.includes('top') || q.includes('meilleur'))
-    );
-}
-
-function isPaymentAnalysisQuestion(q) {
-    return (
-        (q.includes('encours') || q.includes('en-cours') || q.includes('solde')) &&
-        !isNoteCommand(q) &&
-        !isPaymentCommand(q)
-    );
-}
-
-function isPeriodQuestion(q) {
-    return (
-        (q.includes('mois') || q.includes('semaine') || q.includes('trimestre') || q.includes('année')) &&
-        !isNoteCommand(q)
-    );
-}
-
-function isGeneralStatsQuestion(q) {
-    return (
-        (q.includes('stat') || q.includes('résumé') || q.includes('bilan') || q.includes('synthèse')) &&
-        !isNoteCommand(q)
-    );
-}
-
-function isHelpQuestion(q) {
-    return (
-        q.includes('aide') || q.includes('help') || q.includes('comment') || q.includes('que peux')
-    );
-}
-
-// Actions directes - Notes (version corrigée)
-function handleNoteAction(question) {
-    // Nettoyer le texte pour extraire le contenu de la note
-    let noteContent = question;
-    
-    // Supprimer les préfixes courants de manière plus robuste
-    noteContent = noteContent.replace(/^(note\s*:\s*|rappel\s*:\s*|mémo\s*:\s*)/i, '');
-    noteContent = noteContent.replace(/^(note\s+|rappel\s+|mémo\s+)/i, '');
-    noteContent = noteContent.trim();
-    
-    if (noteContent.length < 3) {
-        return `📝 <strong>Prendre une note</strong><br><br>
-        Dites-moi ce que vous voulez noter.<br><br>
-        <strong>Exemples :</strong><br>
-        • "Note : Rappeler CLIENT_X demain"<br>
-        • "Mémo : Commande urgente en cours"<br>
-        • "Rappel : Négocier prix avec FOURNISSEUR"<br><br>
-        <div class="chat-suggestions">
-            <div class="chat-suggestion" onclick="sendSuggestion('Voir mes notes')">Voir mes notes</div>
-        </div>`;
-    }
-    
-    const note = {
-        id: Date.now(),
-        content: noteContent,
-        date: new Date().toLocaleDateString('fr-FR'),
-        timestamp: new Date().toLocaleTimeString('fr-FR')
-    };
-    
-    aiNotes.push(note);
-    saveNotesToFirebase(note);
-    
-    return `📝 <strong>Note enregistrée</strong><br><br>
-    📋 "${noteContent}"<br><br>
-    🕒 ${note.date} à ${note.timestamp}<br><br>
-    💾 <em>Note sauvegardée automatiquement</em><br><br>
-    <div class="chat-suggestions">
-        <div class="chat-suggestion" onclick="sendSuggestion('Voir mes notes')">Voir toutes les notes</div>
-        <div class="chat-suggestion" onclick="sendSuggestion('Note : Autre rappel')">Ajouter une autre note</div>
-    </div>`;
-}
-
-// Actions directes - Encaissement (version simplifiée)
-function handlePaymentAction(question) {
-    const amountMatch = question.match(/(\d+(?:[.,]\d+)?)/);
-    const clientMatch = extractClientFromText(question);
-    
-    if (!amountMatch || !clientMatch) {
-        return `💰 <strong>Créer un encaissement</strong><br><br>
-        Pour encaisser de l'argent, précisez :<br>
-        • Le montant<br>
-        • Le nom du client<br><br>
-        <strong>Exemple :</strong> "Encaisse 50000 pour AFRICA LEYRI"<br><br>
-        <div class="chat-suggestions">
-            ${clientsList.slice(0, 3).map(client => 
-                `<div class="chat-suggestion" onclick="sendSuggestion('Encaisse 10000 pour ${client}')">Encaisse pour ${client}</div>`
-            ).join('')}
-        </div>`;
-    }
-    
-    const amount = parseFloat(amountMatch[1].replace(',', '.'));
-    const client = clientMatch;
-    
-    pendingAction = {
-        type: 'payment',
-        client: client,
-        amount: amount,
-        date: new Date().toLocaleDateString('fr-FR')
-    };
-    
-    return `💳 <strong>Confirmation d'encaissement</strong><br><br>
-    👤 Client: <strong>${client}</strong><br>
-    💰 Montant: <strong>${formatCurrency(amount)}</strong><br>
-    📅 Date: <strong>${new Date().toLocaleDateString('fr-FR')}</strong><br><br>
-    <div style="display: flex; gap: 10px; margin-top: 15px;">
-        <button class="btn btn-success" onclick="executeAction()" style="flex: 1;">✅ Confirmer</button>
-        <button class="btn btn-secondary" onclick="cancelAction()" style="flex: 1;">❌ Annuler</button>
-    </div>`;
-}
-
-// Actions directes - Vente (version simplifiée)
-function handleSaleAction(question) {
-    const clientMatch = extractClientFromText(question);
-    const productMatch = extractProductFromText(question);
-    const quantityMatch = question.match(/(\d+)\s*(?:carton|unité|pièce|kg)?/i);
-    
-    if (!clientMatch && !productMatch) {
-        return `💼 <strong>Créer une vente</strong><br><br>
-        Pour créer une vente, précisez :<br>
-        • Le client<br>
-        • Le produit (optionnel)<br>
-        • La quantité (optionnel)<br><br>
-        <strong>Exemples :</strong><br>
-        • "Vendre 10 cartons de PRODUIT_X à AFRICA LEYRI"<br>
-        • "Créer vente pour SMC"<br><br>
-        <div class="chat-suggestions">
-            ${clientsList.slice(0, 2).map(client => 
-                `<div class="chat-suggestion" onclick="sendSuggestion('Créer vente pour ${client}')">Vente ${client}</div>`
-            ).join('')}
-        </div>`;
-    }
-    
-    const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
-    const product = productMatch || 'Produit à spécifier';
-    const client = clientMatch || 'Client à spécifier';
-    
-    pendingAction = {
-        type: 'sale',
-        client: client,
-        product: product,
-        quantity: quantity,
-        date: new Date().toLocaleDateString('fr-FR'),
-        invoice: `FAC-${Date.now()}`
-    };
-    
-    return `📦 <strong>Confirmation de vente</strong><br><br>
-    👤 Client: <strong>${client}</strong><br>
-    📦 Produit: <strong>${product}</strong><br>
-    📊 Quantité: <strong>${quantity}</strong><br>
-    📅 Date: <strong>${new Date().toLocaleDateString('fr-FR')}</strong><br><br>
-    💡 <em>Le prix sera défini selon votre catalogue produits</em><br><br>
-    <div style="display: flex; gap: 10px; margin-top: 15px;">
-        <button class="btn btn-success" onclick="executeAction()" style="flex: 1;">✅ Créer la vente</button>
-        <button class="btn btn-secondary" onclick="cancelAction()" style="flex: 1;">❌ Annuler</button>
-    </div>`;
-}
-
-// Génération de graphiques (simplifiée)
-function handleChartAction(question) {
-    if (question.includes('ca') || question.includes('revenus')) {
-        return generateRevenueChart();
-    }
-    if (question.includes('client')) {
-        return generateClientChart();
-    }
-    if (question.includes('produit')) {
-        return generateProductChart();
-    }
-    if (question.includes('évolution') || question.includes('temps')) {
-        return generateEvolutionChart();
-    }
-    
-    return `📊 <strong>Génération de graphiques</strong><br><br>
-    Quel type de graphique voulez-vous ?<br><br>
-    <div class="chat-suggestions">
-        <div class="chat-suggestion" onclick="sendSuggestion('Graphique CA par client')">CA par client</div>
-        <div class="chat-suggestion" onclick="sendSuggestion('Graphique évolution CA')">Évolution CA</div>
-        <div class="chat-suggestion" onclick="sendSuggestion('Graphique top produits')">Top produits</div>
-    </div>`;
-}
-
-// Analyses avancées (simplifiées)
-function handleAdvancedAnalysis(question) {
-    if (question.includes('période')) {
-        return handleAdvancedPeriodAnalysis(question);
-    }
-    if (question.includes('produit')) {
-        return handleProductAnalysis(question);
-    }
-    
-    return `📈 <strong>Analyse avancée</strong><br><br>
-    Précisez le type d'analyse souhaité :<br><br>
-    <div class="chat-suggestions">
-        <div class="chat-suggestion" onclick="sendSuggestion('Analyse du mois dernier')">Analyse période</div>
-        <div class="chat-suggestion" onclick="sendSuggestion('Analyse du produit X')">Analyse produit</div>
-    </div>`;
-}
-
-// Afficher toutes les notes
-function showAllNotes() {
-    if (aiNotes.length === 0) {
-        return `📝 <strong>Aucune note enregistrée</strong><br><br>
-        Vous pouvez créer une note en disant :<br>
-        "Note : votre message ici"<br><br>
-        <div class="chat-suggestions">
-            <div class="chat-suggestion" onclick="sendSuggestion('Note : Exemple de rappel')">Créer une note</div>
-        </div>`;
-    }
-    
-    let notesHtml = `📝 <strong>Vos notes (${aiNotes.length})</strong><br><br>`;
-    
-    // Trier par date récente
-    const sortedNotes = [...aiNotes].sort((a, b) => b.id - a.id);
-    
-    sortedNotes.forEach((note, index) => {
-        notesHtml += `<div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #667eea;">
-            <strong>📋 Note ${index + 1}</strong><br>
-            ${note.content}<br>
-            <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
-        </div>`;
-    });
-    
-    notesHtml += `<br><div class="chat-suggestions">
-        <div class="chat-suggestion" onclick="sendSuggestion('Note : Nouvelle note')">Ajouter une note</div>
-    </div>`;
-    
-    return notesHtml;
-}
-
-// Message d'aide avancé
-function generateAdvancedHelpMessage() {
-    return `🤖 <strong>Assistant IA Avancé KAMLAC</strong><br><br>
-    
-    ⚡ <strong>Actions directes:</strong><br>
-    • "Note : votre rappel ici"<br>
-    • "Encaisse 50000 pour AFRICA LEYRI"<br>
-    • "Créer vente 10 cartons pour SMC"<br><br>
-    
-    📊 <strong>Graphiques:</strong><br>
-    • "Graphique CA par client"<br>
-    • "Graphique évolution des ventes"<br><br>
-    
-    📈 <strong>Analyses:</strong><br>
-    • "Quel est mon CA total ?"<br>
-    • "Qui est mon meilleur client ?"<br>
-    • "Mes en-cours clients"<br><br>
-    
-    💡 <strong>Notes:</strong> Commencez par "Note :" pour prendre des rappels<br>
-    💰 <strong>Actions rapides:</strong> Je peux créer encaissements et ventes directement !`;
-}
-
-// Fonctions utilitaires (conservées)
-function extractClientFromText(text) {
-    const words = text.toLowerCase().split(/\s+/);
-    return clientsList.find(client => 
-        words.some(word => client.toLowerCase().includes(word) || word.includes(client.toLowerCase()))
-    );
-}
-
-function extractProductFromText(text) {
-    const productNames = [...new Set(salesData.map(s => s.product).filter(p => p))];
-    const words = text.toLowerCase().split(/\s+/);
-    return productNames.find(product => 
-        words.some(word => product.toLowerCase().includes(word) || word.includes(product.toLowerCase()))
-    );
-}
-
-// Exécution des actions (conservée)
-async function executeAction() {
-    if (!pendingAction) return;
-    
-    try {
-        if (pendingAction.type === 'payment') {
-            const payment = {
-                id: Date.now() + Math.random(),
-                client: pendingAction.client,
-                date: pendingAction.date,
-                amount: pendingAction.amount,
-                method: 'Espèces',
-                reference: 'IA Assistant',
-                notes: 'Créé par Assistant IA'
-            };
+        // Actions directes - Encaissement
+        function handlePaymentAction(question) {
+            const amountMatch = question.match(/(\d+(?:[.,]\d+)?)/);
+            const clientMatch = extractClientFromText(question);
             
-            paymentsData.push(payment);
-            saveToLocalStorage();
-            
-            if (isFirebaseInitialized) {
-                await db.collection('payments').doc(payment.id.toString()).set({
-                    ...payment,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                });
+            if (!amountMatch || !clientMatch) {
+                return `💰 <strong>Créer un encaissement</strong><br><br>
+                Pour encaisser de l'argent, précisez :<br>
+                • Le montant<br>
+                • Le nom du client<br><br>
+                <strong>Exemple :</strong> "Encaisse 50000 pour AFRICA LEYRI"<br><br>
+                <div class="chat-suggestions">
+                    ${clientsList.slice(0, 3).map(client => 
+                        `<div class="chat-suggestion" onclick="sendSuggestion('Encaisse 10000 pour ${client}')">Encaisse pour ${client}</div>`
+                    ).join('')}
+                </div>`;
             }
             
-            updatePaymentsDisplay();
-            updateClientsOverview();
-            updateClientsSummaryTable();
+            const amount = parseFloat(amountMatch[1].replace(',', '.'));
+            const client = clientMatch;
             
-            addChatMessage(`✅ <strong>Encaissement créé avec succès !</strong><br><br>💰 ${formatCurrency(pendingAction.amount)} encaissé pour ${pendingAction.client}`, 'ai');
-            
-        } else if (pendingAction.type === 'sale') {
-            const product = productsData.find(p => p.reference === pendingAction.product);
-            const unitPrice = product ? product.price : 0;
-            
-            const sale = {
-                id: Date.now() + Math.random(),
-                client: pendingAction.client,
-                date: pendingAction.date,
-                invoice: pendingAction.invoice,
-                product: pendingAction.product,
-                quantity: pendingAction.quantity,
-                unitPrice: unitPrice,
-                valeur: pendingAction.quantity * unitPrice
+            pendingAction = {
+                type: 'payment',
+                client: client,
+                amount: amount,
+                date: new Date().toLocaleDateString('fr-FR')
             };
             
-            salesData.push(sale);
-            saveToLocalStorage();
-            
-            if (isFirebaseInitialized) {
-                await db.collection('sales').doc(sale.id.toString()).set({
-                    ...sale,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
-            
-            updateClientsOverview();
-            updateClientsSummaryTable();
-            populateFilters();
-            applyFilters();
-            
-            addChatMessage(`✅ <strong>Vente créée avec succès !</strong><br><br>📦 ${pendingAction.quantity} × ${pendingAction.product}<br>👤 Client: ${pendingAction.client}<br>💰 Total: ${formatCurrency(sale.valeur)}`, 'ai');
+            return `💳 <strong>Confirmation d'encaissement</strong><br><br>
+            👤 Client: <strong>${client}</strong><br>
+            💰 Montant: <strong>${formatCurrency(amount)}</strong><br>
+            📅 Date: <strong>${new Date().toLocaleDateString('fr-FR')}</strong><br><br>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-success" onclick="executeAction()" style="flex: 1;">✅ Confirmer</button>
+                <button class="btn btn-secondary" onclick="cancelAction()" style="flex: 1;">❌ Annuler</button>
+            </div>`;
         }
-        
-        pendingAction = null;
-        
-    } catch (error) {
-        console.error('Erreur exécution action:', error);
-        addChatMessage(`❌ Erreur lors de l'exécution: ${error.message}`, 'ai');
-    }
-}
 
-function cancelAction() {
-    pendingAction = null;
-    addChatMessage(`❌ <strong>Action annulée</strong>`, 'ai');
-}
+        // Actions directes - Vente
+        function handleSaleAction(question) {
+            const clientMatch = extractClientFromText(question);
+            const productMatch = extractProductFromText(question);
+            const quantityMatch = question.match(/(\d+)\s*(?:carton|unité|pièce|kg)?/i);
+            
+            if (!clientMatch && !productMatch) {
+                return `💼 <strong>Créer une vente</strong><br><br>
+                Pour créer une vente, précisez :<br>
+                • Le client<br>
+                • Le produit (optionnel)<br>
+                • La quantité (optionnel)<br><br>
+                <strong>Exemples :</strong><br>
+                • "Vendre 10 cartons de PRODUIT_X à AFRICA LEYRI"<br>
+                • "Créer vente pour SMC"<br><br>
+                <div class="chat-suggestions">
+                    ${clientsList.slice(0, 2).map(client => 
+                        `<div class="chat-suggestion" onclick="sendSuggestion('Créer vente pour ${client}')">Vente ${client}</div>`
+                    ).join('')}
+                </div>`;
+            }
+            
+            const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
+            const product = productMatch || 'Produit à spécifier';
+            const client = clientMatch || 'Client à spécifier';
+            
+            pendingAction = {
+                type: 'sale',
+                client: client,
+                product: product,
+                quantity: quantity,
+                date: new Date().toLocaleDateString('fr-FR'),
+                invoice: `FAC-${Date.now()}`
+            };
+            
+            return `📦 <strong>Confirmation de vente</strong><br><br>
+            👤 Client: <strong>${client}</strong><br>
+            📦 Produit: <strong>${product}</strong><br>
+            📊 Quantité: <strong>${quantity}</strong><br>
+            📅 Date: <strong>${new Date().toLocaleDateString('fr-FR')}</strong><br><br>
+            💡 <em>Le prix sera défini selon votre catalogue produits</em><br><br>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-success" onclick="executeAction()" style="flex: 1;">✅ Créer la vente</button>
+                <button class="btn btn-secondary" onclick="cancelAction()" style="flex: 1;">❌ Annuler</button>
+            </div>`;
+        }
 
-// Sauvegarde des notes dans Firebase (conservée)
-async function saveNotesToFirebase(note) {
-    if (isFirebaseInitialized) {
-        try {
-            await db.collection('ai_notes').doc(note.id.toString()).set({
-                ...note,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        // Afficher toutes les notes
+        function showAllNotes() {
+            if (aiNotes.length === 0) {
+                return `📝 <strong>Aucune note enregistrée</strong><br><br>
+                Vous pouvez créer une note en disant :<br>
+                "Note : votre message ici"<br><br>
+                <div class="chat-suggestions">
+                    <div class="chat-suggestion" onclick="sendSuggestion('Note : Exemple de rappel')">Créer une note</div>
+                </div>`;
+            }
+            
+            let notesHtml = `📝 <strong>Vos notes (${aiNotes.length})</strong><br><br>`;
+            
+            // Trier par date récente
+            const sortedNotes = [...aiNotes].sort((a, b) => b.id - a.id);
+            
+            sortedNotes.forEach((note, index) => {
+                notesHtml += `<div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #667eea;">
+                    <strong>📋 Note ${index + 1}</strong><br>
+                    ${note.content}<br>
+                    <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
+                </div>`;
             });
-        } catch (error) {
-            console.error('Erreur sauvegarde note:', error);
+            
+            notesHtml += `<br><div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Note : Nouvelle note')">Ajouter une note</div>
+            </div>`;
+            
+            return notesHtml;
         }
-    }
-}
 
-// Réponse par défaut (simplifiée)
-function generateDefaultResponse(question) {
-    return `🤔 <strong>Je n'ai pas bien compris votre question</strong><br><br>
-    Vous avez demandé : <em>"${question}"</em><br><br>
-    Voici quelques suggestions :<br><br>
-    <div class="chat-suggestions">
-        <div class="chat-suggestion" onclick="sendSuggestion('Note : rappel important')">Prendre une note</div>
-        <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon CA total ?')">CA total</div>
-        <div class="chat-suggestion" onclick="sendSuggestion('Qui est mon meilleur client ?')">Meilleur client</div>
-        <div class="chat-suggestion" onclick="sendSuggestion('Aide')">Aide</div>
-    </div>`;
-}
+        // Système de notes
+        function handleNoteAction(question) {
+            // Nettoyer le texte pour extraire le contenu de la note
+            let noteContent = question;
+            
+            // Supprimer les préfixes courants
+            noteContent = noteContent.replace(/^(note\s*:\s*|rappel\s*:\s*|mémo\s*:\s*)/i, '');
+            noteContent = noteContent.replace(/^(note\s+|rappel\s+|mémo\s+)/i, '');
+            noteContent = noteContent.trim();
+            
+            if (noteContent.length < 3) {
+                return `📝 <strong>Prendre une note</strong><br><br>
+                Dites-moi ce que vous voulez noter.<br><br>
+                <strong>Exemples :</strong><br>
+                • "Note : Rappeler CLIENT_X demain"<br>
+                • "Mémo : Commande urgente en cours"<br>
+                • "Rappel : Négocier prix avec FOURNISSEUR"<br><br>
+                <div class="chat-suggestions">
+                    <div class="chat-suggestion" onclick="sendSuggestion('Voir mes notes')">Voir mes notes</div>
+                </div>`;
+            }
+            
+            const note = {
+                id: Date.now(),
+                content: noteContent,
+                date: new Date().toLocaleDateString('fr-FR'),
+                timestamp: new Date().toLocaleTimeString('fr-FR')
+            };
+            
+            aiNotes.push(note);
+            saveNotesToFirebase(note);
+            
+            return `📝 <strong>Note enregistrée</strong><br><br>
+            📋 "${noteContent}"<br><br>
+            🕒 ${note.date} à ${note.timestamp}<br><br>
+            💾 <em>Note sauvegardée automatiquement</em><br><br>
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Voir mes notes')">Voir toutes les notes</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Note : Autre rappel')">Ajouter une autre note</div>
+            </div>`;
+        }
 
-// Conserver toutes les autres fonctions d'analyse existantes...
-// (analyzeRevenueQuestion, analyzeClientQuestion, etc. restent identiques)
+        // Simulation email
+        function handleEmailAction(question) {
+            const clientMatch = extractClientFromText(question);
+            
+            return `📧 <strong>Fonction Email</strong><br><br>
+            ${clientMatch ? `👤 Destinataire détecté: <strong>${clientMatch}</strong><br><br>` : ''}
+            🔧 <strong>Intégration email en développement</strong><br><br>
+            Pour l'instant, je peux vous aider à :<br>
+            • 📝 Prendre des notes de rappel<br>
+            • 📊 Générer des rapports pour vos emails<br>
+            • 📋 Lister les clients avec en-cours<br><br>
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Liste clients avec en-cours')">Clients en-cours</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Note : Email à envoyer à ${clientMatch || 'CLIENT'}')">Noter email à faire</div>
+            </div>`;
+        }
+
+        // Génération de graphiques
+        function handleChartAction(question) {
+            if (question.includes('ca') || question.includes('revenus')) {
+                return generateRevenueChart();
+            }
+            if (question.includes('client')) {
+                return generateClientChart();
+            }
+            if (question.includes('produit')) {
+                return generateProductChart();
+            }
+            if (question.includes('évolution') || question.includes('temps')) {
+                return generateEvolutionChart();
+            }
+            
+            return `📊 <strong>Génération de graphiques</strong><br><br>
+            Quel type de graphique voulez-vous ?<br><br>
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Graphique CA par client')">CA par client</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Graphique évolution CA')">Évolution CA</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Graphique top produits')">Top produits</div>
+            </div>`;
+        }
+
+        // Analyses avancées par période
+        function handleAdvancedPeriodAnalysis(question) {
+            let startDate, endDate, periodName;
+            
+            if (question.includes('janvier')) {
+                startDate = new Date(new Date().getFullYear(), 0, 1);
+                endDate = new Date(new Date().getFullYear(), 0, 31);
+                periodName = "janvier";
+            } else if (question.includes('dernier mois')) {
+                const lastMonth = new Date();
+                lastMonth.setMonth(lastMonth.getMonth() - 1);
+                startDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+                endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+                periodName = "le mois dernier";
+            } else if (question.includes('trimestre')) {
+                const now = new Date();
+                const quarter = Math.floor(now.getMonth() / 3);
+                startDate = new Date(now.getFullYear(), quarter * 3, 1);
+                endDate = new Date(now.getFullYear(), quarter * 3 + 3, 0);
+                periodName = `le ${quarter + 1}e trimestre`;
+            }
+            
+            if (!startDate) {
+                return `📅 <strong>Analyse de période</strong><br><br>
+                Précisez la période à analyser :<br><br>
+                <div class="chat-suggestions">
+                    <div class="chat-suggestion" onclick="sendSuggestion('Analyse du mois dernier')">Mois dernier</div>
+                    <div class="chat-suggestion" onclick="sendSuggestion('Analyse de janvier')">Janvier</div>
+                    <div class="chat-suggestion" onclick="sendSuggestion('Analyse du trimestre')">Ce trimestre</div>
+                </div>`;
+            }
+            
+            const periodSales = salesData.filter(sale => {
+                const saleDate = parseDate(sale.date);
+                return saleDate && saleDate >= startDate && saleDate <= endDate;
+            });
+            
+            const periodPayments = paymentsData.filter(payment => {
+                const paymentDate = parseDate(payment.date);
+                return paymentDate && paymentDate >= startDate && paymentDate <= endDate;
+            });
+            
+            return generateDetailedPeriodAnalysis(periodSales, periodPayments, periodName, startDate, endDate);
+        }
+
+        // Analyse détaillée produit
+        function handleProductAnalysis(question) {
+            const productMatch = extractProductFromText(question);
+            
+            if (!productMatch) {
+                const topProducts = getTopProducts(5);
+                return `📦 <strong>Analyse de produit</strong><br><br>
+                Quel produit voulez-vous analyser ?<br><br>
+                <div class="chat-suggestions">
+                    ${topProducts.map(([product]) => 
+                        `<div class="chat-suggestion" onclick="sendSuggestion('Analyse du produit ${product}')">${product}</div>`
+                    ).join('')}
+                </div>`;
+            }
+            
+            return generateProductDetailedAnalysis(productMatch);
+        }
+
+        // Fonctions utilitaires
+        function extractClientFromText(text) {
+            const words = text.toLowerCase().split(/\s+/);
+            return clientsList.find(client => 
+                words.some(word => client.toLowerCase().includes(word) || word.includes(client.toLowerCase()))
+            );
+        }
+
+        function extractProductFromText(text) {
+            const productNames = [...new Set(salesData.map(s => s.product).filter(p => p))];
+            const words = text.toLowerCase().split(/\s+/);
+            return productNames.find(product => 
+                words.some(word => product.toLowerCase().includes(word) || word.includes(product.toLowerCase()))
+            );
+        }
+
+        // Exécution des actions
+        async function executeAction() {
+            if (!pendingAction) return;
+            
+            try {
+                if (pendingAction.type === 'payment') {
+                    const payment = {
+                        id: Date.now() + Math.random(),
+                        client: pendingAction.client,
+                        date: pendingAction.date,
+                        amount: pendingAction.amount,
+                        method: 'Espèces',
+                        reference: 'IA Assistant',
+                        notes: 'Créé par Assistant IA'
+                    };
+                    
+                    paymentsData.push(payment);
+                    saveToLocalStorage();
+                    
+                    if (isFirebaseInitialized) {
+                        await db.collection('payments').doc(payment.id.toString()).set({
+                            ...payment,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                    
+                    updatePaymentsDisplay();
+                    updateClientsOverview();
+                    updateClientsSummaryTable();
+                    
+                    addChatMessage(`✅ <strong>Encaissement créé avec succès !</strong><br><br>💰 ${formatCurrency(pendingAction.amount)} encaissé pour ${pendingAction.client}`, 'ai');
+                    
+                } else if (pendingAction.type === 'sale') {
+                    const product = productsData.find(p => p.reference === pendingAction.product);
+                    const unitPrice = product ? product.price : 0;
+                    
+                    const sale = {
+                        id: Date.now() + Math.random(),
+                        client: pendingAction.client,
+                        date: pendingAction.date,
+                        invoice: pendingAction.invoice,
+                        product: pendingAction.product,
+                        quantity: pendingAction.quantity,
+                        unitPrice: unitPrice,
+                        valeur: pendingAction.quantity * unitPrice
+                    };
+                    
+                    salesData.push(sale);
+                    saveToLocalStorage();
+                    
+                    if (isFirebaseInitialized) {
+                        await db.collection('sales').doc(sale.id.toString()).set({
+                            ...sale,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                    
+                    updateClientsOverview();
+                    updateClientsSummaryTable();
+                    populateFilters();
+                    applyFilters();
+                    
+                    addChatMessage(`✅ <strong>Vente créée avec succès !</strong><br><br>📦 ${pendingAction.quantity} × ${pendingAction.product}<br>👤 Client: ${pendingAction.client}<br>💰 Total: ${formatCurrency(sale.valeur)}`, 'ai');
+                }
+                
+                pendingAction = null;
+                
+            } catch (error) {
+                console.error('Erreur exécution action:', error);
+                addChatMessage(`❌ Erreur lors de l'exécution: ${error.message}`, 'ai');
+            }
+        }
+
+        function cancelAction() {
+            pendingAction = null;
+            addChatMessage(`❌ <strong>Action annulée</strong>`, 'ai');
+        }
+
+        // Sauvegarde des notes dans Firebase
+        async function saveNotesToFirebase(note) {
+            if (isFirebaseInitialized) {
+                try {
+                    await db.collection('ai_notes').doc(note.id.toString()).set({
+                        ...note,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error('Erreur sauvegarde note:', error);
+                }
+            }
+        }
+
+        // Génération de graphiques textuels
+        function generateClientChart() {
+            const clientStats = {};
+            salesData.forEach(sale => {
+                clientStats[sale.client] = (clientStats[sale.client] || 0) + sale.valeur;
+            });
+            
+            const sortedClients = Object.entries(clientStats).sort(([,a], [,b]) => b - a).slice(0, 8);
+            const maxValue = sortedClients[0][1];
+            
+            let chart = `📊 <strong>Graphique CA par client</strong><br><br>`;
+            
+            sortedClients.forEach(([client, value]) => {
+                const barLength = Math.round((value / maxValue) * 20);
+                const bar = '█'.repeat(barLength) + '░'.repeat(20 - barLength);
+                chart += `<div style="font-family: monospace; margin: 5px 0;">
+                    ${client.padEnd(15)}: ${bar} ${formatCurrency(value)}
+                </div>`;
+            });
+            
+            return chart;
+        }
+
+        // Analyses détaillées
+        function generateDetailedPeriodAnalysis(sales, payments, periodName, startDate, endDate) {
+            const revenue = sales.reduce((sum, sale) => sum + sale.valeur, 0);
+            const paymentsTotal = payments.reduce((sum, p) => sum + p.amount, 0);
+            
+            // Top clients de la période
+            const clientStats = {};
+            sales.forEach(sale => {
+                clientStats[sale.client] = (clientStats[sale.client] || 0) + sale.valeur;
+            });
+            const topClients = Object.entries(clientStats).sort(([,a], [,b]) => b - a).slice(0, 3);
+            
+            return `📈 <strong>Analyse détaillée - ${periodName}</strong><br><br>
+            📅 Période: ${startDate.toLocaleDateString('fr-FR')} → ${endDate.toLocaleDateString('fr-FR')}<br><br>
+            
+            💰 <strong>Performance financière:</strong><br>
+            • CA: ${formatCurrency(revenue)}<br>
+            • Encaissé: ${formatCurrency(paymentsTotal)}<br>
+            • En-cours généré: ${formatCurrency(revenue - paymentsTotal)}<br><br>
+            
+            📊 <strong>Volumes:</strong><br>
+            • ${sales.length} ventes<br>
+            • ${payments.length} encaissements<br>
+            • Ticket moyen: ${formatCurrency(revenue / (sales.length || 1))}<br><br>
+            
+            🏆 <strong>Top clients ${periodName}:</strong><br>
+            ${topClients.map(([client, value], i) => 
+                `${i + 1}. ${client}: ${formatCurrency(value)}`
+            ).join('<br>')}<br><br>
+            
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Graphique de cette période')">Voir graphique</div>
+            </div>`;
+        }
+
+        function generateProductDetailedAnalysis(productName) {
+            const productSales = salesData.filter(sale => sale.product === productName);
+            const revenue = productSales.reduce((sum, sale) => sum + sale.valeur, 0);
+            const quantity = productSales.reduce((sum, sale) => sum + (parseFloat(sale.quantity) || 0), 0);
+            
+            // Clients qui achètent ce produit
+            const clientStats = {};
+            productSales.forEach(sale => {
+                clientStats[sale.client] = (clientStats[sale.client] || 0) + sale.valeur;
+            });
+            const topClientsBuyers = Object.entries(clientStats).sort(([,a], [,b]) => b - a).slice(0, 3);
+            
+            return `📦 <strong>Analyse produit: ${productName}</strong><br><br>
+            💰 CA généré: ${formatCurrency(revenue)}<br>
+            📊 Quantité vendue: ${Math.round(quantity)}<br>
+            🛒 Nombre de ventes: ${productSales.length}<br>
+            💵 Prix moyen: ${formatCurrency(revenue / (quantity || 1))}<br><br>
+            
+            🏆 <strong>Principaux acheteurs:</strong><br>
+            ${topClientsBuyers.map(([client, value], i) => 
+                `${i + 1}. ${client}: ${formatCurrency(value)}`
+            ).join('<br>')}<br><br>
+            
+            📈 <strong>Performance:</strong><br>
+            • ${((revenue / salesData.reduce((sum, s) => sum + s.valeur, 0)) * 100).toFixed(1)}% du CA total<br>
+            • Ticket moyen: ${formatCurrency(revenue / productSales.length)}<br><br>
+            
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Comparer ${productName} avec autres produits')">Comparer produits</div>
+            </div>`;
+        }
+
+        function generateAdvancedHelpMessage() {
+            return `🤖 <strong>Assistant IA Avancé KAMLAC</strong><br><br>
+            
+            ⚡ <strong>Actions directes:</strong><br>
+            • "Encaisse 50000 pour AFRICA LEYRI"<br>
+            • "Créer vente 10 cartons pour SMC"<br>
+            • "Note : Rappeler client demain"<br><br>
+            
+            📊 <strong>Graphiques:</strong><br>
+            • "Graphique CA par client"<br>
+            • "Graphique évolution des ventes"<br><br>
+            
+            📈 <strong>Analyses avancées:</strong><br>
+            • "Analyse du mois dernier"<br>
+            • "Analyse du produit PRODUIT_X"<br>
+            • "Compare CLIENT_A et CLIENT_B"<br><br>
+            
+            💡 <strong>Nouveau!</strong> Je peux maintenant créer des encaissements et ventes directement depuis le chat !`;
+        }
+
+        // Fonctions utilitaires
+        function getTopProducts(limit) {
+            const productStats = {};
+            salesData.forEach(sale => {
+                const product = sale.product || 'Non spécifié';
+                productStats[product] = (productStats[product] || 0) + sale.valeur;
+            });
+            return Object.entries(productStats).sort(([,a], [,b]) => b - a).slice(0, limit);
+        }
+
+        // Gestion du chat IA
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        function sendSuggestion(message) {
+            document.getElementById('chatInput').value = message;
+            sendChatMessage();
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Ajouter le message utilisateur
+            addChatMessage(message, 'user');
+            input.value = '';
+            
+            // Désactiver le bouton temporairement
+            const sendBtn = document.getElementById('chatSendBtn');
+            sendBtn.disabled = true;
+            
+            // Afficher l'indicateur de frappe
+            showTypingIndicator();
+            
+            // Analyser et répondre après un délai réaliste
+            setTimeout(() => {
+                const response = analyzeQuestion(message);
+                hideTypingIndicator();
+                addChatMessage(response, 'ai');
+                sendBtn.disabled = false;
+            }, 1500 + Math.random() * 1000); // 1.5-2.5 secondes
+        }
+
+        function addChatMessage(message, sender) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = `chat-avatar ${sender}`;
+            avatar.textContent = sender === 'user' ? '👤' : '🤖';
+            
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${sender}`;
+            bubble.innerHTML = message;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(bubble);
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll vers le bas
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Sauvegarder l'historique
+            chatHistory.push({ message, sender, timestamp: new Date() });
+        }
+
+        function showTypingIndicator() {
+            const messagesContainer = document.getElementById('chatMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'chat-message';
+            typingDiv.id = 'typingIndicator';
+            
+            typingDiv.innerHTML = `
+                <div class="chat-avatar ai">🤖</div>
+                <div class="chat-bubble ai">
+                    <div class="typing-indicator">
+                        <span>Assistant IA en train d'analyser</span>
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // Analyseur de questions intelligent
+        function analyzeQuestion(question) {
+            const q = question.toLowerCase();
+            
+            // Analyser le type de question et extraire les informations
+            try {
+                // Questions sur le CA
+                if (q.includes('ca') || q.includes('chiffre') || q.includes('affaires') || q.includes('revenus')) {
+                    return analyzeRevenueQuestion(q);
+                }
+                
+                // Questions sur les clients
+                if (q.includes('client') || q.includes('meilleur') || q.includes('top client')) {
+                    return analyzeClientQuestion(q);
+                }
+                
+                // Questions sur les produits
+                if (q.includes('produit') || q.includes('article') || q.includes('top produit')) {
+                    return analyzeProductQuestion(q);
+                }
+                
+                // Questions sur les encaissements
+                if (q.includes('encaiss') || q.includes('en-cours') || q.includes('encours') || q.includes('crédit') || q.includes('solde')) {
+                    return analyzePaymentQuestion(q);
+                }
+                
+                // Questions sur les périodes
+                if (q.includes('mois') || q.includes('semaine') || q.includes('trimestre') || q.includes('année') || q.includes('période')) {
+                    return analyzePeriodQuestion(q);
+                }
+                
+                // Questions de comparaison
+                if (q.includes('compar') || q.includes('vs') || q.includes('entre') || q.includes('différence')) {
+                    return analyzeComparisonQuestion(q);
+                }
+                
+                // Question générale sur les statistiques
+                if (q.includes('stat') || q.includes('résumé') || q.includes('bilan') || q.includes('synthèse')) {
+                    return generateGeneralStats();
+                }
+                
+                // Aide
+                if (q.includes('aide') || q.includes('help') || q.includes('comment') || q.includes('que peux')) {
+                    return generateHelpMessage();
+                }
+                
+                // Réponse par défaut avec suggestions
+                return generateDefaultResponse(question);
+                
+            } catch (error) {
+                console.error('Erreur analyse question:', error);
+                return "❌ <strong>Erreur d'analyse</strong><br><br>Désolé, j'ai rencontré une erreur en analysant votre question. Pouvez-vous la reformuler ?";
+            }
+        }
+
+        function analyzeRevenueQuestion(question) {
+            const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+            const salesCount = salesData.length;
+            
+            // Détection de période
+            if (question.includes('2 mois') || question.includes('deux mois')) {
+                const twoMonthsAgo = new Date();
+                twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+                const recentSales = salesData.filter(sale => {
+                    const saleDate = parseDate(sale.date);
+                    return saleDate && saleDate >= twoMonthsAgo;
+                });
+                const recentRevenue = recentSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+                
+                return `📊 <strong>CA des 2 derniers mois</strong><br><br>
+                💰 <strong>${formatCurrency(recentRevenue)}</strong><br>
+                📦 ${recentSales.length} ventes réalisées<br>
+                📈 Moyenne par vente: ${formatCurrency(recentRevenue / (recentSales.length || 1))}<br><br>
+                <div class="chat-stats">
+                    📊 Part du CA total: ${((recentRevenue / totalRevenue) * 100).toFixed(1)}%
+                </div>`;
+            }
+            
+            if (question.includes('mois') && question.includes('cours')) {
+                const now = new Date();
+                const currentMonthSales = salesData.filter(sale => {
+                    const saleDate = parseDate(sale.date);
+                    return saleDate && 
+                           saleDate.getMonth() === now.getMonth() && 
+                           saleDate.getFullYear() === now.getFullYear();
+                });
+                const currentMonthRevenue = currentMonthSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+                
+                return `📅 <strong>CA du mois en cours</strong><br><br>
+                💰 <strong>${formatCurrency(currentMonthRevenue)}</strong><br>
+                📦 ${currentMonthSales.length} ventes ce mois<br>
+                📈 Moyenne journalière: ${formatCurrency(currentMonthRevenue / new Date().getDate())}<br><br>
+                <div class="chat-stats">
+                    📊 Progression: ${currentMonthSales.length} ventes sur ${now.getDate()} jours
+                </div>`;
+            }
+            
+            // CA total par défaut
+            return `💰 <strong>Chiffre d'affaires total</strong><br><br>
+            💰 <strong>${formatCurrency(totalRevenue)}</strong><br>
+            📦 ${salesCount} ventes au total<br>
+            📈 Moyenne par vente: ${formatCurrency(totalRevenue / (salesCount || 1))}<br><br>
+            <div class="chat-stats">
+                🏆 Plus grosse vente: ${formatCurrency(Math.max(...salesData.map(s => s.valeur || 0)))}<br>
+                📉 Plus petite vente: ${formatCurrency(Math.min(...salesData.map(s => s.valeur || 0)))}
+            </div>`;
+        }
+
+        function analyzeClientQuestion(question) {
+            // Calculer les ventes par client
+            const clientStats = {};
+            salesData.forEach(sale => {
+                if (!clientStats[sale.client]) {
+                    clientStats[sale.client] = { sales: 0, revenue: 0, count: 0 };
+                }
+                clientStats[sale.client].revenue += sale.valeur || 0;
+                clientStats[sale.client].count++;
+            });
+            
+            // Trier par revenus
+            const sortedClients = Object.entries(clientStats)
+                .sort(([,a], [,b]) => b.revenue - a.revenue);
+            
+            if (question.includes('meilleur') || question.includes('top')) {
+                const topClients = sortedClients.slice(0, 5);
+                
+                let response = `🏆 <strong>Top 5 des meilleurs clients</strong><br><br>`;
+                
+                topClients.forEach(([client, stats], index) => {
+                    const medal = ['🥇', '🥈', '🥉', '🏅', '🏅'][index];
+                    response += `${medal} <strong>${client}</strong><br>`;
+                    response += `💰 ${formatCurrency(stats.revenue)} (${stats.count} ventes)<br><br>`;
+                });
+                
+                const topClient = topClients[0];
+                const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+                const topClientPercentage = ((topClient[1].revenue / totalRevenue) * 100).toFixed(1);
+                
+                response += `<div class="chat-stats">
+                    🎯 ${topClient[0]} représente ${topClientPercentage}% de votre CA total
+                </div>`;
+                
+                return response;
+            }
+            
+            // Liste générale des clients
+            return `👥 <strong>Analyse des clients</strong><br><br>
+            📊 ${Object.keys(clientStats).length} clients au total<br><br>
+            <table class="chat-table">
+                <tr><th>Client</th><th>CA</th><th>Ventes</th></tr>
+                ${sortedClients.slice(0, 10).map(([client, stats]) => 
+                    `<tr><td>${client}</td><td>${formatCurrency(stats.revenue)}</td><td>${stats.count}</td></tr>`
+                ).join('')}
+            </table>`;
+        }
+
+        function analyzeProductQuestion(question) {
+            // Calculer les ventes par produit
+            const productStats = {};
+            salesData.forEach(sale => {
+                const product = sale.product || 'Produit non spécifié';
+                if (!productStats[product]) {
+                    productStats[product] = { revenue: 0, quantity: 0, count: 0 };
+                }
+                productStats[product].revenue += sale.valeur || 0;
+                productStats[product].quantity += parseFloat(sale.quantity) || 0;
+                productStats[product].count++;
+            });
+            
+            // Trier par revenus
+            const sortedProducts = Object.entries(productStats)
+                .sort(([,a], [,b]) => b.revenue - a.revenue);
+            
+            if (question.includes('top') || question.includes('meilleur')) {
+                const topProducts = sortedProducts.slice(0, 5);
+                
+                let response = `🏆 <strong>Top 5 des produits</strong><br><br>`;
+                
+                topProducts.forEach(([product, stats], index) => {
+                    const medal = ['🥇', '🥈', '🥉', '🏅', '🏅'][index];
+                    response += `${medal} <strong>${product}</strong><br>`;
+                    response += `💰 ${formatCurrency(stats.revenue)} (${Math.round(stats.quantity)} unités)<br><br>`;
+                });
+                
+                return response;
+            }
+            
+            return `📦 <strong>Analyse des produits</strong><br><br>
+            📊 ${Object.keys(productStats).length} produits vendus<br><br>
+            <table class="chat-table">
+                <tr><th>Produit</th><th>CA</th><th>Quantité</th></tr>
+                ${sortedProducts.slice(0, 8).map(([product, stats]) => 
+                    `<tr><td>${product}</td><td>${formatCurrency(stats.revenue)}</td><td>${Math.round(stats.quantity)}</td></tr>`
+                ).join('')}
+            </table>`;
+        }
+
+        function analyzePaymentQuestion(question) {
+            const totalSales = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+            const totalPayments = paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const totalOutstanding = totalSales - totalPayments;
+            
+            // Calculer les en-cours par client
+            const clientBalances = {};
+            
+            // Ajouter les ventes
+            salesData.forEach(sale => {
+                if (!clientBalances[sale.client]) {
+                    clientBalances[sale.client] = { sales: 0, payments: 0, balance: 0 };
+                }
+                clientBalances[sale.client].sales += sale.valeur || 0;
+            });
+            
+            // Soustraire les encaissements
+            paymentsData.forEach(payment => {
+                if (!clientBalances[payment.client]) {
+                    clientBalances[payment.client] = { sales: 0, payments: 0, balance: 0 };
+                }
+                clientBalances[payment.client].payments += payment.amount || 0;
+            });
+            
+            // Calculer les balances
+            Object.keys(clientBalances).forEach(client => {
+                clientBalances[client].balance = clientBalances[client].sales - clientBalances[client].payments;
+            });
+            
+            // Clients avec en-cours positif
+            const clientsWithOutstanding = Object.entries(clientBalances)
+                .filter(([, balance]) => balance.balance > 0)
+                .sort(([,a], [,b]) => b.balance - a.balance);
+            
+            let response = `💰 <strong>Analyse des encaissements</strong><br><br>
+            📊 <strong>Vue d'ensemble :</strong><br>
+            💰 Total ventes: ${formatCurrency(totalSales)}<br>
+            ✅ Total encaissé: ${formatCurrency(totalPayments)}<br>
+            ⚠️ En-cours total: ${formatCurrency(totalOutstanding)}<br><br>`;
+            
+            if (clientsWithOutstanding.length > 0) {
+                response += `🔴 <strong>Clients avec en-cours :</strong><br><br>`;
+                response += `<table class="chat-table">
+                    <tr><th>Client</th><th>En-cours</th></tr>
+                    ${clientsWithOutstanding.slice(0, 10).map(([client, balance]) => 
+                        `<tr><td>${client}</td><td style="color: #dc3545; font-weight: 600;">${formatCurrency(balance.balance)}</td></tr>`
+                    ).join('')}
+                </table>`;
+            } else {
+                response += `✅ <strong>Excellente nouvelle !</strong><br>Aucun client n'a d'en-cours. Tous vos comptes sont soldés ! 🎉`;
+            }
+            
+            return response;
+        }
+
+        function analyzePeriodQuestion(question) {
+            const now = new Date();
+            let startDate, endDate, periodName;
+            
+            if (question.includes('semaine')) {
+                // Cette semaine
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(now.getDate() - now.getDay());
+                startDate = startOfWeek;
+                endDate = now;
+                periodName = "cette semaine";
+            } else if (question.includes('mois')) {
+                // Ce mois
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                endDate = now;
+                periodName = "ce mois";
+            } else if (question.includes('trimestre')) {
+                // Ce trimestre
+                const quarter = Math.floor(now.getMonth() / 3);
+                startDate = new Date(now.getFullYear(), quarter * 3, 1);
+                endDate = now;
+                periodName = "ce trimestre";
+            } else {
+                // Cette année par défaut
+                startDate = new Date(now.getFullYear(), 0, 1);
+                endDate = now;
+                periodName = "cette année";
+            }
+            
+            const periodSales = salesData.filter(sale => {
+                const saleDate = parseDate(sale.date);
+                return saleDate && saleDate >= startDate && saleDate <= endDate;
+            });
+            
+            const periodPayments = paymentsData.filter(payment => {
+                const paymentDate = parseDate(payment.date);
+                return paymentDate && paymentDate >= startDate && paymentDate <= endDate;
+            });
+            
+            const periodRevenue = periodSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+            const periodPaymentsTotal = periodPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            
+            return `📅 <strong>Analyse pour ${periodName}</strong><br><br>
+            💰 CA: ${formatCurrency(periodRevenue)}<br>
+            📦 ${periodSales.length} ventes réalisées<br>
+            💳 ${formatCurrency(periodPaymentsTotal)} encaissés<br>
+            📈 Moyenne par vente: ${formatCurrency(periodRevenue / (periodSales.length || 1))}<br><br>
+            <div class="chat-stats">
+                📊 Période: ${startDate.toLocaleDateString('fr-FR')} → ${endDate.toLocaleDateString('fr-FR')}
+            </div>`;
+        }
+
+        function analyzeComparisonQuestion(question) {
+            // Extraire les noms de clients de la question
+            const words = question.split(/\s+/);
+            const possibleClients = clientsList.filter(client => {
+                return words.some(word => 
+                    client.toLowerCase().includes(word.toLowerCase()) || 
+                    word.toLowerCase().includes(client.toLowerCase())
+                );
+            });
+            
+            if (possibleClients.length >= 2) {
+                const client1 = possibleClients[0];
+                const client2 = possibleClients[1];
+                
+                const client1Sales = salesData.filter(sale => sale.client === client1);
+                const client2Sales = salesData.filter(sale => sale.client === client2);
+                
+                const client1Revenue = client1Sales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+                const client2Revenue = client2Sales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+                
+                const winner = client1Revenue > client2Revenue ? client1 : client2;
+                const difference = Math.abs(client1Revenue - client2Revenue);
+                
+                return `⚖️ <strong>Comparaison : ${client1} vs ${client2}</strong><br><br>
+                🥇 <strong>Gagnant : ${winner}</strong><br><br>
+                📊 <strong>${client1} :</strong><br>
+                💰 ${formatCurrency(client1Revenue)} (${client1Sales.length} ventes)<br><br>
+                📊 <strong>${client2} :</strong><br>
+                💰 ${formatCurrency(client2Revenue)} (${client2Sales.length} ventes)<br><br>
+                <div class="chat-stats">
+                    📈 Écart: ${formatCurrency(difference)}<br>
+                    📊 Ratio: ${(Math.max(client1Revenue, client2Revenue) / Math.min(client1Revenue, client2Revenue)).toFixed(1)}:1
+                </div>`;
+            }
+            
+            return "🤔 <strong>Comparaison</strong><br><br>Je n'ai pas pu identifier clairement les deux éléments à comparer dans votre question. Pouvez-vous préciser ?<br><br>Exemple : <em>\"Compare les ventes de AFRICA LEYRI et SMC\"</em>";
+        }
+
+        function generateGeneralStats() {
+            const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+            const totalPayments = paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const totalOutstanding = totalRevenue - totalPayments;
+            
+            // Top client
+            const clientStats = {};
+            salesData.forEach(sale => {
+                clientStats[sale.client] = (clientStats[sale.client] || 0) + sale.valeur;
+            });
+            const topClient = Object.entries(clientStats).sort(([,a], [,b]) => b - a)[0];
+            
+            // Top produit
+            const productStats = {};
+            salesData.forEach(sale => {
+                const product = sale.product || 'Non spécifié';
+                productStats[product] = (productStats[product] || 0) + sale.valeur;
+            });
+            const topProduct = Object.entries(productStats).sort(([,a], [,b]) => b - a)[0];
+            
+            return `📈 <strong>Synthèse générale de votre activité</strong><br><br>
+            💰 <strong>Financier :</strong><br>
+            • CA total: ${formatCurrency(totalRevenue)}<br>
+            • Encaissé: ${formatCurrency(totalPayments)}<br>
+            • En-cours: ${formatCurrency(totalOutstanding)}<br><br>
+            
+            🏆 <strong>Champions :</strong><br>
+            • Meilleur client: ${topClient ? topClient[0] : 'N/A'} (${formatCurrency(topClient ? topClient[1] : 0)})<br>
+            • Top produit: ${topProduct ? topProduct[0] : 'N/A'} (${formatCurrency(topProduct ? topProduct[1] : 0)})<br><br>
+            
+            📊 <strong>Volumes :</strong><br>
+            • ${salesData.length} ventes réalisées<br>
+            • ${paymentsData.length} encaissements<br>
+            • ${Object.keys(clientStats).length} clients actifs<br>
+            • ${Object.keys(productStats).length} produits vendus`;
+        }
+
+        function generateHelpMessage() {
+            return `🤖 <strong>Comment puis-je vous aider ?</strong><br><br>
+            Je peux analyser vos données KAMLAC et répondre à différents types de questions :<br><br>
+            
+            💰 <strong>Questions financières :</strong><br>
+            • "Quel est mon CA total ?"<br>
+            • "Quel est mon CA des 2 derniers mois ?"<br>
+            • "Quel est mon en-cours total ?"<br><br>
+            
+            🏆 <strong>Top performances :</strong><br>
+            • "Qui est mon meilleur client ?"<br>
+            • "Quel est mon top produit ?"<br>
+            • "Top 5 des clients"<br><br>
+            
+            📊 <strong>Analyses par période :</strong><br>
+            • "Mes ventes cette semaine"<br>
+            • "CA du mois en cours"<br>
+            • "Bilan du trimestre"<br><br>
+            
+            ⚖️ <strong>Comparaisons :</strong><br>
+            • "Compare Client A et Client B"<br>
+            • "Différence entre ces deux produits"<br><br>
+            
+            📈 <strong>Statistiques générales :</strong><br>
+            • "Résumé de mon activité"<br>
+            • "Bilan général"<br><br>
+            
+            Posez-moi votre question en langage naturel ! 😊`;
+        }
+
+        function generateDefaultResponse(question) {
+            return `🤔 <strong>Je n'ai pas bien compris votre question</strong><br><br>
+            Vous avez demandé : <em>"${question}"</em><br><br>
+            Voici quelques suggestions pour reformuler :<br><br>
+            <div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon CA total ?')">CA total</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Qui est mon meilleur client ?')">Meilleur client</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Mes ventes ce mois')">Ventes du mois</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('En-cours clients')">En-cours</div>
+                <div class="chat-suggestion" onclick="sendSuggestion('Aide')">Aide</div>
+            </div>`;
+        }
 
         // Navigation entre sections
         function showSection(sectionName) {
