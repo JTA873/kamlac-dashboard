@@ -3336,65 +3336,6 @@ function handleSaleAction(question) {
                 indicator.remove();
             }
         }
-
-        // Analyseur de questions intelligent
-        function analyzeQuestion(question) {
-            const q = question.toLowerCase();
-            
-            // Analyser le type de question et extraire les informations
-            try {
-                // Questions sur le CA
-                if (q.includes('ca') || q.includes('chiffre') || q.includes('affaires') || q.includes('revenus')) {
-                    return analyzeRevenueQuestion(q);
-                }
-                
-                // Questions sur les clients
-                if (q.includes('client') || q.includes('meilleur') || q.includes('top client')) {
-                    return analyzeClientQuestion(q);
-                }
-                
-                // Questions sur les produits
-                if (q.includes('produit') || q.includes('article') || q.includes('top produit')) {
-                    return analyzeProductQuestion(q);
-                }
-                
-                // Questions sur les encaissements
-                if (q.includes('encaiss') || q.includes('en-cours') || q.includes('encours') || q.includes('crédit') || q.includes('solde')) {
-                    return analyzePaymentQuestion(q);
-                }
-                
-                // Questions sur les périodes
-                if (q.includes('mois') || q.includes('semaine') || q.includes('trimestre') || q.includes('année') || q.includes('période')) {
-                    return analyzePeriodQuestion(q);
-                }
-                
-                // Questions de comparaison
-                if (q.includes('compar') || q.includes('vs') || q.includes('entre') || q.includes('différence')) {
-                    return analyzeComparisonQuestion(q);
-                }
-                
-                // Question générale sur les statistiques
-                if (q.includes('stat') || q.includes('résumé') || q.includes('bilan') || q.includes('synthèse')) {
-                    return generateGeneralStats();
-                }
-                
-                // Aide
-                if (q.includes('aide') || q.includes('help') || q.includes('comment') || q.includes('que peux')) {
-                    return generateHelpMessage();
-                }
-                
-                // Réponse par défaut avec suggestions
-                return generateDefaultResponse(question);
-                
-            } catch (error) {
-                console.error('Erreur analyse question:', error);
-                return "❌ <strong>Erreur d'analyse</strong><br><br>Désolé, j'ai rencontré une erreur en analysant votre question. Pouvez-vous la reformuler ?";
-            }
-        }
-
-        function analyzeRevenueQuestion(question) {
-            const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
-            const salesCount = salesData.length;
             
             // Détection de période
             if (question.includes('2 mois') || question.includes('deux mois')) {
