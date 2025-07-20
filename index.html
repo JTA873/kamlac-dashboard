@@ -1357,6 +1357,222 @@
                 padding: 15px;
             }
         }
+        
+        /* === BOUTON FLOTTANT === */
+        .floating-btn {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+        
+        .floating-btn:hover {
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+        }
+        
+        .floating-btn.active {
+            transform: rotate(45deg);
+            background: linear-gradient(45deg, #764ba2, #667eea);
+        }
+        
+        .floating-menu {
+            position: fixed;
+            top: 145px;
+            right: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            z-index: 999;
+            opacity: 0;
+            transform: translateY(-10px) scale(0.95);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            min-width: 200px;
+            overflow: hidden;
+        }
+        
+        .floating-menu.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+        
+        .floating-menu-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .floating-menu-item:last-child {
+            border-bottom: none;
+        }
+        
+        .floating-menu-item:hover {
+            background: #f8f9fa;
+            color: #667eea;
+        }
+        
+        .floating-menu-item .icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+        
+        /* Chat flottant mini */
+        .mini-chat {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 998;
+            opacity: 0;
+            transform: translateY(-20px) scale(0.9);
+            transition: all 0.4s ease;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .mini-chat.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+        
+        .mini-chat-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+        
+        .mini-chat-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .mini-chat-close:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .mini-chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        
+        .mini-chat-input-container {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .mini-chat-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .mini-chat-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .mini-chat-send {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .mini-chat-send:hover {
+            background: #5a67d8;
+            transform: scale(1.05);
+        }
+        
+        /* Responsive mobile */
+        @media (max-width: 768px) {
+            .floating-btn {
+                top: 70px;
+                right: 15px;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            
+            .floating-menu {
+                top: 130px;
+                right: 15px;
+                width: calc(100vw - 30px);
+                max-width: 250px;
+            }
+            
+            .mini-chat {
+                top: 70px;
+                right: 15px;
+                left: 15px;
+                width: calc(100vw - 30px);
+                height: 70vh;
+                max-height: 500px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1776,8 +1992,8 @@
                                 Je peux analyser vos données KAMLAC :<br><br>
                                 📊 <strong>Analyses</strong> : CA, top clients, produits<br>
                                 📈 <strong>Calculs</strong> : Moyennes, totaux, évolutions<br>
-                                � <strong>Notes</strong> : Consultez vos notes avec "affiche mes notes"<br>
-                                � <strong>Comparaisons</strong> : Entre clients et produits
+                                  <strong>Notes</strong> : Consultez vos notes avec "affiche mes notes"<br>
+                                  <strong>Comparaisons</strong> : Entre clients et produits
                                 <br><br>
                                 <div class="chat-suggestions">
                                     <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon CA total ?')">CA total</div>
@@ -2055,6 +2271,43 @@
         </div>
     </div>
 
+    <!-- Bouton flottant et interfaces -->
+    <button class="floating-btn" id="floatingBtn" onclick="toggleFloatingMenu()" title="Accès rapide">
+        +
+    </button>
+
+    <div class="floating-menu" id="floatingMenu">
+        <div class="floating-menu-item" onclick="openQuickNote()">
+            <span class="icon">📝</span>
+            <span>Nouvelle note</span>
+        </div>
+        <div class="floating-menu-item" onclick="openQuickChat()">
+            <span class="icon">🤖</span>
+            <span>IA BOT</span>
+        </div>
+        <div class="floating-menu-item" onclick="showAllNotes()">
+            <span class="icon">📋</span>
+            <span>Toutes les notes</span>
+        </div>
+    </div>
+
+    <div class="mini-chat" id="miniChat">
+        <div class="mini-chat-header">
+            <span>🤖 Assistant IA</span>
+            <button class="mini-chat-close" onclick="closeMiniChat()">×</button>
+        </div>
+        <div class="mini-chat-messages" id="miniChatMessages">
+            <div style="text-align: center; color: #6c757d; margin-top: 50px;">
+                <div style="font-size: 48px; margin-bottom: 15px;">🤖</div>
+                <p>Bonjour ! Je suis votre assistant IA.<br>Comment puis-je vous aider aujourd'hui ?</p>
+            </div>
+        </div>
+        <div class="mini-chat-input-container">
+            <input type="text" class="mini-chat-input" id="miniChatInput" placeholder="Tapez votre message..." onkeypress="if(event.key==='Enter') sendMiniChatMessage()">
+            <button class="mini-chat-send" onclick="sendMiniChatMessage()">➤</button>
+        </div>
+    </div>
+
     <script>
         // Variables globales
         let salesData = [];
@@ -2124,12 +2377,14 @@
             salesData = JSON.parse(localStorage.getItem('kamlacSalesData') || '[]');
             paymentsData = JSON.parse(localStorage.getItem('kamlacPaymentsData') || '[]');
             productsData = JSON.parse(localStorage.getItem('kamlacProductsData') || '[]');
+            aiNotes = JSON.parse(localStorage.getItem('kamlacAiNotes') || '[]');
         }
 
         function saveToLocalStorage() {
             localStorage.setItem('kamlacSalesData', JSON.stringify(salesData));
             localStorage.setItem('kamlacPaymentsData', JSON.stringify(paymentsData));
             localStorage.setItem('kamlacProductsData', JSON.stringify(productsData));
+            localStorage.setItem('kamlacAiNotes', JSON.stringify(aiNotes));
         }
 
         function updateCloudStatus(status, message) {
@@ -2680,10 +2935,15 @@
         // Assistant IA simplifié - Analyseur d'intentions
         function analyzeQuestion(question) {
             const q = question.toLowerCase();
+            console.log('Question reçue:', question, 'Processée:', q); // Debug
             
             try {
                 // Afficher les notes
-                if (q.includes('affiche') && q.includes('note') || q.includes('voir') && q.includes('note') || q.includes('mes notes')) {
+                if ((q.includes('affiche') && q.includes('note')) || 
+                    (q.includes('voir') && q.includes('note')) || 
+                    q.includes('mes notes') || 
+                    (q.includes('mes') && q.includes('note'))) {
+                    console.log('Condition notes détectée, aiNotes.length:', aiNotes.length); // Debug
                     return showAllNotes();
                 }
                 
@@ -5574,6 +5834,7 @@ Date [ESPACES] Client [ESPACES] Montant
             };
             
             aiNotes.push(note);
+            saveToLocalStorage(); // Sauvegarder en localStorage
             
             // Sauvegarder sur Firebase
             if (isFirebaseInitialized) {
@@ -5616,6 +5877,90 @@ Date [ESPACES] Client [ESPACES] Montant
             
             return notesHtml;
         }
+
+        // === FONCTIONS BOUTON FLOTTANT ===
+        function toggleFloatingMenu() {
+            const menu = document.getElementById('floatingMenu');
+            const btn = document.getElementById('floatingBtn');
+            
+            if (menu.classList.contains('show')) {
+                menu.classList.remove('show');
+                btn.classList.remove('active');
+            } else {
+                // Fermer le mini-chat s'il est ouvert
+                closeMiniChat();
+                menu.classList.add('show');
+                btn.classList.add('active');
+            }
+        }
+
+        function openQuickNote() {
+            toggleFloatingMenu(); // Fermer le menu
+            showNotesModal(); // Ouvrir le modal de note
+        }
+
+        function openQuickChat() {
+            toggleFloatingMenu(); // Fermer le menu
+            const miniChat = document.getElementById('miniChat');
+            miniChat.classList.add('show');
+        }
+
+        function closeMiniChat() {
+            const miniChat = document.getElementById('miniChat');
+            miniChat.classList.remove('show');
+        }
+
+        function sendMiniChatMessage() {
+            const input = document.getElementById('miniChatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            const messagesContainer = document.getElementById('miniChatMessages');
+            
+            // Ajouter le message utilisateur
+            messagesContainer.innerHTML += `
+                <div style="margin-bottom: 15px; text-align: right;">
+                    <div style="background: #667eea; color: white; padding: 10px 15px; border-radius: 18px 18px 4px 18px; display: inline-block; max-width: 80%; word-wrap: break-word;">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            input.value = '';
+            
+            // Faire défiler vers le bas
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Traiter la réponse de l'IA
+            setTimeout(() => {
+                const response = analyzeQuestion(message);
+                
+                messagesContainer.innerHTML += `
+                    <div style="margin-bottom: 15px;">
+                        <div style="background: #f8f9fa; color: #333; padding: 10px 15px; border-radius: 18px 18px 18px 4px; display: inline-block; max-width: 80%; word-wrap: break-word; border: 1px solid #e9ecef;">
+                            🤖 ${response}
+                        </div>
+                    </div>
+                `;
+                
+                // Faire défiler vers le bas
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 800);
+        }
+
+        // Fermer les menus en cliquant à l'extérieur
+        document.addEventListener('click', function(event) {
+            const floatingBtn = document.getElementById('floatingBtn');
+            const floatingMenu = document.getElementById('floatingMenu');
+            const miniChat = document.getElementById('miniChat');
+            
+            // Si on clique en dehors du bouton et du menu
+            if (!floatingBtn.contains(event.target) && !floatingMenu.contains(event.target)) {
+                floatingMenu.classList.remove('show');
+                floatingBtn.classList.remove('active');
+            }
+        });
 
         // Message d'aide simplifié
         function generateSimpleHelpMessage() {
