@@ -2944,7 +2944,7 @@
                     q.includes('mes notes') || 
                     (q.includes('mes') && q.includes('note'))) {
                     console.log('Condition notes détectée, aiNotes.length:', aiNotes.length); // Debug
-                    return showAllNotes();
+                    return getAllNotesHtml();
                 }
                 
                 // Questions sur le CA
@@ -5854,6 +5854,58 @@ Date [ESPACES] Client [ESPACES] Montant
 
         // Afficher toutes les notes (version simplifiée)
         function showAllNotes() {
+            console.log('showAllNotes appelée, aiNotes.length:', aiNotes.length);
+            
+            // S'assurer que l'onglet IA BOT est affiché
+            showPage('chat');
+            
+            let notesHtml;
+            
+            if (aiNotes.length === 0) {
+                notesHtml = `📝 <strong>Aucune note enregistrée</strong><br><br>
+                Cliquez sur le bouton ➕ en haut à droite pour ajouter une note.<br><br>
+                <div class="chat-suggestions">
+                    <div class="chat-suggestion" onclick="showNotesModal()">Ajouter une note</div>
+                </div>`;
+            } else {
+                notesHtml = `📝 <strong>Vos notes (${aiNotes.length})</strong><br><br>`;
+                
+                // Trier par date récente
+                const sortedNotes = [...aiNotes].sort((a, b) => b.id - a.id);
+                
+                sortedNotes.forEach((note, index) => {
+                    notesHtml += `<div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #667eea;">
+                        <strong>📋 Note ${index + 1}</strong><br>
+                        ${note.content}<br>
+                        <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
+                    </div>`;
+                });
+            }
+            
+            // Afficher dans le chat principal
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                chatMessages.innerHTML += `
+                    <div class="chat-message">
+                        <div class="bot-message">
+                            ${notesHtml}
+                        </div>
+                    </div>
+                `;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Fermer le menu flottant si ouvert
+            const floatingMenu = document.getElementById('floatingMenu');
+            const floatingBtn = document.getElementById('floatingBtn');
+            if (floatingMenu && floatingBtn) {
+                floatingMenu.classList.remove('show');
+                floatingBtn.classList.remove('active');
+            }
+        }
+
+        // Version pour le retour dans analyzeQuestion
+        function getAllNotesHtml() {
             if (aiNotes.length === 0) {
                 return `📝 <strong>Aucune note enregistrée</strong><br><br>
                 Cliquez sur le bouton ➕ en haut à droite pour ajouter une note.<br><br>
