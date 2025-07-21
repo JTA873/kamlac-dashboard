@@ -1992,8 +1992,8 @@
                                 Je peux analyser vos données KAMLAC :<br><br>
                                 📊 <strong>Analyses</strong> : CA, top clients, produits<br>
                                 📈 <strong>Calculs</strong> : Moyennes, totaux, évolutions<br>
-                                  <strong>Notes</strong> : Consultez vos notes avec "affiche mes notes"<br>
-                                  <strong>Comparaisons</strong> : Entre clients et produits
+                                � <strong>Notes</strong> : Consultez vos notes avec "affiche mes notes"<br>
+                                � <strong>Comparaisons</strong> : Entre clients et produits
                                 <br><br>
                                 <div class="chat-suggestions">
                                     <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon CA total ?')">CA total</div>
@@ -2260,6 +2260,20 @@
     <div id="notesModal" class="product-modal">
         <div class="product-modal-content">
             <h3 style="margin-bottom: 15px;">📝 Ajouter une note</h3>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="noteCategory">🏷️ Catégorie</label>
+                <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
+                    <select id="noteCategory" style="flex: 1; padding: 8px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;">
+                        <option value="">Sélectionner une catégorie...</option>
+                    </select>
+                    <button type="button" onclick="toggleNewCategoryInput()" style="padding: 8px 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 12px; white-space: nowrap;">+ Nouvelle</button>
+                </div>
+                <div id="newCategoryContainer" style="display: none; margin-top: 10px;">
+                    <input type="text" id="newCategoryInput" placeholder="Nom de la nouvelle catégorie..." style="width: 100%; padding: 8px; border: 2px solid #667eea; border-radius: 8px; font-size: 14px;">
+                </div>
+            </div>
+            
             <div class="form-group">
                 <label for="noteContent">Note *</label>
                 <textarea id="noteContent" placeholder="Tapez votre note ici..." rows="4" required style="width: 100%; min-height: 100px;"></textarea>
@@ -2267,6 +2281,33 @@
             <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <button class="btn btn-primary" onclick="saveNote()" style="flex: 1;">💾 Sauvegarder</button>
                 <button class="btn btn-secondary" onclick="closeNotesModal()" style="flex: 1;">❌ Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour afficher toutes les notes -->
+    <div id="allNotesModal" class="product-modal">
+        <div class="product-modal-content" style="max-width: 900px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">📋 Toutes vos notes</h3>
+                <button onclick="closeAllNotesModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
+            </div>
+            
+            <!-- Filtre par catégorie -->
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <label style="font-weight: 600;">🏷️ Filtrer par catégorie :</label>
+                <select id="categoryFilter" onchange="filterNotesByCategory()" style="padding: 8px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px; min-width: 200px;">
+                    <option value="">Toutes les catégories</option>
+                </select>
+                <span id="notesCount" style="color: #666; font-size: 14px;"></span>
+            </div>
+            
+            <div id="allNotesContent" style="max-height: 500px; overflow-y: auto;">
+                <!-- Les notes seront chargées ici -->
+            </div>
+            <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="showNotesModal(); closeAllNotesModal();" style="flex: 1;">➕ Ajouter une note</button>
+                <button class="btn btn-secondary" onclick="closeAllNotesModal()" style="flex: 1;">❌ Fermer</button>
             </div>
         </div>
     </div>
@@ -2288,10 +2329,6 @@
         <div class="floating-menu-item" onclick="showAllNotes()">
             <span class="icon">📋</span>
             <span>Toutes les notes</span>
-        </div>
-        <div class="floating-menu-item" onclick="testShowAllNotes()" style="background: #ffe6e6;">
-            <span class="icon">🔧</span>
-            <span>TEST Notes</span>
         </div>
     </div>
 
@@ -2382,6 +2419,7 @@
             paymentsData = JSON.parse(localStorage.getItem('kamlacPaymentsData') || '[]');
             productsData = JSON.parse(localStorage.getItem('kamlacProductsData') || '[]');
             aiNotes = JSON.parse(localStorage.getItem('kamlacAiNotes') || '[]');
+            noteCategories = JSON.parse(localStorage.getItem('kamlacNoteCategories') || '[]');
         }
 
         function saveToLocalStorage() {
@@ -2389,6 +2427,7 @@
             localStorage.setItem('kamlacPaymentsData', JSON.stringify(paymentsData));
             localStorage.setItem('kamlacProductsData', JSON.stringify(productsData));
             localStorage.setItem('kamlacAiNotes', JSON.stringify(aiNotes));
+            localStorage.setItem('kamlacNoteCategories', JSON.stringify(noteCategories));
         }
 
         function updateCloudStatus(status, message) {
@@ -2482,6 +2521,17 @@
                     console.log(`${aiNotes.length} notes IA chargées`);
                 } catch (error) {
                     console.error('Erreur chargement notes IA:', error);
+                }
+                
+                // Charger les catégories de notes
+                try {
+                    const categoriesDoc = await db.collection('system').doc('note_categories').get();
+                    if (categoriesDoc.exists) {
+                        noteCategories = categoriesDoc.data().categories || [];
+                        console.log(`${noteCategories.length} catégories de notes chargées`);
+                    }
+                } catch (error) {
+                    console.error('Erreur chargement catégories notes:', error);
                 }
                 
                 const firebaseCounts = {
@@ -2934,6 +2984,7 @@
         // Variables globales pour le chat
         let chatHistory = [];
         let aiNotes = [];
+        let noteCategories = []; // Catégories des notes
         let pendingAction = null;
 
         // Assistant IA simplifié - Analyseur d'intentions
@@ -5749,6 +5800,10 @@ Date [ESPACES] Client [ESPACES] Montant
             if (event.target === notesModal) {
                 closeNotesModal();
             }
+            const allNotesModal = document.getElementById('allNotesModal');
+            if (event.target === allNotesModal) {
+                closeAllNotesModal();
+            }
         }
 
         // Gestion responsive des graphiques
@@ -5815,11 +5870,48 @@ Date [ESPACES] Client [ESPACES] Montant
         // === GESTION DES NOTES ===
         function showNotesModal() {
             document.getElementById('noteContent').value = '';
+            document.getElementById('noteCategory').value = '';
+            document.getElementById('newCategoryInput').value = '';
+            document.getElementById('newCategoryContainer').style.display = 'none';
+            
+            // Charger les catégories existantes
+            loadCategoriesInSelect();
+            
             document.getElementById('notesModal').style.display = 'block';
         }
 
         function closeNotesModal() {
             document.getElementById('notesModal').style.display = 'none';
+        }
+
+        function toggleNewCategoryInput() {
+            const container = document.getElementById('newCategoryContainer');
+            const input = document.getElementById('newCategoryInput');
+            
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                input.focus();
+            } else {
+                container.style.display = 'none';
+                input.value = '';
+            }
+        }
+
+        function loadCategoriesInSelect() {
+            const select = document.getElementById('noteCategory');
+            
+            // Vider les options existantes (sauf la première)
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
+            }
+            
+            // Ajouter les catégories
+            noteCategories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                select.appendChild(option);
+            });
         }
 
         async function saveNote() {
@@ -5830,9 +5922,22 @@ Date [ESPACES] Client [ESPACES] Montant
                 return;
             }
             
+            // Récupérer la catégorie
+            let category = document.getElementById('noteCategory').value;
+            const newCategory = document.getElementById('newCategoryInput').value.trim();
+            
+            if (newCategory) {
+                category = newCategory;
+                // Ajouter la nouvelle catégorie si elle n'existe pas
+                if (!noteCategories.includes(category)) {
+                    noteCategories.push(category);
+                }
+            }
+            
             const note = {
                 id: Date.now(),
                 content: content,
+                category: category || 'Sans catégorie',
                 date: new Date().toLocaleDateString('fr-FR'),
                 timestamp: new Date().toLocaleTimeString('fr-FR')
             };
@@ -5847,6 +5952,12 @@ Date [ESPACES] Client [ESPACES] Montant
                         ...note,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
+                    
+                    // Sauvegarder les catégories
+                    await db.collection('system').doc('note_categories').set({
+                        categories: noteCategories,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                 } catch (error) {
                     console.error('Erreur sauvegarde note:', error);
                 }
@@ -5856,77 +5967,139 @@ Date [ESPACES] Client [ESPACES] Montant
             showAlert('📝 Note sauvegardée', 'success');
         }
 
-        // Afficher toutes les notes (version simplifiée)
+        // Afficher toutes les notes dans un modal
         function showAllNotes() {
-            console.log('=== showAllNotes appelée ===');
-            console.log('aiNotes.length:', aiNotes.length);
-            console.log('aiNotes:', aiNotes);
+            console.log('showAllNotes appelée, aiNotes.length:', aiNotes.length);
             
-            try {
-                // S'assurer que l'onglet IA BOT est affiché
-                console.log('Tentative d\'affichage de la page chat...');
-                showPage('chat');
+            const modal = document.getElementById('allNotesModal');
+            
+            // Charger les catégories dans le filtre
+            loadCategoriesInFilter();
+            
+            // Afficher toutes les notes
+            filterNotesByCategory();
+            
+            // Afficher le modal
+            modal.style.display = 'block';
+            
+            // Fermer le menu flottant si ouvert
+            const floatingMenu = document.getElementById('floatingMenu');
+            const floatingBtn = document.getElementById('floatingBtn');
+            if (floatingMenu && floatingBtn) {
+                floatingMenu.classList.remove('show');
+                floatingBtn.classList.remove('active');
+            }
+        }
+
+        function loadCategoriesInFilter() {
+            const select = document.getElementById('categoryFilter');
+            
+            // Vider les options existantes (sauf la première)
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
+            }
+            
+            // Récupérer toutes les catégories uniques des notes
+            const allCategories = [...new Set(aiNotes.map(note => note.category || 'Sans catégorie'))];
+            
+            // Ajouter les catégories
+            allCategories.sort().forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                select.appendChild(option);
+            });
+        }
+
+        function filterNotesByCategory() {
+            const selectedCategory = document.getElementById('categoryFilter').value;
+            const content = document.getElementById('allNotesContent');
+            const countElement = document.getElementById('notesCount');
+            
+            // Filtrer les notes
+            let filteredNotes = aiNotes;
+            if (selectedCategory) {
+                filteredNotes = aiNotes.filter(note => (note.category || 'Sans catégorie') === selectedCategory);
+            }
+            
+            // Mettre à jour le compteur
+            countElement.textContent = `(${filteredNotes.length} note${filteredNotes.length > 1 ? 's' : ''})`;
+            
+            if (filteredNotes.length === 0) {
+                content.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📝</div>
+                        <h4>${selectedCategory ? `Aucune note dans la catégorie "${selectedCategory}"` : 'Aucune note enregistrée'}</h4>
+                        <p>Cliquez sur "Ajouter une note" pour créer une nouvelle note.</p>
+                    </div>
+                `;
+            } else {
+                // Trier par date récente
+                const sortedNotes = [...filteredNotes].sort((a, b) => b.id - a.id);
                 
-                let notesHtml;
-                
-                if (aiNotes.length === 0) {
-                    console.log('Aucune note trouvée');
-                    notesHtml = `📝 <strong>Aucune note enregistrée</strong><br><br>
-                    Cliquez sur le bouton ➕ en haut à droite pour ajouter une note.<br><br>
-                    <div class="chat-suggestions">
-                        <div class="chat-suggestion" onclick="showNotesModal()">Ajouter une note</div>
-                    </div>`;
-                } else {
-                    console.log(`${aiNotes.length} notes trouvées`);
-                    notesHtml = `📝 <strong>Vos notes (${aiNotes.length})</strong><br><br>`;
+                let notesHtml = '';
+                sortedNotes.forEach((note, index) => {
+                    const categoryDisplay = note.category || 'Sans catégorie';
+                    const categoryColor = getCategoryColor(categoryDisplay);
                     
-                    // Trier par date récente
-                    const sortedNotes = [...aiNotes].sort((a, b) => b.id - a.id);
-                    
-                    sortedNotes.forEach((note, index) => {
-                        notesHtml += `<div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #667eea;">
-                            <strong>📋 Note ${index + 1}</strong><br>
-                            ${note.content}<br>
-                            <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
-                        </div>`;
-                    });
-                }
-                
-                // Afficher dans le chat principal
-                const chatMessages = document.getElementById('chatMessages');
-                console.log('chatMessages element:', chatMessages);
-                
-                if (chatMessages) {
-                    console.log('Ajout du message dans le chat...');
-                    chatMessages.innerHTML += `
-                        <div class="chat-message">
-                            <div class="bot-message">
-                                ${notesHtml}
+                    notesHtml += `
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #667eea; position: relative;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <strong style="color: #667eea;">📋 Note ${index + 1}</strong>
+                                    <span style="background: ${categoryColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">🏷️ ${categoryDisplay}</span>
+                                </div>
+                                <button onclick="deleteNote(${note.id})" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Supprimer cette note">×</button>
                             </div>
+                            <div style="margin-bottom: 10px; line-height: 1.5;">${note.content}</div>
+                            <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
                         </div>
                     `;
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                    console.log('Message ajouté avec succès');
+                });
+                
+                content.innerHTML = notesHtml;
+            }
+        }
+
+        function getCategoryColor(category) {
+            // Générer une couleur basée sur le nom de la catégorie
+            const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#43e97b', '#fa709a', '#fbc2eb'];
+            let hash = 0;
+            for (let i = 0; i < category.length; i++) {
+                hash = category.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        function closeAllNotesModal() {
+            document.getElementById('allNotesModal').style.display = 'none';
+        }
+
+        function deleteNote(noteId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) {
+                // Supprimer de la liste locale
+                aiNotes = aiNotes.filter(note => note.id !== noteId);
+                
+                // Sauvegarder en localStorage
+                saveToLocalStorage();
+                
+                // Supprimer de Firebase
+                if (isFirebaseInitialized) {
+                    db.collection('ai_notes').doc(noteId.toString()).delete()
+                        .then(() => {
+                            console.log('Note supprimée de Firebase');
+                            showAlert('📝 Note supprimée', 'success');
+                        })
+                        .catch(error => {
+                            console.error('Erreur suppression Firebase:', error);
+                            showAlert('Erreur lors de la suppression', 'error');
+                        });
                 } else {
-                    console.error('Element chatMessages non trouvé !');
-                    // Fallback : essayer d'afficher dans une alerte
-                    showAlert('📝 Notes: ' + aiNotes.length + ' note(s) trouvée(s)', 'info');
+                    showAlert('📝 Note supprimée', 'success');
                 }
                 
-                // Fermer le menu flottant si ouvert
-                const floatingMenu = document.getElementById('floatingMenu');
-                const floatingBtn = document.getElementById('floatingBtn');
-                console.log('floatingMenu:', floatingMenu, 'floatingBtn:', floatingBtn);
-                
-                if (floatingMenu && floatingBtn) {
-                    floatingMenu.classList.remove('show');
-                    floatingBtn.classList.remove('active');
-                    console.log('Menu flottant fermé');
-                }
-                
-            } catch (error) {
-                console.error('Erreur dans showAllNotes:', error);
-                showAlert('Erreur lors de l\'affichage des notes: ' + error.message, 'error');
+                // Rafraîchir l'affichage
+                filterNotesByCategory();
             }
         }
 
@@ -5946,8 +6119,9 @@ Date [ESPACES] Client [ESPACES] Montant
             const sortedNotes = [...aiNotes].sort((a, b) => b.id - a.id);
             
             sortedNotes.forEach((note, index) => {
+                const categoryDisplay = note.category || 'Sans catégorie';
                 notesHtml += `<div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #667eea;">
-                    <strong>📋 Note ${index + 1}</strong><br>
+                    <strong>📋 Note ${index + 1}</strong> <span style="background: #667eea; color: white; padding: 1px 6px; border-radius: 8px; font-size: 11px;">🏷️ ${categoryDisplay}</span><br>
                     ${note.content}<br>
                     <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
                 </div>`;
@@ -5958,18 +6132,13 @@ Date [ESPACES] Client [ESPACES] Montant
 
         // === FONCTIONS BOUTON FLOTTANT ===
         function toggleFloatingMenu() {
-            console.log('=== toggleFloatingMenu appelée ===');
             const menu = document.getElementById('floatingMenu');
             const btn = document.getElementById('floatingBtn');
             
-            console.log('menu:', menu, 'btn:', btn);
-            
             if (menu.classList.contains('show')) {
-                console.log('Fermeture du menu');
                 menu.classList.remove('show');
                 btn.classList.remove('active');
             } else {
-                console.log('Ouverture du menu');
                 // Fermer le mini-chat s'il est ouvert
                 closeMiniChat();
                 menu.classList.add('show');
@@ -5978,13 +6147,11 @@ Date [ESPACES] Client [ESPACES] Montant
         }
 
         function openQuickNote() {
-            console.log('=== openQuickNote appelée ===');
             toggleFloatingMenu(); // Fermer le menu
             showNotesModal(); // Ouvrir le modal de note
         }
 
         function openQuickChat() {
-            console.log('=== openQuickChat appelée ===');
             toggleFloatingMenu(); // Fermer le menu
             const miniChat = document.getElementById('miniChat');
             miniChat.classList.add('show');
@@ -5993,36 +6160,6 @@ Date [ESPACES] Client [ESPACES] Montant
         function closeMiniChat() {
             const miniChat = document.getElementById('miniChat');
             miniChat.classList.remove('show');
-        }
-
-        // === FONCTION DE TEST ===
-        function testShowAllNotes() {
-            console.log('=== TEST showAllNotes ===');
-            alert('Test: aiNotes.length = ' + aiNotes.length + '\nConsultez la console pour plus de détails.');
-            console.log('aiNotes complet:', aiNotes);
-            
-            // Test simple d'affichage
-            const chatMessages = document.getElementById('chatMessages');
-            if (chatMessages) {
-                chatMessages.innerHTML += `
-                    <div class="chat-message">
-                        <div class="bot-message">
-                            🔧 <strong>TEST:</strong> ${aiNotes.length} note(s) trouvée(s)<br>
-                            Heure: ${new Date().toLocaleTimeString()}
-                        </div>
-                    </div>
-                `;
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-                showPage('chat');
-            }
-            
-            // Fermer le menu
-            const floatingMenu = document.getElementById('floatingMenu');
-            const floatingBtn = document.getElementById('floatingBtn');
-            if (floatingMenu && floatingBtn) {
-                floatingMenu.classList.remove('show');
-                floatingBtn.classList.remove('active');
-            }
         }
 
         function sendMiniChatMessage() {
