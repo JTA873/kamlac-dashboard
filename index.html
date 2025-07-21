@@ -1992,8 +1992,8 @@
                                 Je peux analyser vos données KAMLAC :<br><br>
                                 📊 <strong>Analyses</strong> : CA, top clients, produits<br>
                                 📈 <strong>Calculs</strong> : Moyennes, totaux, évolutions<br>
-                                  <strong>Notes</strong> : Consultez vos notes avec "affiche mes notes"<br>
-                                  <strong>Comparaisons</strong> : Entre clients et produits
+                                � <strong>Notes</strong> : Consultez vos notes avec "affiche mes notes"<br>
+                                � <strong>Comparaisons</strong> : Entre clients et produits
                                 <br><br>
                                 <div class="chat-suggestions">
                                     <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon CA total ?')">CA total</div>
@@ -2267,6 +2267,23 @@
             <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <button class="btn btn-primary" onclick="saveNote()" style="flex: 1;">💾 Sauvegarder</button>
                 <button class="btn btn-secondary" onclick="closeNotesModal()" style="flex: 1;">❌ Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour afficher toutes les notes -->
+    <div id="allNotesModal" class="product-modal">
+        <div class="product-modal-content" style="max-width: 800px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">📋 Toutes vos notes</h3>
+                <button onclick="closeAllNotesModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
+            </div>
+            <div id="allNotesContent" style="max-height: 500px; overflow-y: auto;">
+                <!-- Les notes seront chargées ici -->
+            </div>
+            <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="showNotesModal(); closeAllNotesModal();" style="flex: 1;">➕ Ajouter une note</button>
+                <button class="btn btn-secondary" onclick="closeAllNotesModal()" style="flex: 1;">❌ Fermer</button>
             </div>
         </div>
     </div>
@@ -5745,6 +5762,10 @@ Date [ESPACES] Client [ESPACES] Montant
             if (event.target === notesModal) {
                 closeNotesModal();
             }
+            const allNotesModal = document.getElementById('allNotesModal');
+            if (event.target === allNotesModal) {
+                closeAllNotesModal();
+            }
         }
 
         // Gestion responsive des graphiques
@@ -5852,48 +5873,44 @@ Date [ESPACES] Client [ESPACES] Montant
             showAlert('📝 Note sauvegardée', 'success');
         }
 
-        // Afficher toutes les notes (version simplifiée)
+        // Afficher toutes les notes dans un modal
         function showAllNotes() {
             console.log('showAllNotes appelée, aiNotes.length:', aiNotes.length);
             
-            // S'assurer que l'onglet IA BOT est affiché
-            showPage('chat');
-            
-            let notesHtml;
+            const modal = document.getElementById('allNotesModal');
+            const content = document.getElementById('allNotesContent');
             
             if (aiNotes.length === 0) {
-                notesHtml = `📝 <strong>Aucune note enregistrée</strong><br><br>
-                Cliquez sur le bouton ➕ en haut à droite pour ajouter une note.<br><br>
-                <div class="chat-suggestions">
-                    <div class="chat-suggestion" onclick="showNotesModal()">Ajouter une note</div>
-                </div>`;
+                content.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📝</div>
+                        <h4>Aucune note enregistrée</h4>
+                        <p>Cliquez sur "Ajouter une note" pour créer votre première note.</p>
+                    </div>
+                `;
             } else {
-                notesHtml = `📝 <strong>Vos notes (${aiNotes.length})</strong><br><br>`;
-                
                 // Trier par date récente
                 const sortedNotes = [...aiNotes].sort((a, b) => b.id - a.id);
                 
+                let notesHtml = '';
                 sortedNotes.forEach((note, index) => {
-                    notesHtml += `<div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #667eea;">
-                        <strong>📋 Note ${index + 1}</strong><br>
-                        ${note.content}<br>
-                        <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
-                    </div>`;
+                    notesHtml += `
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #667eea; position: relative;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <strong style="color: #667eea;">📋 Note ${index + 1}</strong>
+                                <button onclick="deleteNote(${note.id})" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Supprimer cette note">×</button>
+                            </div>
+                            <div style="margin-bottom: 10px; line-height: 1.5;">${note.content}</div>
+                            <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
+                        </div>
+                    `;
                 });
+                
+                content.innerHTML = notesHtml;
             }
             
-            // Afficher dans le chat principal
-            const chatMessages = document.getElementById('chatMessages');
-            if (chatMessages) {
-                chatMessages.innerHTML += `
-                    <div class="chat-message">
-                        <div class="bot-message">
-                            ${notesHtml}
-                        </div>
-                    </div>
-                `;
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
+            // Afficher le modal
+            modal.style.display = 'block';
             
             // Fermer le menu flottant si ouvert
             const floatingMenu = document.getElementById('floatingMenu');
@@ -5901,6 +5918,38 @@ Date [ESPACES] Client [ESPACES] Montant
             if (floatingMenu && floatingBtn) {
                 floatingMenu.classList.remove('show');
                 floatingBtn.classList.remove('active');
+            }
+        }
+
+        function closeAllNotesModal() {
+            document.getElementById('allNotesModal').style.display = 'none';
+        }
+
+        function deleteNote(noteId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) {
+                // Supprimer de la liste locale
+                aiNotes = aiNotes.filter(note => note.id !== noteId);
+                
+                // Sauvegarder en localStorage
+                saveToLocalStorage();
+                
+                // Supprimer de Firebase
+                if (isFirebaseInitialized) {
+                    db.collection('ai_notes').doc(noteId.toString()).delete()
+                        .then(() => {
+                            console.log('Note supprimée de Firebase');
+                            showAlert('📝 Note supprimée', 'success');
+                        })
+                        .catch(error => {
+                            console.error('Erreur suppression Firebase:', error);
+                            showAlert('Erreur lors de la suppression', 'error');
+                        });
+                } else {
+                    showAlert('📝 Note supprimée', 'success');
+                }
+                
+                // Rafraîchir l'affichage
+                showAllNotes();
             }
         }
 
