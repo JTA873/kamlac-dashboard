@@ -20,7 +20,7 @@
         }
         
         :root {
-            /* Mode Clair */
+            /* Mode Clair uniquement */
             --bg-primary: #f5f7fa;
             --bg-secondary: #ffffff;
             --text-primary: #333333;
@@ -30,19 +30,6 @@
             --border-color: #e9ecef;
             --shadow: 0 2px 10px rgba(0,0,0,0.05);
             --gradient: linear-gradient(45deg, #667eea, #764ba2);
-        }
-        
-        [data-theme="dark"] {
-            /* Mode Sombre */
-            --bg-primary: #1a1a2e;
-            --bg-secondary: #16213e;
-            --text-primary: #eee;
-            --text-secondary: #bbb;
-            --accent-color: #4facfe;
-            --accent-hover: #00f2fe;
-            --border-color: #2d3748;
-            --shadow: 0 2px 10px rgba(0,0,0,0.3);
-            --gradient: linear-gradient(45deg, #4facfe, #00f2fe);
         }
         
         body {
@@ -84,113 +71,9 @@
             gap: 15px;
         }
         
-        .theme-toggle {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: var(--accent-color);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 18px;
-            transition: all 0.3s ease;
-            box-shadow: var(--shadow);
-        }
-        
-        .theme-toggle:hover {
-            background: var(--accent-hover);
-            transform: scale(1.05);
-        }
-        
         .last-update {
             font-size: clamp(0.75rem, 2vw, 0.9rem);
             color: var(--text-secondary);
-        }
-        
-        /* Toast Notifications */
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .toast {
-            min-width: 300px;
-            max-width: 400px;
-            padding: 16px 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 500;
-            opacity: 0;
-            transform: translateX(100%);
-            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .toast.show {
-            opacity: 1;
-            transform: translateX(0);
-        }
-        
-        .toast.success {
-            background: linear-gradient(135deg, #4ade80, #22c55e);
-            color: white;
-        }
-        
-        .toast.error {
-            background: linear-gradient(135deg, #f87171, #ef4444);
-            color: white;
-        }
-        
-        .toast.warning {
-            background: linear-gradient(135deg, #fbbf24, #f59e0b);
-            color: white;
-        }
-        
-        .toast.info {
-            background: linear-gradient(135deg, #60a5fa, #3b82f6);
-            color: white;
-        }
-        
-        .toast-icon {
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-        
-        .toast-content {
-            flex: 1;
-            line-height: 1.4;
-        }
-        
-        .toast-close {
-            background: none;
-            border: none;
-            color: currentColor;
-            cursor: pointer;
-            font-size: 18px;
-            opacity: 0.7;
-            padding: 0;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: all 0.2s ease;
         }
         
         /* Progress Bar pour les synchronisations */
@@ -1361,37 +1244,6 @@
             align-items: center;
         }
         
-        .voice-btn {
-            background: var(--accent-color);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 16px;
-        }
-        
-        .voice-btn:hover {
-            background: var(--accent-hover);
-            transform: scale(1.05);
-        }
-        
-        .voice-btn.listening {
-            background: #dc3545;
-            animation: pulse 1.5s infinite;
-        }
-        
-        .voice-btn.mini {
-            width: 36px;
-            height: 36px;
-            font-size: 14px;
-        }
-        
         /* Auto-complétion pour l'assistant IA */
         .chat-input-wrapper {
             position: relative;
@@ -2054,14 +1906,8 @@
         <div class="progress-bar" id="progressBar"></div>
     </div>
     
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
-    
     <div class="dashboard-container">
         <div class="header">
-            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Changer de thème">
-                🌙
-            </button>
             <h1>📊 KAMLAC - Suivi Clients</h1>
             <div class="last-update" id="lastUpdate">Dernière mise à jour: --</div>
             <div style="margin-top: 8px; font-size: clamp(0.7rem, 1.8vw, 0.8rem); color: var(--text-secondary);">
@@ -2107,27 +1953,27 @@
                 </div>
             </div>
             <div class="kpi-grid" id="kpiGrid">
-                <div class="kpi-card">
+                <div class="kpi-card" onclick="navigateToSection('dashboard')" style="cursor: pointer;" title="Cliquer pour voir le dashboard">
                     <div class="kpi-icon">💰</div>
                     <div class="kpi-value" id="totalRevenue">0 CFA</div>
                     <div class="kpi-label">CA Total</div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card" onclick="navigateToSection('recap')" style="cursor: pointer;" title="Cliquer pour voir les ventes">
                     <div class="kpi-icon">📦</div>
                     <div class="kpi-value" id="totalSales">0</div>
                     <div class="kpi-label">Ventes</div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card" onclick="navigateToSection('payments')" style="cursor: pointer;" title="Cliquer pour voir les encaissements">
                     <div class="kpi-icon">💳</div>
                     <div class="kpi-value" id="totalPayments">0 CFA</div>
                     <div class="kpi-label">Encaissé</div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card" onclick="navigateToSection('clients')" style="cursor: pointer;" title="Cliquer pour voir les clients">
                     <div class="kpi-icon">⚠️</div>
                     <div class="kpi-value" id="totalOutstanding">0 CFA</div>
                     <div class="kpi-label">Compte client toute période</div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card" onclick="navigateToSection('clients')" style="cursor: pointer;" title="Cliquer pour voir les clients">
                     <div class="kpi-icon">📋</div>
                     <div class="kpi-value" id="filteredOutstanding">0 CFA</div>
                     <div class="kpi-label">Compte client filtré</div>
@@ -2205,9 +2051,9 @@
                             </select>
                         </div>
                         <div class="filter-group">
-                            <label for="recapReferenceFilter">Référence</label>
+                            <label for="recapReferenceFilter">N° Facture</label>
                             <select id="recapReferenceFilter" onchange="applyRecapFilters()">
-                                <option value="">Toutes les références</option>
+                                <option value="">Toutes les factures</option>
                             </select>
                         </div>
                         <div class="filter-group">
@@ -2491,14 +2337,11 @@
                     
                     <div class="chat-input-container">
                         <div class="chat-input-wrapper">
-                            <input type="text" class="chat-input" id="chatInput" placeholder="Posez votre question ou utilisez la reconnaissance vocale..." onkeypress="handleChatKeyPress(event)" oninput="handleChatInputChange(event)" onfocus="showChatSuggestions()" onblur="hideChatSuggestions()">
+                            <input type="text" class="chat-input" id="chatInput" placeholder="Posez votre question..." onkeypress="handleChatKeyPress(event)" oninput="handleChatInputChange(event)" onfocus="showChatSuggestions()" onblur="hideChatSuggestions()">
                             <div class="chat-suggestions-dropdown" id="chatSuggestionsDropdown">
                                 <!-- Les suggestions apparaîtront ici -->
                             </div>
                         </div>
-                        <button class="voice-btn" id="voiceBtn" onclick="toggleVoiceRecognition()" title="Reconnaissance vocale">
-                            🎤
-                        </button>
                         <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">
                             ➤
                         </button>
@@ -2820,8 +2663,7 @@
             </div>
         </div>
         <div class="mini-chat-input-container">
-            <input type="text" class="mini-chat-input" id="miniChatInput" placeholder="Tapez ou parlez..." onkeypress="if(event.key==='Enter') sendMiniChatMessage()">
-            <button class="voice-btn mini" onclick="toggleVoiceRecognition('mini')" title="Reconnaissance vocale">🎤</button>
+            <input type="text" class="mini-chat-input" id="miniChatInput" placeholder="Tapez votre question..." onkeypress="if(event.key==='Enter') sendMiniChatMessage()">
             <button class="mini-chat-send" onclick="sendMiniChatMessage()">➤</button>
         </div>
     </div>
@@ -2851,178 +2693,9 @@
         // Gestion des thèmes
         let currentTheme = 'light';
         
-        // Initialiser le thème au chargement
-        function initializeTheme() {
-            const savedTheme = localStorage.getItem('kamlacTheme') || 'light';
-            setTheme(savedTheme);
-        }
-        
-        function toggleTheme() {
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            setTheme(newTheme);
-            showToast(`Mode ${newTheme === 'dark' ? 'sombre' : 'clair'} activé`, 'success', `${newTheme === 'dark' ? '🌙' : '☀️'}`);
-        }
-        
-        function setTheme(theme) {
-            currentTheme = theme;
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('kamlacTheme', theme);
-            
-            const themeToggle = document.getElementById('themeToggle');
-            if (themeToggle) {
-                themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
-                themeToggle.title = theme === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair';
-            }
-        }
-        
-        // Système de notifications toast
-        function showToast(message, type = 'info', icon = null) {
-            const toastContainer = document.getElementById('toastContainer');
-            if (!toastContainer) return;
-            
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            
-            const iconMap = {
-                success: '✅',
-                error: '❌',
-                warning: '⚠️',
-                info: 'ℹ️'
-            };
-            
-            const toastIcon = icon || iconMap[type] || 'ℹ️';
-            
-            toast.innerHTML = `
-                <div class="toast-icon">${toastIcon}</div>
-                <div class="toast-content">${message}</div>
-                <button class="toast-close" onclick="removeToast(this.parentElement)">×</button>
-            `;
-            
-            toastContainer.appendChild(toast);
-            
-            // Déclencher l'animation
-            setTimeout(() => toast.classList.add('show'), 10);
-            
-            // Auto-remove après 5 secondes
-            setTimeout(() => removeToast(toast), 5000);
-            
-            return toast;
-        }
-        
-        // Fonction de compatibilité pour showAlert -> showToast
-        function showAlert(message, type = 'info') {
-            return showToast(message, type);
-        }
-        
-        // Reconnaissance vocale
-        let recognition = null;
-        let isListening = false;
-        
-        function initializeVoiceRecognition() {
-            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SpeechRecognition();
-                
-                recognition.continuous = false;
-                recognition.interimResults = false;
-                recognition.lang = 'fr-FR';
-                
-                recognition.onstart = function() {
-                    isListening = true;
-                    updateVoiceButtonState();
-                    showToast('🎤 Écoute en cours... Parlez maintenant', 'info');
-                };
-                
-                recognition.onresult = function(event) {
-                    const transcript = event.results[0][0].transcript;
-                    const inputId = document.activeElement?.id === 'miniChatInput' ? 'miniChatInput' : 'chatInput';
-                    const input = document.getElementById(inputId);
-                    
-                    if (input) {
-                        input.value = transcript;
-                        showToast(`✅ Reconnu: "${transcript}"`, 'success', '🎤');
-                        
-                        // Envoyer automatiquement après reconnaissance
-                        setTimeout(() => {
-                            if (inputId === 'miniChatInput') {
-                                sendMiniChatMessage();
-                            } else {
-                                sendChatMessage();
-                            }
-                        }, 500);
-                    }
-                };
-                
-                recognition.onerror = function(event) {
-                    console.error('Erreur reconnaissance vocale:', event.error);
-                    let errorMessage = 'Erreur de reconnaissance vocale';
-                    
-                    switch(event.error) {
-                        case 'no-speech':
-                            errorMessage = 'Aucune parole détectée. Essayez à nouveau.';
-                            break;
-                        case 'audio-capture':
-                            errorMessage = 'Microphone non disponible';
-                            break;
-                        case 'not-allowed':
-                            errorMessage = 'Permission microphone refusée';
-                            break;
-                        case 'network':
-                            errorMessage = 'Erreur réseau pour la reconnaissance vocale';
-                            break;
-                    }
-                    
-                    showToast(errorMessage, 'error', '🎤');
-                    isListening = false;
-                    updateVoiceButtonState();
-                };
-                
-                recognition.onend = function() {
-                    isListening = false;
-                    updateVoiceButtonState();
-                };
-                
-                return true;
-            } else {
-                console.warn('Reconnaissance vocale non supportée');
-                return false;
-            }
-        }
-        
-        function toggleVoiceRecognition(mode = 'main') {
-            if (!recognition) {
-                if (!initializeVoiceRecognition()) {
-                    showToast('Reconnaissance vocale non supportée par votre navigateur', 'warning', '🎤');
-                    return;
-                }
-            }
-            
-            if (isListening) {
-                recognition.stop();
-                showToast('🎤 Écoute arrêtée', 'info');
-            } else {
-                try {
-                    recognition.start();
-                } catch (error) {
-                    console.error('Erreur démarrage reconnaissance:', error);
-                    showToast('Impossible de démarrer la reconnaissance vocale', 'error', '🎤');
-                }
-            }
-        }
-        
-        function updateVoiceButtonState() {
-            const voiceBtns = document.querySelectorAll('.voice-btn');
-            voiceBtns.forEach(btn => {
-                if (isListening) {
-                    btn.classList.add('listening');
-                    btn.textContent = '🔴';
-                    btn.title = 'Arrêter l\'écoute';
-                } else {
-                    btn.classList.remove('listening');
-                    btn.textContent = '🎤';
-                    btn.title = 'Reconnaissance vocale';
-                }
-            });
+        // Fonction d'alerte simple (version restaurée)
+        function showAlert(message, type = 'success') {
+            alert(message);
         }
         
         // Barre de progression
@@ -3174,81 +2847,6 @@
             return false;
         }
         
-        // Système de raccourcis clavier
-        function initializeKeyboardShortcuts() {
-            document.addEventListener('keydown', function(event) {
-                // Ctrl/Cmd + D = Toggle thème
-                if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
-                    event.preventDefault();
-                    toggleTheme();
-                    return;
-                }
-                
-                // Ctrl/Cmd + K = Focus sur chat
-                if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-                    event.preventDefault();
-                    const chatInput = document.getElementById('chatInput');
-                    if (chatInput) {
-                        chatInput.focus();
-                        showToast('Raccourci: Focus sur l\'assistant IA', 'info', '⌨️');
-                    }
-                    return;
-                }
-                
-                // Ctrl/Cmd + Shift + V = Toggle reconnaissance vocale
-                if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'V') {
-                    event.preventDefault();
-                    toggleVoiceRecognition();
-                    return;
-                }
-                
-                // Alt + 1-7 = Navigation entre sections
-                if (event.altKey && event.key >= '1' && event.key <= '7') {
-                    event.preventDefault();
-                    const sections = ['dashboard', 'clients', 'recap', 'sales', 'payments', 'chat', 'settings'];
-                    const sectionIndex = parseInt(event.key) - 1;
-                    if (sections[sectionIndex]) {
-                        showSection(sections[sectionIndex]);
-                        // Activer l'onglet correspondant
-                        document.querySelectorAll('.nav-tab').forEach((tab, index) => {
-                            tab.classList.toggle('active', index === sectionIndex);
-                        });
-                        showToast(`Section: ${sections[sectionIndex]}`, 'info', '🔄');
-                    }
-                    return;
-                }
-                
-                // Escape = Fermer mini-chat ou notifications
-                if (event.key === 'Escape') {
-                    const miniChat = document.getElementById('miniChat');
-                    if (miniChat && miniChat.style.display !== 'none') {
-                        closeMiniChat();
-                        return;
-                    }
-                    
-                    // Fermer toutes les notifications
-                    const toasts = document.querySelectorAll('.toast');
-                    toasts.forEach(toast => removeToast(toast));
-                }
-            });
-            
-            // Afficher l'aide des raccourcis au démarrage
-            setTimeout(() => {
-                showToast('💡 Raccourcis: Ctrl+D (thème), Ctrl+K (chat), Ctrl+Shift+V (vocal), Alt+1-7 (navigation)', 'info');
-            }, 5000);
-        }
-        
-        function removeToast(toast) {
-            if (!toast || !toast.parentElement) return;
-            
-            toast.classList.remove('show');
-            setTimeout(() => {
-                if (toast.parentElement) {
-                    toast.parentElement.removeChild(toast);
-                }
-            }, 400);
-        }
-
         // Configuration Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBuR-B_bOyMtN1xnSQCCsxfJWydzg9mvs",
@@ -3269,14 +2867,6 @@
             console.log('Initialisation de l\'application...');
             
             // Initialiser le thème
-            initializeTheme();
-            
-            // Initialiser la reconnaissance vocale
-            initializeVoiceRecognition();
-            
-            // Initialiser les raccourcis clavier
-            initializeKeyboardShortcuts();
-            
             // Afficher la version
             document.getElementById('appVersion').textContent = APP_VERSION;
             document.getElementById('autoSyncStatus').innerHTML = '🟢 Actif';
@@ -4602,6 +4192,58 @@
                 }, 100);
             }
         }
+        
+        // Navigation depuis les cartes KPI
+        function navigateToSection(sectionName) {
+            // Masquer toutes les sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Désactiver tous les onglets
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Activer la section cible
+            document.getElementById(sectionName).classList.add('active');
+            
+            // Activer l'onglet correspondant
+            const tabs = document.querySelectorAll('.nav-tab');
+            const tabMapping = {
+                'dashboard': 0,
+                'clients': 1, 
+                'recap': 2,
+                'sales': 3,
+                'payments': 4,
+                'chat': 5,
+                'settings': 6
+            };
+            
+            if (tabMapping[sectionName] !== undefined && tabs[tabMapping[sectionName]]) {
+                tabs[tabMapping[sectionName]].classList.add('active');
+            }
+            
+            // Exécuter les actions spécifiques à chaque section
+            if (sectionName === 'dashboard') {
+                applyFilters();
+                updateClientsSummaryTable();
+            } else if (sectionName === 'clients') {
+                updateClientsOverview();
+            } else if (sectionName === 'recap') {
+                applyRecapFilters();
+            } else if (sectionName === 'payments') {
+                updatePaymentsDisplay();
+            } else if (sectionName === 'settings') {
+                updateProductsDisplay();
+            } else if (sectionName === 'chat') {
+                setTimeout(() => {
+                    document.getElementById('chatInput').focus();
+                }, 100);
+            }
+            
+            // Pas de message de confirmation pour éviter les alertes répétées
+        }
 
         // Navigation sous-sections récapitulatif
         function showSubSection(subSectionName) {
@@ -4723,9 +4365,9 @@
             const products = [...new Set(salesData.map(sale => sale.product).filter(p => p))].sort();
             populateSelect('recapProductFilter', products, 'Tous les produits');
             
-            // Références des encaissements
-            const references = [...new Set(paymentsData.map(payment => payment.reference).filter(r => r))].sort();
-            populateSelect('recapReferenceFilter', references, 'Toutes les références');
+            // Références des factures (au lieu des encaissements)
+            const invoiceReferences = [...new Set(salesData.map(sale => sale.invoice).filter(r => r))].sort();
+            populateSelect('recapReferenceFilter', invoiceReferences, 'Toutes les factures');
         }
 
         function applyRecapFilters() {
@@ -4741,6 +4383,7 @@
                 
                 if (clientFilter && sale.client !== clientFilter) include = false;
                 if (productFilter && sale.product !== productFilter) include = false;
+                if (referenceFilter && sale.invoice !== referenceFilter) include = false;
                 
                 if (dateStart || dateEnd) {
                     const saleDate = parseDate(sale.date);
@@ -4758,7 +4401,7 @@
                 let include = true;
                 
                 if (clientFilter && payment.client !== clientFilter) include = false;
-                if (referenceFilter && payment.reference !== referenceFilter) include = false;
+                // Le filtre référence ne s'applique plus aux encaissements
                 
                 if (dateStart || dateEnd) {
                     const paymentDate = parseDate(payment.date);
