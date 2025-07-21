@@ -2262,17 +2262,11 @@
             <h3 style="margin-bottom: 15px;">📝 Ajouter une note</h3>
             <div class="form-group" style="margin-bottom: 15px;">
                 <label for="noteCategory">Catégorie</label>
-                <select id="noteCategory" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="">-- Sélectionner une catégorie --</option>
-                    <option value="Général">📋 Général</option>
-                    <option value="Travail">💼 Travail</option>
-                    <option value="Personnel">👤 Personnel</option>
-                    <option value="Projet">🚀 Projet</option>
-                    <option value="Idée">💡 Idée</option>
-                    <option value="Rappel">⏰ Rappel</option>
-                    <option value="Important">⚠️ Important</option>
-                    <option value="Urgent">🔥 Urgent</option>
-                </select>
+                <input type="text" id="noteCategory" list="categoriesList" placeholder="Tapez une catégorie (ex: Client, Projet...)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <datalist id="categoriesList">
+                    <!-- Les catégories seront chargées dynamiquement -->
+                </datalist>
+                <small style="color: #666; font-size: 12px;">💡 Tapez une nouvelle catégorie ou sélectionnez une existante</small>
             </div>
             <div class="form-group">
                 <label for="noteContent">Note *</label>
@@ -2388,6 +2382,8 @@
             updateLastUpdateTime();
             
             loadFromLocalStorage();
+            extractCategoriesFromNotes(); // Extraire les catégories des notes existantes
+            updateCategoriesList(); // Charger les catégories des notes
             initializeFirebase();
             addSaleLine();
             
@@ -2409,6 +2405,7 @@
             paymentsData = JSON.parse(localStorage.getItem('kamlacPaymentsData') || '[]');
             productsData = JSON.parse(localStorage.getItem('kamlacProductsData') || '[]');
             aiNotes = JSON.parse(localStorage.getItem('kamlacAiNotes') || '[]');
+            noteCategories = JSON.parse(localStorage.getItem('kamlacNoteCategories') || '[]');
         }
 
         function saveToLocalStorage() {
@@ -2416,6 +2413,7 @@
             localStorage.setItem('kamlacPaymentsData', JSON.stringify(paymentsData));
             localStorage.setItem('kamlacProductsData', JSON.stringify(productsData));
             localStorage.setItem('kamlacAiNotes', JSON.stringify(aiNotes));
+            localStorage.setItem('kamlacNoteCategories', JSON.stringify(noteCategories));
         }
 
         function updateCloudStatus(status, message) {
@@ -2961,6 +2959,7 @@
         // Variables globales pour le chat
         let chatHistory = [];
         let aiNotes = [];
+        let noteCategories = []; // Catégories créées par l'utilisateur
         let pendingAction = null;
 
         // Assistant IA simplifié - Analyseur d'intentions
@@ -5846,6 +5845,8 @@ Date [ESPACES] Client [ESPACES] Montant
         // === GESTION DES NOTES ===
         function showNotesModal() {
             document.getElementById('noteContent').value = '';
+            document.getElementById('noteCategory').value = '';
+            updateCategoriesList(); // Mettre à jour la liste des catégories
             document.getElementById('notesModal').style.display = 'block';
         }
 
@@ -5856,19 +5857,73 @@ Date [ESPACES] Client [ESPACES] Montant
             document.getElementById('noteCategory').value = '';
         }
 
+        // Mettre à jour la liste des catégories dans le datalist
+        function updateCategoriesList() {
+            const datalist = document.getElementById('categoriesList');
+            datalist.innerHTML = '';
+            
+            // Ajouter toutes les catégories existantes (triées)
+            const sortedCategories = [...noteCategories].sort();
+            sortedCategories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                datalist.appendChild(option);
+            });
+        }
+
+        // Ajouter une nouvelle catégorie si elle n'existe pas
+        function addCategoryIfNew(category) {
+            if (category && category.trim() && !noteCategories.includes(category.trim())) {
+                noteCategories.push(category.trim());
+                saveToLocalStorage(); // Sauvegarder immédiatement
+                updateCategoriesList(); // Mettre à jour la liste
+                console.log('Nouvelle catégorie ajoutée:', category.trim());
+            }
+        }
+
+        // Extraire toutes les catégories des notes existantes
+        function extractCategoriesFromNotes() {
+            const existingCategories = new Set();
+            
+            aiNotes.forEach(note => {
+                if (note.category && note.category.trim()) {
+                    existingCategories.add(note.category.trim());
+                }
+            });
+            
+            // Ajouter les catégories manquantes
+            existingCategories.forEach(category => {
+                if (!noteCategories.includes(category)) {
+                    noteCategories.push(category);
+                }
+            });
+            
+            // Ajouter "Général" par défaut s'il n'existe pas
+            if (!noteCategories.includes('Général')) {
+                noteCategories.push('Général');
+            }
+            
+            saveToLocalStorage();
+            updateCategoriesList();
+        }
+
         async function saveNote() {
             const content = document.getElementById('noteContent').value.trim();
-            const category = document.getElementById('noteCategory').value;
+            const category = document.getElementById('noteCategory').value.trim();
             
             if (!content) {
                 showAlert('Veuillez saisir une note', 'error');
                 return;
             }
             
+            // Ajouter la catégorie à la liste si elle est nouvelle
+            const finalCategory = category || 'Général';
+            addCategoryIfNew(finalCategory);
+            
             const note = {
                 id: Date.now(),
                 content: content,
-                category: category || 'Général', // Catégorie par défaut si non sélectionnée
+                category: finalCategory,
                 date: new Date().toLocaleDateString('fr-FR'),
                 timestamp: new Date().toLocaleTimeString('fr-FR')
             };
@@ -5893,7 +5948,7 @@ Date [ESPACES] Client [ESPACES] Montant
             document.getElementById('noteCategory').value = '';
             
             closeNotesModal();
-            showAlert('📝 Note sauvegardée', 'success');
+            showAlert(`📝 Note sauvegardée dans "${finalCategory}"`, 'success');
         }
 
         // Afficher toutes les notes dans un modal
@@ -5956,17 +6011,40 @@ Date [ESPACES] Client [ESPACES] Montant
         }
 
         function getCategoryIcon(category) {
-            const icons = {
+            // Icônes pour quelques catégories communes
+            const commonIcons = {
                 'Général': '📋',
+                'général': '📋',
                 'Travail': '💼',
+                'travail': '💼',
                 'Personnel': '👤',
+                'personnel': '👤',
                 'Projet': '🚀',
+                'projet': '🚀',
                 'Idée': '💡',
+                'idée': '💡',
                 'Rappel': '⏰',
+                'rappel': '⏰',
                 'Important': '⚠️',
-                'Urgent': '🔥'
+                'important': '⚠️',
+                'Urgent': '🔥',
+                'urgent': '🔥',
+                'Client': '👥',
+                'client': '👥',
+                'clients': '👥',
+                'Clients': '👥',
+                'Réunion': '📅',
+                'réunion': '📅',
+                'Meeting': '📅',
+                'meeting': '📅',
+                'Todo': '✅',
+                'todo': '✅',
+                'À faire': '✅',
+                'à faire': '✅'
             };
-            return icons[category] || '📋';
+            
+            // Retourner l'icône correspondante ou une icône par défaut
+            return commonIcons[category] || '🏷️';
         }
 
         function deleteNote(noteId) {
