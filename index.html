@@ -1992,8 +1992,8 @@
                                 Je peux analyser vos données KAMLAC :<br><br>
                                 📊 <strong>Analyses</strong> : CA, top clients, produits<br>
                                 📈 <strong>Calculs</strong> : Moyennes, totaux, évolutions<br>
-                                � <strong>Notes</strong> : Consultez vos notes avec "affiche mes notes"<br>
-                                � <strong>Comparaisons</strong> : Entre clients et produits
+                                  <strong>Notes</strong> : Consultez vos notes avec "affiche mes notes"<br>
+                                  <strong>Comparaisons</strong> : Entre clients et produits
                                 <br><br>
                                 <div class="chat-suggestions">
                                     <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon CA total ?')">CA total</div>
@@ -2271,23 +2271,6 @@
         </div>
     </div>
 
-    <!-- Modal pour afficher toutes les notes -->
-    <div id="allNotesModal" class="product-modal">
-        <div class="product-modal-content" style="max-width: 800px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="margin: 0;">📋 Toutes vos notes</h3>
-                <button onclick="closeAllNotesModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
-            </div>
-            <div id="allNotesContent" style="max-height: 500px; overflow-y: auto;">
-                <!-- Les notes seront chargées ici -->
-            </div>
-            <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="showNotesModal(); closeAllNotesModal();" style="flex: 1;">➕ Ajouter une note</button>
-                <button class="btn btn-secondary" onclick="closeAllNotesModal()" style="flex: 1;">❌ Fermer</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Bouton flottant et interfaces -->
     <button class="floating-btn" id="floatingBtn" onclick="toggleFloatingMenu()" title="Accès rapide">
         +
@@ -2305,6 +2288,10 @@
         <div class="floating-menu-item" onclick="showAllNotes()">
             <span class="icon">📋</span>
             <span>Toutes les notes</span>
+        </div>
+        <div class="floating-menu-item" onclick="testShowAllNotes()" style="background: #ffe6e6;">
+            <span class="icon">🔧</span>
+            <span>TEST Notes</span>
         </div>
     </div>
 
@@ -5762,10 +5749,6 @@ Date [ESPACES] Client [ESPACES] Montant
             if (event.target === notesModal) {
                 closeNotesModal();
             }
-            const allNotesModal = document.getElementById('allNotesModal');
-            if (event.target === allNotesModal) {
-                closeAllNotesModal();
-            }
         }
 
         // Gestion responsive des graphiques
@@ -5873,83 +5856,77 @@ Date [ESPACES] Client [ESPACES] Montant
             showAlert('📝 Note sauvegardée', 'success');
         }
 
-        // Afficher toutes les notes dans un modal
+        // Afficher toutes les notes (version simplifiée)
         function showAllNotes() {
-            console.log('showAllNotes appelée, aiNotes.length:', aiNotes.length);
+            console.log('=== showAllNotes appelée ===');
+            console.log('aiNotes.length:', aiNotes.length);
+            console.log('aiNotes:', aiNotes);
             
-            const modal = document.getElementById('allNotesModal');
-            const content = document.getElementById('allNotesContent');
-            
-            if (aiNotes.length === 0) {
-                content.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #666;">
-                        <div style="font-size: 48px; margin-bottom: 15px;">📝</div>
-                        <h4>Aucune note enregistrée</h4>
-                        <p>Cliquez sur "Ajouter une note" pour créer votre première note.</p>
-                    </div>
-                `;
-            } else {
-                // Trier par date récente
-                const sortedNotes = [...aiNotes].sort((a, b) => b.id - a.id);
+            try {
+                // S'assurer que l'onglet IA BOT est affiché
+                console.log('Tentative d\'affichage de la page chat...');
+                showPage('chat');
                 
-                let notesHtml = '';
-                sortedNotes.forEach((note, index) => {
-                    notesHtml += `
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #667eea; position: relative;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                <strong style="color: #667eea;">📋 Note ${index + 1}</strong>
-                                <button onclick="deleteNote(${note.id})" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Supprimer cette note">×</button>
-                            </div>
-                            <div style="margin-bottom: 10px; line-height: 1.5;">${note.content}</div>
-                            <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
-                        </div>
-                    `;
-                });
+                let notesHtml;
                 
-                content.innerHTML = notesHtml;
-            }
-            
-            // Afficher le modal
-            modal.style.display = 'block';
-            
-            // Fermer le menu flottant si ouvert
-            const floatingMenu = document.getElementById('floatingMenu');
-            const floatingBtn = document.getElementById('floatingBtn');
-            if (floatingMenu && floatingBtn) {
-                floatingMenu.classList.remove('show');
-                floatingBtn.classList.remove('active');
-            }
-        }
-
-        function closeAllNotesModal() {
-            document.getElementById('allNotesModal').style.display = 'none';
-        }
-
-        function deleteNote(noteId) {
-            if (confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) {
-                // Supprimer de la liste locale
-                aiNotes = aiNotes.filter(note => note.id !== noteId);
-                
-                // Sauvegarder en localStorage
-                saveToLocalStorage();
-                
-                // Supprimer de Firebase
-                if (isFirebaseInitialized) {
-                    db.collection('ai_notes').doc(noteId.toString()).delete()
-                        .then(() => {
-                            console.log('Note supprimée de Firebase');
-                            showAlert('📝 Note supprimée', 'success');
-                        })
-                        .catch(error => {
-                            console.error('Erreur suppression Firebase:', error);
-                            showAlert('Erreur lors de la suppression', 'error');
-                        });
+                if (aiNotes.length === 0) {
+                    console.log('Aucune note trouvée');
+                    notesHtml = `📝 <strong>Aucune note enregistrée</strong><br><br>
+                    Cliquez sur le bouton ➕ en haut à droite pour ajouter une note.<br><br>
+                    <div class="chat-suggestions">
+                        <div class="chat-suggestion" onclick="showNotesModal()">Ajouter une note</div>
+                    </div>`;
                 } else {
-                    showAlert('📝 Note supprimée', 'success');
+                    console.log(`${aiNotes.length} notes trouvées`);
+                    notesHtml = `📝 <strong>Vos notes (${aiNotes.length})</strong><br><br>`;
+                    
+                    // Trier par date récente
+                    const sortedNotes = [...aiNotes].sort((a, b) => b.id - a.id);
+                    
+                    sortedNotes.forEach((note, index) => {
+                        notesHtml += `<div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #667eea;">
+                            <strong>📋 Note ${index + 1}</strong><br>
+                            ${note.content}<br>
+                            <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
+                        </div>`;
+                    });
                 }
                 
-                // Rafraîchir l'affichage
-                showAllNotes();
+                // Afficher dans le chat principal
+                const chatMessages = document.getElementById('chatMessages');
+                console.log('chatMessages element:', chatMessages);
+                
+                if (chatMessages) {
+                    console.log('Ajout du message dans le chat...');
+                    chatMessages.innerHTML += `
+                        <div class="chat-message">
+                            <div class="bot-message">
+                                ${notesHtml}
+                            </div>
+                        </div>
+                    `;
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    console.log('Message ajouté avec succès');
+                } else {
+                    console.error('Element chatMessages non trouvé !');
+                    // Fallback : essayer d'afficher dans une alerte
+                    showAlert('📝 Notes: ' + aiNotes.length + ' note(s) trouvée(s)', 'info');
+                }
+                
+                // Fermer le menu flottant si ouvert
+                const floatingMenu = document.getElementById('floatingMenu');
+                const floatingBtn = document.getElementById('floatingBtn');
+                console.log('floatingMenu:', floatingMenu, 'floatingBtn:', floatingBtn);
+                
+                if (floatingMenu && floatingBtn) {
+                    floatingMenu.classList.remove('show');
+                    floatingBtn.classList.remove('active');
+                    console.log('Menu flottant fermé');
+                }
+                
+            } catch (error) {
+                console.error('Erreur dans showAllNotes:', error);
+                showAlert('Erreur lors de l\'affichage des notes: ' + error.message, 'error');
             }
         }
 
@@ -5981,13 +5958,18 @@ Date [ESPACES] Client [ESPACES] Montant
 
         // === FONCTIONS BOUTON FLOTTANT ===
         function toggleFloatingMenu() {
+            console.log('=== toggleFloatingMenu appelée ===');
             const menu = document.getElementById('floatingMenu');
             const btn = document.getElementById('floatingBtn');
             
+            console.log('menu:', menu, 'btn:', btn);
+            
             if (menu.classList.contains('show')) {
+                console.log('Fermeture du menu');
                 menu.classList.remove('show');
                 btn.classList.remove('active');
             } else {
+                console.log('Ouverture du menu');
                 // Fermer le mini-chat s'il est ouvert
                 closeMiniChat();
                 menu.classList.add('show');
@@ -5996,11 +5978,13 @@ Date [ESPACES] Client [ESPACES] Montant
         }
 
         function openQuickNote() {
+            console.log('=== openQuickNote appelée ===');
             toggleFloatingMenu(); // Fermer le menu
             showNotesModal(); // Ouvrir le modal de note
         }
 
         function openQuickChat() {
+            console.log('=== openQuickChat appelée ===');
             toggleFloatingMenu(); // Fermer le menu
             const miniChat = document.getElementById('miniChat');
             miniChat.classList.add('show');
@@ -6009,6 +5993,36 @@ Date [ESPACES] Client [ESPACES] Montant
         function closeMiniChat() {
             const miniChat = document.getElementById('miniChat');
             miniChat.classList.remove('show');
+        }
+
+        // === FONCTION DE TEST ===
+        function testShowAllNotes() {
+            console.log('=== TEST showAllNotes ===');
+            alert('Test: aiNotes.length = ' + aiNotes.length + '\nConsultez la console pour plus de détails.');
+            console.log('aiNotes complet:', aiNotes);
+            
+            // Test simple d'affichage
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                chatMessages.innerHTML += `
+                    <div class="chat-message">
+                        <div class="bot-message">
+                            🔧 <strong>TEST:</strong> ${aiNotes.length} note(s) trouvée(s)<br>
+                            Heure: ${new Date().toLocaleTimeString()}
+                        </div>
+                    </div>
+                `;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                showPage('chat');
+            }
+            
+            // Fermer le menu
+            const floatingMenu = document.getElementById('floatingMenu');
+            const floatingBtn = document.getElementById('floatingBtn');
+            if (floatingMenu && floatingBtn) {
+                floatingMenu.classList.remove('show');
+                floatingBtn.classList.remove('active');
+            }
         }
 
         function sendMiniChatMessage() {
