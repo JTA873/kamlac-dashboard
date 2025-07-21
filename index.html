@@ -19,42 +19,240 @@
             -webkit-tap-highlight-color: transparent;
         }
         
+        :root {
+            /* Mode Clair */
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --accent-color: #667eea;
+            --accent-hover: #5a67d8;
+            --border-color: #e9ecef;
+            --shadow: 0 2px 10px rgba(0,0,0,0.05);
+            --gradient: linear-gradient(45deg, #667eea, #764ba2);
+        }
+        
+        [data-theme="dark"] {
+            /* Mode Sombre */
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #eee;
+            --text-secondary: #bbb;
+            --accent-color: #4facfe;
+            --accent-hover: #00f2fe;
+            --border-color: #2d3748;
+            --shadow: 0 2px 10px rgba(0,0,0,0.3);
+            --gradient: linear-gradient(45deg, #4facfe, #00f2fe);
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f7fa;
-            color: #333;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             overflow-x: hidden;
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         
         .dashboard-container {
             min-height: 100vh;
             padding: 10px;
-            background: #f5f7fa;
+            background: var(--bg-primary);
         }
         
         .header {
             text-align: center;
             margin-bottom: 20px;
-            color: #333;
+            color: var(--text-primary);
             position: relative;
-            background: white;
+            background: var(--bg-secondary);
             padding: 20px;
             border-radius: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
         }
         
         .header h1 {
             font-size: clamp(1.5rem, 4vw, 2.5rem);
             margin-bottom: 8px;
-            color: #667eea;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+        
+        .theme-toggle:hover {
+            background: var(--accent-hover);
+            transform: scale(1.05);
         }
         
         .last-update {
             font-size: clamp(0.75rem, 2vw, 0.9rem);
-            color: #666;
+            color: var(--text-secondary);
+        }
+        
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .toast {
+            min-width: 300px;
+            max-width: 400px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .toast.success {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            color: white;
+        }
+        
+        .toast.error {
+            background: linear-gradient(135deg, #f87171, #ef4444);
+            color: white;
+        }
+        
+        .toast.warning {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+        }
+        
+        .toast.info {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            color: white;
+        }
+        
+        .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .toast-content {
+            flex: 1;
+            line-height: 1.4;
+        }
+        
+        .toast-close {
+            background: none;
+            border: none;
+            color: currentColor;
+            cursor: pointer;
+            font-size: 18px;
+            opacity: 0.7;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        
+        /* Progress Bar pour les synchronisations */
+        .progress-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            z-index: 9999;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: var(--gradient);
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background-image: linear-gradient(
+                -45deg, 
+                rgba(255, 255, 255, .2) 25%, 
+                transparent 25%, 
+                transparent 50%, 
+                rgba(255, 255, 255, .2) 50%, 
+                rgba(255, 255, 255, .2) 75%, 
+                transparent 75%, 
+                transparent
+            );
+            background-size: 50px 50px;
+            animation: move 2s linear infinite;
+        }
+        
+        @keyframes move {
+            0% { background-position: 0 0; }
+            100% { background-position: 50px 50px; }
+        }
+        
+        /* Amélioration responsive tablettes */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .kpi-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .nav-tabs {
+                gap: 6px;
+            }
+            
+            .nav-tab {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
         }
         
         .cloud-status {
@@ -93,34 +291,109 @@
             padding: 0 5px;
         }
         
+        /* Micro-animations pour les interactions */
         .nav-tab {
-            background: white;
-            border: 2px solid #e9ecef;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
             padding: 12px 16px;
             border-radius: 12px;
-            color: #666;
+            color: var(--text-secondary);
             cursor: pointer;
             font-size: clamp(12px, 3vw, 14px);
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
             min-height: 44px;
             min-width: 44px;
             touch-action: manipulation;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .nav-tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.6s ease;
+        }
+        
+        .nav-tab:hover::before {
+            left: 100%;
         }
         
         .nav-tab:hover, .nav-tab:active {
-            background: #667eea;
+            background: var(--accent-color);
             color: white;
-            border-color: #667eea;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            border-color: var(--accent-color);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
         }
         
         .nav-tab.active {
-            background: #667eea;
+            background: var(--accent-color);
             color: white;
-            border-color: #667eea;
+            border-color: var(--accent-color);
+            transform: translateY(-1px);
+        }
+        
+        /* Animations et transitions améliorées */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideInFromLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes slideInFromRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
         }
         
         .section {
@@ -131,27 +404,27 @@
         
         .section.active {
             display: block;
-            animation: slideIn 0.3s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            animation: slideIn 0.5s cubic-bezier(0.23, 1, 0.32, 1);
         }
         
         .card {
-            background: white;
+            background: var(--bg-secondary);
             padding: 20px;
             border-radius: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: var(--shadow);
             margin-bottom: 20px;
-            border: 1px solid #e9ecef;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            animation: slideInFromLeft 0.6s ease-out;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px) scale(1.005);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        
+        .card:hover .kpi-value {
+            animation: bounce 0.6s ease;
         }
         
         .kpi-grid {
@@ -162,22 +435,23 @@
         }
         
         .kpi-card {
-            background: white;
+            background: var(--bg-secondary);
             padding: 16px;
             border-radius: 15px;
             text-align: center;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-            border: 1px solid #e9ecef;
+            box-shadow: var(--shadow);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            border: 1px solid var(--border-color);
             min-height: 100px;
+            animation: slideInFromRight 0.8s ease-out;
         }
         
         .kpi-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            border-color: #667eea;
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.2);
+            border-color: var(--accent-color);
         }
         
         .kpi-card::before {
@@ -187,7 +461,7 @@
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
+            background: var(--gradient);
         }
         
         .kpi-icon {
@@ -198,9 +472,15 @@
         .kpi-value {
             font-size: clamp(1rem, 3vw, 1.5rem);
             font-weight: 700;
-            color: #333;
+            color: var(--text-primary);
             margin-bottom: 4px;
             word-break: break-word;
+            transition: all 0.3s ease;
+        }
+        
+        .kpi-card:hover .kpi-value {
+            transform: scale(1.05);
+            color: var(--accent-color);
         }
         
         .kpi-label {
@@ -357,11 +637,11 @@
         .btn {
             padding: 12px 16px;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             cursor: pointer;
             font-size: clamp(12px, 3vw, 14px);
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -370,32 +650,72 @@
             min-width: 44px;
             touch-action: manipulation;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+            transform: translateZ(0); /* Hardware acceleration */
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
         }
         
         .btn-primary {
-            background: #667eea;
+            background: var(--gradient);
             color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
         }
         
         .btn-primary:hover {
-            background: #5a67d8;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0) scale(0.98);
         }
         
         .btn-success {
-            background: #28a745;
+            background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
         }
         
         .btn-warning {
-            background: #ffc107;
-            color: #333;
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2);
+        }
+        
+        .btn-warning:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(255, 193, 7, 0.4);
         }
         
         .btn-danger {
-            background: #dc3545;
+            background: linear-gradient(135deg, #dc3545, #e83e8c);
             color: white;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.2);
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
         }
         
         .btn-secondary {
@@ -1034,30 +1354,15 @@
         
         .chat-input-container {
             padding: 15px 20px;
-            background: white;
-            border-top: 1px solid #e9ecef;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
             display: flex;
             gap: 10px;
             align-items: center;
         }
         
-        .chat-input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 2px solid #e9ecef;
-            border-radius: 25px;
-            font-size: clamp(0.9rem, 2.5vw, 1rem);
-            outline: none;
-            transition: all 0.3s ease;
-        }
-        
-        .chat-input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        .chat-send-btn {
-            background: #667eea;
+        .voice-btn {
+            background: var(--accent-color);
             color: white;
             border: none;
             border-radius: 50%;
@@ -1071,9 +1376,123 @@
             font-size: 16px;
         }
         
-        .chat-send-btn:hover {
-            background: #5a67d8;
+        .voice-btn:hover {
+            background: var(--accent-hover);
             transform: scale(1.05);
+        }
+        
+        .voice-btn.listening {
+            background: #dc3545;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .voice-btn.mini {
+            width: 36px;
+            height: 36px;
+            font-size: 14px;
+        }
+        
+        /* Auto-complétion pour l'assistant IA */
+        .chat-input-wrapper {
+            position: relative;
+            flex: 1;
+        }
+        
+        .chat-suggestions-dropdown {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        
+        .chat-suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .chat-suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .chat-suggestion-item:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+        
+        .chat-suggestion-item.selected {
+            background: var(--accent-color);
+            color: white;
+        }
+        
+        .chat-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 25px;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            outline: none;
+            transition: all 0.3s ease;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .chat-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .chat-send-btn {
+            background: var(--gradient);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            font-size: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .chat-send-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+        
+        .chat-send-btn:hover::before {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .chat-send-btn:hover {
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .chat-send-btn:active {
+            transform: scale(0.95) rotate(0deg);
         }
         
         .chat-send-btn:disabled {
@@ -1105,33 +1524,87 @@
             color: white;
         }
         
+        /* Indicateurs de chargement améliorés */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
         .typing-indicator {
             display: flex;
             align-items: center;
-            gap: 5px;
-            color: #666;
+            gap: 8px;
+            color: var(--text-secondary);
             font-style: italic;
+            padding: 12px 0;
         }
         
         .typing-dots {
             display: flex;
-            gap: 3px;
+            gap: 4px;
         }
         
         .typing-dot {
-            width: 6px;
-            height: 6px;
-            background: #667eea;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-color);
             border-radius: 50%;
-            animation: typingDot 1.4s infinite;
+            animation: typingDot 1.4s infinite ease-in-out;
         }
         
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
         .typing-dot:nth-child(2) { animation-delay: 0.2s; }
         .typing-dot:nth-child(3) { animation-delay: 0.4s; }
         
         @keyframes typingDot {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-10px); }
+            0%, 60%, 100% { 
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+            30% { 
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+        
+        /* Améliorations d'accessibilité */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        /* Focus visible amélioré */
+        *:focus-visible {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        
+        /* Support pour prefers-reduced-motion */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
         
         .chat-stats {
@@ -1576,11 +2049,22 @@
     </style>
 </head>
 <body>
+    <!-- Progress Bar -->
+    <div class="progress-container" id="progressContainer" style="display: none;">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
     <div class="dashboard-container">
         <div class="header">
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Changer de thème">
+                🌙
+            </button>
             <h1>📊 KAMLAC - Suivi Clients</h1>
             <div class="last-update" id="lastUpdate">Dernière mise à jour: --</div>
-            <div style="margin-top: 8px; font-size: clamp(0.7rem, 1.8vw, 0.8rem); color: #666;">
+            <div style="margin-top: 8px; font-size: clamp(0.7rem, 1.8vw, 0.8rem); color: var(--text-secondary);">
                 <span>Version: <strong id="appVersion">2.1.0</strong></span>
                 <span style="margin-left: 15px;">Sync auto: <span id="autoSyncStatus">🟢 Actif</span></span>
             </div>
@@ -2006,7 +2490,15 @@
                     </div>
                     
                     <div class="chat-input-container">
-                        <input type="text" class="chat-input" id="chatInput" placeholder="Posez votre question sur les données..." onkeypress="handleChatKeyPress(event)">
+                        <div class="chat-input-wrapper">
+                            <input type="text" class="chat-input" id="chatInput" placeholder="Posez votre question ou utilisez la reconnaissance vocale..." onkeypress="handleChatKeyPress(event)" oninput="handleChatInputChange(event)" onfocus="showChatSuggestions()" onblur="hideChatSuggestions()">
+                            <div class="chat-suggestions-dropdown" id="chatSuggestionsDropdown">
+                                <!-- Les suggestions apparaîtront ici -->
+                            </div>
+                        </div>
+                        <button class="voice-btn" id="voiceBtn" onclick="toggleVoiceRecognition()" title="Reconnaissance vocale">
+                            🎤
+                        </button>
                         <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">
                             ➤
                         </button>
@@ -2259,7 +2751,7 @@
     <!-- Modal Notes -->
     <div id="notesModal" class="product-modal">
         <div class="product-modal-content">
-            <h3 style="margin-bottom: 15px;">📝 Ajouter une note</h3>
+            <h3 id="notesModalTitle" style="margin-bottom: 15px;">📝 Ajouter une note</h3>
             <div class="form-group" style="margin-bottom: 15px;">
                 <label for="noteCategory">Catégorie</label>
                 <input type="text" id="noteCategory" list="categoriesList" placeholder="Tapez une catégorie (ex: Client, Projet...)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
@@ -2328,7 +2820,8 @@
             </div>
         </div>
         <div class="mini-chat-input-container">
-            <input type="text" class="mini-chat-input" id="miniChatInput" placeholder="Tapez votre message..." onkeypress="if(event.key==='Enter') sendMiniChatMessage()">
+            <input type="text" class="mini-chat-input" id="miniChatInput" placeholder="Tapez ou parlez..." onkeypress="if(event.key==='Enter') sendMiniChatMessage()">
+            <button class="voice-btn mini" onclick="toggleVoiceRecognition('mini')" title="Reconnaissance vocale">🎤</button>
             <button class="mini-chat-send" onclick="sendMiniChatMessage()">➤</button>
         </div>
     </div>
@@ -2352,8 +2845,409 @@
         let productsList = [];
 
         // Version de l'application - À incrémenter à chaque mise à jour
-        const APP_VERSION = "2.1.0";
+        const APP_VERSION = "2.1.1";
         let autoSyncInterval = null;
+        
+        // Gestion des thèmes
+        let currentTheme = 'light';
+        
+        // Initialiser le thème au chargement
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('kamlacTheme') || 'light';
+            setTheme(savedTheme);
+        }
+        
+        function toggleTheme() {
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            setTheme(newTheme);
+            showToast(`Mode ${newTheme === 'dark' ? 'sombre' : 'clair'} activé`, 'success', `${newTheme === 'dark' ? '🌙' : '☀️'}`);
+        }
+        
+        function setTheme(theme) {
+            currentTheme = theme;
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('kamlacTheme', theme);
+            
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
+                themeToggle.title = theme === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair';
+            }
+        }
+        
+        // Système de notifications toast
+        function showToast(message, type = 'info', icon = null) {
+            const toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) return;
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const iconMap = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            const toastIcon = icon || iconMap[type] || 'ℹ️';
+            
+            toast.innerHTML = `
+                <div class="toast-icon">${toastIcon}</div>
+                <div class="toast-content">${message}</div>
+                <button class="toast-close" onclick="removeToast(this.parentElement)">×</button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Déclencher l'animation
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            // Auto-remove après 5 secondes
+            setTimeout(() => removeToast(toast), 5000);
+            
+            return toast;
+        }
+        
+        // Fonction de compatibilité pour showAlert -> showToast
+        function showAlert(message, type = 'info') {
+            return showToast(message, type);
+        }
+        
+        // Reconnaissance vocale
+        let recognition = null;
+        let isListening = false;
+        
+        function initializeVoiceRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'fr-FR';
+                
+                recognition.onstart = function() {
+                    isListening = true;
+                    updateVoiceButtonState();
+                    showToast('🎤 Écoute en cours... Parlez maintenant', 'info');
+                };
+                
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    const inputId = document.activeElement?.id === 'miniChatInput' ? 'miniChatInput' : 'chatInput';
+                    const input = document.getElementById(inputId);
+                    
+                    if (input) {
+                        input.value = transcript;
+                        showToast(`✅ Reconnu: "${transcript}"`, 'success', '🎤');
+                        
+                        // Envoyer automatiquement après reconnaissance
+                        setTimeout(() => {
+                            if (inputId === 'miniChatInput') {
+                                sendMiniChatMessage();
+                            } else {
+                                sendChatMessage();
+                            }
+                        }, 500);
+                    }
+                };
+                
+                recognition.onerror = function(event) {
+                    console.error('Erreur reconnaissance vocale:', event.error);
+                    let errorMessage = 'Erreur de reconnaissance vocale';
+                    
+                    switch(event.error) {
+                        case 'no-speech':
+                            errorMessage = 'Aucune parole détectée. Essayez à nouveau.';
+                            break;
+                        case 'audio-capture':
+                            errorMessage = 'Microphone non disponible';
+                            break;
+                        case 'not-allowed':
+                            errorMessage = 'Permission microphone refusée';
+                            break;
+                        case 'network':
+                            errorMessage = 'Erreur réseau pour la reconnaissance vocale';
+                            break;
+                    }
+                    
+                    showToast(errorMessage, 'error', '🎤');
+                    isListening = false;
+                    updateVoiceButtonState();
+                };
+                
+                recognition.onend = function() {
+                    isListening = false;
+                    updateVoiceButtonState();
+                };
+                
+                return true;
+            } else {
+                console.warn('Reconnaissance vocale non supportée');
+                return false;
+            }
+        }
+        
+        function toggleVoiceRecognition(mode = 'main') {
+            if (!recognition) {
+                if (!initializeVoiceRecognition()) {
+                    showToast('Reconnaissance vocale non supportée par votre navigateur', 'warning', '🎤');
+                    return;
+                }
+            }
+            
+            if (isListening) {
+                recognition.stop();
+                showToast('🎤 Écoute arrêtée', 'info');
+            } else {
+                try {
+                    recognition.start();
+                } catch (error) {
+                    console.error('Erreur démarrage reconnaissance:', error);
+                    showToast('Impossible de démarrer la reconnaissance vocale', 'error', '🎤');
+                }
+            }
+        }
+        
+        function updateVoiceButtonState() {
+            const voiceBtns = document.querySelectorAll('.voice-btn');
+            voiceBtns.forEach(btn => {
+                if (isListening) {
+                    btn.classList.add('listening');
+                    btn.textContent = '🔴';
+                    btn.title = 'Arrêter l\'écoute';
+                } else {
+                    btn.classList.remove('listening');
+                    btn.textContent = '🎤';
+                    btn.title = 'Reconnaissance vocale';
+                }
+            });
+        }
+        
+        // Barre de progression
+        function showProgress(show = true) {
+            const progressContainer = document.getElementById('progressContainer');
+            if (progressContainer) {
+                progressContainer.style.display = show ? 'block' : 'none';
+                if (show) {
+                    setProgress(0);
+                    // Animation automatique
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                        progress += Math.random() * 15;
+                        if (progress >= 90) {
+                            clearInterval(interval);
+                            progress = 90; // Ne jamais atteindre 100% automatiquement
+                        }
+                        setProgress(progress);
+                    }, 200);
+                    
+                    // Nettoyer l'interval après 10 secondes max
+                    setTimeout(() => clearInterval(interval), 10000);
+                }
+            }
+        }
+        
+        function setProgress(percentage) {
+            const progressBar = document.getElementById('progressBar');
+            if (progressBar) {
+                progressBar.style.width = Math.min(percentage, 100) + '%';
+            }
+        }
+        
+        function completeProgress() {
+            setProgress(100);
+            setTimeout(() => showProgress(false), 500);
+        }
+        
+        // Auto-complétion intelligente pour l'assistant IA
+        const chatSuggestions = [
+            "Quel est mon CA total ?",
+            "Qui est mon meilleur client ?",
+            "Quel est mon CA des 2 derniers mois ?",
+            "Mes ventes cette semaine",
+            "CA du mois en cours",
+            "Top 5 des clients",
+            "Quel est mon top produit ?",
+            "Analyse du mois dernier",
+            "En-cours clients",
+            "Résumé de mon activité",
+            "Compare les ventes",
+            "Graphique CA par client",
+            "Mes notes importantes",
+            "Bilan du trimestre",
+            "Aide sur les fonctionnalités"
+        ];
+        
+        let selectedSuggestionIndex = -1;
+        
+        function handleChatInputChange(event) {
+            const input = event.target;
+            const value = input.value.toLowerCase();
+            
+            if (value.length >= 2) {
+                const filteredSuggestions = chatSuggestions.filter(suggestion =>
+                    suggestion.toLowerCase().includes(value)
+                ).slice(0, 5);
+                
+                showFilteredSuggestions(filteredSuggestions);
+            } else {
+                hideChatSuggestions();
+            }
+        }
+        
+        function showFilteredSuggestions(suggestions) {
+            const dropdown = document.getElementById('chatSuggestionsDropdown');
+            if (!dropdown) return;
+            
+            if (suggestions.length === 0) {
+                hideChatSuggestions();
+                return;
+            }
+            
+            dropdown.innerHTML = suggestions.map((suggestion, index) => 
+                `<div class="chat-suggestion-item" data-index="${index}" onclick="selectChatSuggestion('${suggestion}')">${suggestion}</div>`
+            ).join('');
+            
+            dropdown.style.display = 'block';
+            selectedSuggestionIndex = -1;
+        }
+        
+        function showChatSuggestions() {
+            const input = document.getElementById('chatInput');
+            if (input && input.value.length >= 2) {
+                handleChatInputChange({ target: input });
+            }
+        }
+        
+        function hideChatSuggestions() {
+            setTimeout(() => {
+                const dropdown = document.getElementById('chatSuggestionsDropdown');
+                if (dropdown) {
+                    dropdown.style.display = 'none';
+                }
+            }, 200);
+        }
+        
+        function selectChatSuggestion(suggestion) {
+            const input = document.getElementById('chatInput');
+            if (input) {
+                input.value = suggestion;
+                hideChatSuggestions();
+                input.focus();
+            }
+        }
+        
+        function navigateSuggestions(direction) {
+            const dropdown = document.getElementById('chatSuggestionsDropdown');
+            if (!dropdown || dropdown.style.display === 'none') return;
+            
+            const items = dropdown.querySelectorAll('.chat-suggestion-item');
+            if (items.length === 0) return;
+            
+            // Supprimer la sélection précédente
+            if (selectedSuggestionIndex >= 0) {
+                items[selectedSuggestionIndex].classList.remove('selected');
+            }
+            
+            // Calculer le nouvel index
+            if (direction === 'down') {
+                selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length;
+            } else if (direction === 'up') {
+                selectedSuggestionIndex = selectedSuggestionIndex <= 0 ? items.length - 1 : selectedSuggestionIndex - 1;
+            }
+            
+            // Ajouter la nouvelle sélection
+            items[selectedSuggestionIndex].classList.add('selected');
+        }
+        
+        function selectCurrentSuggestion() {
+            const dropdown = document.getElementById('chatSuggestionsDropdown');
+            if (!dropdown || dropdown.style.display === 'none') return false;
+            
+            const items = dropdown.querySelectorAll('.chat-suggestion-item');
+            if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < items.length) {
+                items[selectedSuggestionIndex].click();
+                return true;
+            }
+            return false;
+        }
+        
+        // Système de raccourcis clavier
+        function initializeKeyboardShortcuts() {
+            document.addEventListener('keydown', function(event) {
+                // Ctrl/Cmd + D = Toggle thème
+                if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+                    event.preventDefault();
+                    toggleTheme();
+                    return;
+                }
+                
+                // Ctrl/Cmd + K = Focus sur chat
+                if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+                    event.preventDefault();
+                    const chatInput = document.getElementById('chatInput');
+                    if (chatInput) {
+                        chatInput.focus();
+                        showToast('Raccourci: Focus sur l\'assistant IA', 'info', '⌨️');
+                    }
+                    return;
+                }
+                
+                // Ctrl/Cmd + Shift + V = Toggle reconnaissance vocale
+                if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'V') {
+                    event.preventDefault();
+                    toggleVoiceRecognition();
+                    return;
+                }
+                
+                // Alt + 1-7 = Navigation entre sections
+                if (event.altKey && event.key >= '1' && event.key <= '7') {
+                    event.preventDefault();
+                    const sections = ['dashboard', 'clients', 'recap', 'sales', 'payments', 'chat', 'settings'];
+                    const sectionIndex = parseInt(event.key) - 1;
+                    if (sections[sectionIndex]) {
+                        showSection(sections[sectionIndex]);
+                        // Activer l'onglet correspondant
+                        document.querySelectorAll('.nav-tab').forEach((tab, index) => {
+                            tab.classList.toggle('active', index === sectionIndex);
+                        });
+                        showToast(`Section: ${sections[sectionIndex]}`, 'info', '🔄');
+                    }
+                    return;
+                }
+                
+                // Escape = Fermer mini-chat ou notifications
+                if (event.key === 'Escape') {
+                    const miniChat = document.getElementById('miniChat');
+                    if (miniChat && miniChat.style.display !== 'none') {
+                        closeMiniChat();
+                        return;
+                    }
+                    
+                    // Fermer toutes les notifications
+                    const toasts = document.querySelectorAll('.toast');
+                    toasts.forEach(toast => removeToast(toast));
+                }
+            });
+            
+            // Afficher l'aide des raccourcis au démarrage
+            setTimeout(() => {
+                showToast('💡 Raccourcis: Ctrl+D (thème), Ctrl+K (chat), Ctrl+Shift+V (vocal), Alt+1-7 (navigation)', 'info');
+            }, 5000);
+        }
+        
+        function removeToast(toast) {
+            if (!toast || !toast.parentElement) return;
+            
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.parentElement.removeChild(toast);
+                }
+            }, 400);
+        }
 
         // Configuration Firebase
         const firebaseConfig = {
@@ -2373,6 +3267,15 @@
 
         function initializeApp() {
             console.log('Initialisation de l\'application...');
+            
+            // Initialiser le thème
+            initializeTheme();
+            
+            // Initialiser la reconnaissance vocale
+            initializeVoiceRecognition();
+            
+            // Initialiser les raccourcis clavier
+            initializeKeyboardShortcuts();
             
             // Afficher la version
             document.getElementById('appVersion').textContent = APP_VERSION;
@@ -2398,6 +3301,14 @@
             updatePaymentsDisplay();
             setTodayForNewInvoice();
             updateClientsSummaryTable();
+            
+        // Message de bienvenue avec fonctionnalités
+        setTimeout(() => {
+            showToast('Bienvenue dans KAMLAC Dashboard ! 🎉', 'success');
+            setTimeout(() => {
+                showToast('Nouvelles fonctionnalités: Mode sombre 🌙, Reconnaissance vocale 🎤, Animations fluides ✨', 'info');
+            }, 2000);
+        }, 1000);
         }
 
         function loadFromLocalStorage() {
@@ -2420,6 +3331,13 @@
             const statusElement = document.getElementById('cloudStatus');
             statusElement.className = `cloud-status cloud-${status}`;
             statusElement.textContent = message;
+            
+            // Gérer la barre de progression
+            if (status === 'syncing') {
+                showProgress(true);
+            } else if (status === 'online' || status === 'offline') {
+                completeProgress();
+            }
         }
 
         function initializeFirebase() {
@@ -2961,6 +3879,7 @@
         let aiNotes = [];
         let noteCategories = []; // Catégories créées par l'utilisateur
         let pendingAction = null;
+        let editingNoteId = null; // ID de la note en cours d'édition
 
         // Assistant IA simplifié - Analyseur d'intentions
         function analyzeQuestion(question) {
@@ -3130,7 +4049,17 @@
         // Gestion du chat IA
         function handleChatKeyPress(event) {
             if (event.key === 'Enter') {
-                sendChatMessage();
+                if (!selectCurrentSuggestion()) {
+                    sendChatMessage();
+                }
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                navigateSuggestions('down');
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                navigateSuggestions('up');
+            } else if (event.key === 'Escape') {
+                hideChatSuggestions();
             }
         }
 
@@ -3199,7 +4128,7 @@
                 <div class="chat-avatar ai">🤖</div>
                 <div class="chat-bubble ai">
                     <div class="typing-indicator">
-                        <span>Assistant IA en train d'analyser</span>
+                        <span>L'assistant analyse votre question</span>
                         <div class="typing-dots">
                             <div class="typing-dot"></div>
                             <div class="typing-dot"></div>
@@ -5844,6 +6773,8 @@ Date [ESPACES] Client [ESPACES] Montant
 
         // === GESTION DES NOTES ===
         function showNotesModal() {
+            editingNoteId = null; // Réinitialiser l'ID d'édition
+            document.getElementById('notesModalTitle').textContent = '📝 Ajouter une note';
             document.getElementById('noteContent').value = '';
             document.getElementById('noteCategory').value = '';
             updateCategoriesList(); // Mettre à jour la liste des catégories
@@ -5855,6 +6786,7 @@ Date [ESPACES] Client [ESPACES] Montant
             // Réinitialiser les champs du formulaire
             document.getElementById('noteContent').value = '';
             document.getElementById('noteCategory').value = '';
+            editingNoteId = null; // Réinitialiser l'ID d'édition
         }
 
         // Mettre à jour la liste des catégories dans le datalist
@@ -5920,35 +6852,72 @@ Date [ESPACES] Client [ESPACES] Montant
             const finalCategory = category || 'Général';
             addCategoryIfNew(finalCategory);
             
-            const note = {
-                id: Date.now(),
-                content: content,
-                category: finalCategory,
-                date: new Date().toLocaleDateString('fr-FR'),
-                timestamp: new Date().toLocaleTimeString('fr-FR')
-            };
-            
-            aiNotes.push(note);
-            saveToLocalStorage(); // Sauvegarder en localStorage
-            
-            // Sauvegarder sur Firebase
-            if (isFirebaseInitialized) {
-                try {
-                    await db.collection('ai_notes').doc(note.id.toString()).set({
-                        ...note,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                } catch (error) {
-                    console.error('Erreur sauvegarde note:', error);
+            if (editingNoteId) {
+                // Mode édition - Modifier la note existante
+                const noteIndex = aiNotes.findIndex(n => n.id === editingNoteId);
+                if (noteIndex === -1) {
+                    showAlert('Note introuvable', 'error');
+                    return;
                 }
+                
+                // Mettre à jour la note
+                aiNotes[noteIndex] = {
+                    ...aiNotes[noteIndex],
+                    content: content,
+                    category: finalCategory,
+                    // Conserver la date/heure de création originale mais ajouter une info de modification
+                    lastModified: new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR')
+                };
+                
+                saveToLocalStorage();
+                
+                // Sauvegarder sur Firebase
+                if (isFirebaseInitialized) {
+                    try {
+                        await db.collection('ai_notes').doc(editingNoteId.toString()).set({
+                            ...aiNotes[noteIndex],
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    } catch (error) {
+                        console.error('Erreur sauvegarde note:', error);
+                    }
+                }
+                
+                showAlert(`✏️ Note modifiée dans "${finalCategory}"`, 'success');
+            } else {
+                // Mode création - Créer une nouvelle note
+                const note = {
+                    id: Date.now(),
+                    content: content,
+                    category: finalCategory,
+                    date: new Date().toLocaleDateString('fr-FR'),
+                    timestamp: new Date().toLocaleTimeString('fr-FR')
+                };
+                
+                aiNotes.push(note);
+                saveToLocalStorage();
+                
+                // Sauvegarder sur Firebase
+                if (isFirebaseInitialized) {
+                    try {
+                        await db.collection('ai_notes').doc(note.id.toString()).set({
+                            ...note,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    } catch (error) {
+                        console.error('Erreur sauvegarde note:', error);
+                    }
+                }
+                
+                showAlert(`📝 Note sauvegardée dans "${finalCategory}"`, 'success');
             }
             
             // Réinitialiser les champs du formulaire
             document.getElementById('noteContent').value = '';
             document.getElementById('noteCategory').value = '';
+            editingNoteId = null;
             
             closeNotesModal();
-            showAlert(`📝 Note sauvegardée dans "${finalCategory}"`, 'success');
         }
 
         // Afficher toutes les notes dans un modal
@@ -5967,28 +6936,48 @@ Date [ESPACES] Client [ESPACES] Montant
                     </div>
                 `;
             } else {
-                // Trier par date récente
-                const sortedNotes = [...aiNotes].sort((a, b) => b.id - a.id);
+                // Grouper les notes par catégorie
+                const notesByCategory = {};
+                aiNotes.forEach(note => {
+                    const category = note.category || 'Général';
+                    if (!notesByCategory[category]) {
+                        notesByCategory[category] = [];
+                    }
+                    notesByCategory[category].push(note);
+                });
+                
+                // Trier les catégories et les notes dans chaque catégorie
+                const sortedCategories = Object.keys(notesByCategory).sort();
                 
                 let notesHtml = '';
-                sortedNotes.forEach((note, index) => {
-                    // Obtenir l'icône de la catégorie
-                    const categoryIcon = getCategoryIcon(note.category);
-                    const categoryDisplay = note.category || 'Général';
+                sortedCategories.forEach(category => {
+                    const categoryIcon = getCategoryIcon(category);
+                    const notesInCategory = notesByCategory[category].sort((a, b) => b.id - a.id);
                     
                     notesHtml += `
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #667eea; position: relative;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                <div>
-                                    <strong style="color: #667eea;">📋 Note ${index + 1}</strong>
-                                    <span style="background: #e9ecef; color: #495057; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">${categoryIcon} ${categoryDisplay}</span>
-                                </div>
-                                <button onclick="deleteNote(${note.id})" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Supprimer cette note">×</button>
-                            </div>
-                            <div style="margin-bottom: 10px; line-height: 1.5;">${note.content}</div>
-                            <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
-                        </div>
+                        <div style="margin-bottom: 25px;">
+                            <h4 style="color: #667eea; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #667eea; display: flex; align-items: center; gap: 8px;">
+                                ${categoryIcon} ${category} <span style="background: #667eea; color: white; font-size: 11px; padding: 2px 6px; border-radius: 12px;">${notesInCategory.length}</span>
+                            </h4>
                     `;
+                    
+                    notesInCategory.forEach((note, index) => {
+                        notesHtml += `
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #667eea; position: relative;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                    <strong style="color: #667eea;">  Note ${index + 1}</strong>
+                                    <div style="display: flex; gap: 5px;">
+                                        <button onclick="editNote(${note.id})" style="background: #28a745; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Modifier cette note">✏️</button>
+                                        <button onclick="deleteNote(${note.id})" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Supprimer cette note">×</button>
+                                    </div>
+                                </div>
+                                <div style="margin-bottom: 10px; line-height: 1.5; word-wrap: break-word;">${note.content}</div>
+                                <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
+                            </div>
+                        `;
+                    });
+                    
+                    notesHtml += `</div>`;
                 });
                 
                 content.innerHTML = notesHtml;
@@ -6008,6 +6997,27 @@ Date [ESPACES] Client [ESPACES] Montant
 
         function closeAllNotesModal() {
             document.getElementById('allNotesModal').style.display = 'none';
+        }
+
+        function editNote(noteId) {
+            const note = aiNotes.find(n => n.id === noteId);
+            if (!note) {
+                showAlert('Note introuvable', 'error');
+                return;
+            }
+            
+            // Fermer le modal "Toutes les notes"
+            closeAllNotesModal();
+            
+            // Configurer le modal pour l'édition
+            editingNoteId = noteId;
+            document.getElementById('notesModalTitle').textContent = '✏️ Modifier la note';
+            document.getElementById('noteContent').value = note.content;
+            document.getElementById('noteCategory').value = note.category || '';
+            updateCategoriesList();
+            
+            // Ouvrir le modal d'édition
+            document.getElementById('notesModal').style.display = 'block';
         }
 
         function getCategoryIcon(category) {
@@ -6085,23 +7095,39 @@ Date [ESPACES] Client [ESPACES] Montant
                 </div>`;
             }
             
+            // Grouper les notes par catégorie
+            const notesByCategory = {};
+            aiNotes.forEach(note => {
+                const category = note.category || 'Général';
+                if (!notesByCategory[category]) {
+                    notesByCategory[category] = [];
+                }
+                notesByCategory[category].push(note);
+            });
+            
+            // Trier les catégories
+            const sortedCategories = Object.keys(notesByCategory).sort();
+            
             let notesHtml = `📝 <strong>Vos notes (${aiNotes.length})</strong><br><br>`;
             
-            // Trier par date récente
-            const sortedNotes = [...aiNotes].sort((a, b) => b.id - a.id);
-            
-            sortedNotes.forEach((note, index) => {
-                const categoryIcon = getCategoryIcon(note.category);
-                const categoryDisplay = note.category || 'Général';
+            sortedCategories.forEach(category => {
+                const categoryIcon = getCategoryIcon(category);
+                const notesInCategory = notesByCategory[category].sort((a, b) => b.id - a.id);
                 
-                notesHtml += `<div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #667eea;">
-                    <div style="margin-bottom: 5px;">
-                        <strong>📋 Note ${index + 1}</strong>
-                        <span style="background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-left: 8px;">${categoryIcon} ${categoryDisplay}</span>
-                    </div>
-                    ${note.content}<br>
-                    <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}</small>
-                </div>`;
+                notesHtml += `<div style="margin-bottom: 20px;">
+                    <strong style="color: #667eea; border-bottom: 1px solid #667eea; padding-bottom: 3px; margin-bottom: 10px; display: inline-block;">
+                        ${categoryIcon} ${category} (${notesInCategory.length})
+                    </strong><br>`;
+                
+                notesInCategory.forEach((note, index) => {
+                    notesHtml += `<div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 8px 0 8px 15px; border-left: 3px solid #667eea;">
+                        <strong>📄 Note ${index + 1}</strong><br>
+                        ${note.content}<br>
+                        <small style="color: #666;">🕒 ${note.date} à ${note.timestamp}${note.lastModified ? ' (modifiée le ' + note.lastModified + ')' : ''}</small>
+                    </div>`;
+                });
+                
+                notesHtml += `</div>`;
             });
             
             return notesHtml;
