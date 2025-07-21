@@ -2452,13 +2452,6 @@
                                 </small>
                             </div>
                             <div class="form-group">
-                                <label>Mise à jour forcée</label>
-                                <button class="btn btn-warning" onclick="forceAppUpdate()">🚀 Forcer MAJ</button>
-                                <small style="color: #856404; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    ⚡ Force tous les appareils à se mettre à jour
-                                </small>
-                            </div>
-                            <div class="form-group">
                                 <label>Réinitialiser</label>
                                 <button class="btn btn-danger" onclick="clearAllData()">🗑️ Effacer Tout</button>
                                 <small style="color: #dc3545; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
@@ -2937,9 +2930,6 @@
                 db = firebase.firestore();
                 isFirebaseInitialized = true;
                 
-                // Vérifier la version et forcer la mise à jour si nécessaire
-                checkAppVersion();
-                
                 // Synchronisation automatique au démarrage
                 autoSyncOnStartup();
                 
@@ -2953,43 +2943,6 @@
             } catch (error) {
                 console.error('Erreur Firebase:', error);
                 updateCloudStatus('offline', '❌ Offline');
-            }
-        }
-
-        // Vérification automatique de la version de l'application
-        async function checkAppVersion() {
-            try {
-                const versionDoc = await db.collection('system').doc('version').get();
-                
-                if (versionDoc.exists) {
-                    const latestVersion = versionDoc.data().version;
-                    const forceUpdate = versionDoc.data().forceUpdate || false;
-                    
-                    if (latestVersion !== APP_VERSION) {
-                        console.log(`Version locale: ${APP_VERSION}, Version serveur: ${latestVersion}`);
-                        
-                        if (forceUpdate) {
-                            // Forcer la mise à jour
-                            showAlert(`🔄 Nouvelle version détectée (${latestVersion}). Mise à jour forcée...`, 'info');
-                            setTimeout(() => {
-                                window.location.reload(true); // Forcer le rechargement depuis le serveur
-                            }, 2000);
-                            return;
-                        } else {
-                            // Proposer la mise à jour
-                            showAlert(`ℹ️ Nouvelle version disponible (${latestVersion}). Veuillez actualiser la page.`, 'warning');
-                        }
-                    }
-                } else {
-                    // Créer le document de version s'il n'existe pas
-                    await db.collection('system').doc('version').set({
-                        version: APP_VERSION,
-                        forceUpdate: false,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                }
-            } catch (error) {
-                console.error('Erreur vérification version:', error);
             }
         }
 
@@ -5785,61 +5738,6 @@ Date [ESPACES] Client [ESPACES] Montant
             updatePaymentsDisplay();
             updateClientsSummaryTable();
             showAlert('📊 Données actualisées avec succès', 'success');
-        }
-
-        // Forcer la mise à jour de l'application sur tous les appareils
-        async function forceAppUpdate() {
-            if (!isFirebaseInitialized) {
-                showAlert('Firebase non initialisé. Impossible de forcer la mise à jour.', 'error');
-                return;
-            }
-            
-            const newVersion = prompt(`🚀 Forcer la mise à jour sur tous les appareils ?\n\nVersion actuelle: ${APP_VERSION}\nEntrez la nouvelle version (ex: 2.2.0):`);
-            
-            if (newVersion && newVersion.trim()) {
-                if (confirm(`⚡ ATTENTION !\n\nCela va forcer TOUS les appareils connectés à recharger l'application.\n\nNouvelle version: ${newVersion.trim()}\n\nContinuer ?`)) {
-                    try {
-                        updateCloudStatus('syncing', '🚀 Mise à jour forcée...');
-                        
-                        await db.collection('system').doc('version').set({
-                            version: newVersion.trim(),
-                            forceUpdate: true,
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                            updatedBy: 'Admin',
-                            previousVersion: APP_VERSION
-                        });
-                        
-                        updateCloudStatus('online', '☁️ Sync');
-                        showAlert(`✅ Mise à jour forcée activée !\n\n🔄 Tous les appareils vont se mettre à jour vers la version ${newVersion.trim()}\n\n⏱️ Cette page va se recharger dans 3 secondes...`, 'success');
-                        
-                        // Recharger cette page aussi après 3 secondes
-                        setTimeout(() => {
-                            window.location.reload(true);
-                        }, 3000);
-                        
-                    } catch (error) {
-                        console.error('Erreur lors de la mise à jour forcée:', error);
-                        updateCloudStatus('offline', '❌ Erreur');
-                        showAlert(`Erreur lors de la mise à jour forcée: ${error.message}`, 'error');
-                    }
-                }
-            }
-        }
-
-        // Désactiver la mise à jour forcée (pour les administrateurs)
-        async function disableForceUpdate() {
-            if (!isFirebaseInitialized) return;
-            
-            try {
-                await db.collection('system').doc('version').update({
-                    forceUpdate: false,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                showAlert('🔓 Mise à jour forcée désactivée', 'info');
-            } catch (error) {
-                console.error('Erreur désactivation force update:', error);
-            }
         }
 
         // Forcer la synchronisation depuis Firebase (résout les problèmes de cache mobile)
