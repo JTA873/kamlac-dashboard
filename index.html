@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>📊 KAMLAC - Gestion Clients</title>
     <script src=https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js></script>
+    
+    <!-- Excel Export Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- PDF Export Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Firebase SDKs -->
     <script src=https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js></script>
@@ -2079,11 +2085,12 @@
                 <div class="sub-nav-tabs">
                     <button class="sub-nav-tab active" onclick="showSubSection('recap-sales')">📦 Ventes</button>
                     <button class="sub-nav-tab" onclick="showSubSection('recap-payments')">💰 Encaissements</button>
+                    <button class="sub-nav-tab" onclick="showSubSection('recap-global')">🌐 Global</button>
                 </div>
 
                 <!-- Sous-section Ventes -->
-                <div id="recap-sales" class="sub-section active">
-                    <h3 style="margin-bottom: 15px; color: #667eea;">📦 Historique des Ventes</h3>
+                <div id="recap-sales" class="sub-section active" style="background: #E8F5E8; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px; color: #2d5a2d;">📦 Historique des Ventes</h3>
                     
                     <!-- Stats récapitulatif ventes -->
                     <div class="stats-row" style="margin-bottom: 20px;">
@@ -2122,8 +2129,8 @@
                 </div>
 
                 <!-- Sous-section Encaissements -->
-                <div id="recap-payments" class="sub-section">
-                    <h3 style="margin-bottom: 15px; color: #667eea;">💰 Historique des Encaissements</h3>
+                <div id="recap-payments" class="sub-section" style="background: #E3F2FD; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px; color: #1a4d72;">💰 Historique des Encaissements</h3>
                     
                     <!-- Stats récapitulatif encaissements -->
                     <div class="stats-row" style="margin-bottom: 20px;">
@@ -2154,6 +2161,48 @@
                                 </tr>
                             </thead>
                             <tbody id="paymentsRecapTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sous-section Global -->
+                <div id="recap-global" class="sub-section" style="background: linear-gradient(135deg, #E8F5E8 50%, #E3F2FD 50%); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px; color: #1a4d72;">🌐 Historique Global (Ventes & Encaissements)</h3>
+                    
+                    <!-- Stats récapitulatif global -->
+                    <div class="stats-row" style="margin-bottom: 20px;">
+                        <div class="stat-item">
+                            <div class="stat-value" id="globalTransactionsCount">0</div>
+                            <div class="stat-label">Transactions</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="globalSalesTotal">0 CFA</div>
+                            <div class="stat-label">Total Ventes</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="globalPaymentsTotal">0 CFA</div>
+                            <div class="stat-label">Total Encaissé</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="globalBalance">0 CFA</div>
+                            <div class="stat-label">Solde</div>
+                        </div>
+                    </div>
+                    
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Client</th>
+                                    <th>Description</th>
+                                    <th>Montant</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="globalRecapTableBody">
                             </tbody>
                         </table>
                     </div>
@@ -2359,6 +2408,7 @@
                 <div class="settings-nav">
                     <button class="settings-tab active" onclick="showSettingsSection('products')">📦 Produits</button>
                     <button class="settings-tab" onclick="showSettingsSection('data')">💾 Données</button>
+                    <button class="settings-tab" onclick="showSettingsSection('export')">📄 Export</button>
                 </div>
                 
                 <!-- Section Produits -->
@@ -2459,6 +2509,39 @@
                                 </small>
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Section Export -->
+                <div id="settings-export" class="settings-section">
+                    <div class="import-section">
+                        <h3 style="margin-bottom: 15px;">📊 Export Excel</h3>
+                        <p style="color: #666; margin-bottom: 15px; font-size: clamp(0.8rem, 2vw, 0.9rem);">
+                            Exportez vos données dans un fichier Excel (.xlsx) avec plusieurs onglets
+                        </p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+                            <button class="btn btn-success" onclick="exportToExcel()" style="flex: 1; min-width: 200px;">
+                                📊 Export Excel Complet
+                            </button>
+                        </div>
+                        <small style="color: #28a745; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                            📋 Contient: Encours clients, Encaissements, Ventes
+                        </small>
+                    </div>
+
+                    <div class="import-section">
+                        <h3 style="margin-bottom: 15px;">📄 Export PDF Encours</h3>
+                        <p style="color: #666; margin-bottom: 15px; font-size: clamp(0.8rem, 2vw, 0.9rem);">
+                            Générez un rapport PDF professionnel des encours par client
+                        </p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+                            <button class="btn btn-primary" onclick="exportEncoursToPDF()" style="flex: 1; min-width: 200px;">
+                                📄 Export PDF Encours
+                            </button>
+                        </div>
+                        <small style="color: #007bff; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                            📋 Format professionnel et ergonomique
+                        </small>
                     </div>
                 </div>
                 
@@ -4399,6 +4482,7 @@
         function updateRecapDisplay() {
             updateSalesRecapTable();
             updatePaymentsRecapTable();
+            updateGlobalRecapTable();
             updateRecapStats();
         }
 
@@ -4420,6 +4504,13 @@
             document.getElementById('recapPaymentsCount').textContent = paymentsCount;
             document.getElementById('recapPaymentsTotal').textContent = formatCurrency(paymentsTotal);
             document.getElementById('recapBalance').textContent = formatCurrency(balance);
+            
+            // Stats global récapitulatif
+            const globalTransactionsCount = salesCount + paymentsCount;
+            document.getElementById('globalTransactionsCount').textContent = globalTransactionsCount;
+            document.getElementById('globalSalesTotal').textContent = formatCurrency(salesTotal);
+            document.getElementById('globalPaymentsTotal').textContent = formatCurrency(paymentsTotal);
+            document.getElementById('globalBalance').textContent = formatCurrency(balance);
         }
 
         function updateSalesRecapTable() {
@@ -4489,6 +4580,72 @@
             if (sortedPayments.length > 50) {
                 const row = tbody.insertRow(0);
                 row.innerHTML = `<td colspan="6" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedPayments.length} encaissements affichés</td>`;
+            }
+        }
+
+        function updateGlobalRecapTable() {
+            const tbody = document.getElementById('globalRecapTableBody');
+            tbody.innerHTML = '';
+            
+            // Combiner ventes et encaissements
+            const allTransactions = [];
+            
+            // Ajouter les ventes
+            filteredRecapSales.forEach(sale => {
+                allTransactions.push({
+                    date: sale.date,
+                    type: 'Vente',
+                    client: sale.client,
+                    description: `${sale.product || 'Produit'} - Qté: ${sale.quantity || 1}`,
+                    amount: sale.valeur || 0,
+                    id: sale.id,
+                    dataType: 'sale',
+                    style: 'color: #2d5a2d; background: rgba(232, 245, 232, 0.3);'
+                });
+            });
+            
+            // Ajouter les encaissements
+            filteredRecapPayments.forEach(payment => {
+                allTransactions.push({
+                    date: payment.date,
+                    type: 'Encaissement',
+                    client: payment.client,
+                    description: `${payment.method} - ${payment.reference || 'Sans ref.'}`,
+                    amount: payment.amount || 0,
+                    id: payment.id,
+                    dataType: 'payment',
+                    style: 'color: #1a4d72; background: rgba(227, 242, 253, 0.3);'
+                });
+            });
+            
+            // Trier par date (plus récent en premier)
+            const sortedTransactions = allTransactions.sort((a, b) => {
+                const dateA = parseDate(a.date);
+                const dateB = parseDate(b.date);
+                return dateB - dateA;
+            });
+            
+            sortedTransactions.forEach(transaction => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${transaction.date}</td>
+                    <td style="${transaction.style}"><strong>${transaction.type}</strong></td>
+                    <td>${transaction.client}</td>
+                    <td style="font-size: 0.9em;">${transaction.description}</td>
+                    <td><strong>${formatCurrency(transaction.amount)}</strong></td>
+                    <td>
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                            <button class="btn btn-warning" onclick="${transaction.dataType === 'sale' ? 'editSale' : 'editPayment'}(${transaction.id})" style="padding: 4px 8px; font-size: 10px;">✏️</button>
+                            <button class="btn btn-danger" onclick="${transaction.dataType === 'sale' ? 'deleteSale' : 'deletePayment'}(${transaction.id})" style="padding: 4px 8px; font-size: 10px;">🗑️</button>
+                        </div>
+                    </td>
+                `;
+            });
+            
+            // Afficher le nombre total de lignes
+            if (sortedTransactions.length > 50) {
+                const row = tbody.insertRow(0);
+                row.innerHTML = `<td colspan="6" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedTransactions.length} transactions affichées</td>`;
             }
         }
 
@@ -5857,6 +6014,200 @@ Date [ESPACES] Client [ESPACES] Montant
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        }
+
+        // Excel Export Function
+        function exportToExcel() {
+            try {
+                // Préparer les données pour l'onglet Encours
+                const clientBalances = {};
+                
+                // Calculer les ventes par client
+                salesData.forEach(sale => {
+                    if (!clientBalances[sale.client]) {
+                        clientBalances[sale.client] = { sales: 0, payments: 0, balance: 0 };
+                    }
+                    clientBalances[sale.client].sales += sale.valeur || 0;
+                });
+                
+                // Calculer les encaissements par client
+                paymentsData.forEach(payment => {
+                    if (!clientBalances[payment.client]) {
+                        clientBalances[payment.client] = { sales: 0, payments: 0, balance: 0 };
+                    }
+                    clientBalances[payment.client].payments += payment.amount || 0;
+                });
+                
+                // Calculer les soldes
+                Object.keys(clientBalances).forEach(client => {
+                    clientBalances[client].balance = clientBalances[client].sales - clientBalances[client].payments;
+                });
+                
+                // Données pour l'onglet Encours
+                const encoursData = [
+                    ['Client', 'Total Ventes', 'Total Encaissé', 'Encours'],
+                    ...Object.entries(clientBalances)
+                        .filter(([, balance]) => balance.balance > 0)
+                        .sort(([,a], [,b]) => b.balance - a.balance)
+                        .map(([client, balance]) => [
+                            client,
+                            balance.sales,
+                            balance.payments,
+                            balance.balance
+                        ])
+                ];
+                
+                // Données pour l'onglet Encaissements
+                const encaissementsData = [
+                    ['Date', 'Client', 'Montant', 'Mode', 'Référence', 'Notes'],
+                    ...paymentsData.map(payment => [
+                        payment.date,
+                        payment.client,
+                        payment.amount,
+                        payment.method,
+                        payment.reference || '',
+                        payment.notes || ''
+                    ])
+                ];
+                
+                // Données pour l'onglet Ventes
+                const ventesData = [
+                    ['Date', 'Client', 'N° Facture', 'Produit', 'Quantité', 'Prix Unitaire', 'Total'],
+                    ...salesData.map(sale => [
+                        sale.date,
+                        sale.client,
+                        sale.invoice || '',
+                        sale.product || '',
+                        sale.quantity || '',
+                        sale.unitPrice || '',
+                        sale.valeur
+                    ])
+                ];
+                
+                // Créer le workbook
+                const wb = XLSX.utils.book_new();
+                
+                // Ajouter les onglets
+                const wsEncours = XLSX.utils.aoa_to_sheet(encoursData);
+                const wsEncaissements = XLSX.utils.aoa_to_sheet(encaissementsData);
+                const wsVentes = XLSX.utils.aoa_to_sheet(ventesData);
+                
+                XLSX.utils.book_append_sheet(wb, wsEncours, 'Encours');
+                XLSX.utils.book_append_sheet(wb, wsEncaissements, 'Encaissement');
+                XLSX.utils.book_append_sheet(wb, wsVentes, 'Ventes');
+                
+                // Télécharger le fichier
+                const filename = `KAMLAC_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(wb, filename);
+                
+                showAlert('Export Excel terminé avec succès! 📊', 'success');
+            } catch (error) {
+                console.error('Erreur export Excel:', error);
+                showAlert('Erreur lors de l\'export Excel', 'error');
+            }
+        }
+
+        // PDF Export Function
+        function exportEncoursToPDF() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Titre du document
+                doc.setFontSize(20);
+                doc.text('KAMLAC - État des Encours Clients', 20, 30);
+                
+                // Date du rapport
+                doc.setFontSize(12);
+                doc.text(`Date du rapport: ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
+                
+                // Calculer les encours par client
+                const clientBalances = {};
+                
+                salesData.forEach(sale => {
+                    if (!clientBalances[sale.client]) {
+                        clientBalances[sale.client] = { sales: 0, payments: 0, balance: 0 };
+                    }
+                    clientBalances[sale.client].sales += sale.valeur || 0;
+                });
+                
+                paymentsData.forEach(payment => {
+                    if (!clientBalances[payment.client]) {
+                        clientBalances[payment.client] = { sales: 0, payments: 0, balance: 0 };
+                    }
+                    clientBalances[payment.client].payments += payment.amount || 0;
+                });
+                
+                Object.keys(clientBalances).forEach(client => {
+                    clientBalances[client].balance = clientBalances[client].sales - clientBalances[client].payments;
+                });
+                
+                // Filtrer et trier les clients avec encours positif
+                const clientsWithOutstanding = Object.entries(clientBalances)
+                    .filter(([, balance]) => balance.balance > 0)
+                    .sort(([,a], [,b]) => b.balance - a.balance);
+                
+                let yPosition = 65;
+                
+                if (clientsWithOutstanding.length === 0) {
+                    doc.text('Aucun encours client détecté.', 20, yPosition);
+                } else {
+                    // En-tête du tableau
+                    doc.setFontSize(14);
+                    doc.text('Résumé des Encours:', 20, yPosition);
+                    yPosition += 15;
+                    
+                    doc.setFontSize(10);
+                    doc.text('Client', 20, yPosition);
+                    doc.text('Total Ventes', 80, yPosition);
+                    doc.text('Total Encaissé', 130, yPosition);
+                    doc.text('Encours', 180, yPosition);
+                    yPosition += 10;
+                    
+                    // Ligne de séparation
+                    doc.line(20, yPosition - 5, 200, yPosition - 5);
+                    
+                    let totalEncours = 0;
+                    
+                    clientsWithOutstanding.forEach(([client, balance]) => {
+                        if (yPosition > 270) {
+                            doc.addPage();
+                            yPosition = 30;
+                        }
+                        
+                        doc.text(client.substring(0, 25), 20, yPosition);
+                        doc.text(`${balance.sales.toLocaleString('fr-FR')} CFA`, 80, yPosition);
+                        doc.text(`${balance.payments.toLocaleString('fr-FR')} CFA`, 130, yPosition);
+                        doc.text(`${balance.balance.toLocaleString('fr-FR')} CFA`, 180, yPosition);
+                        
+                        totalEncours += balance.balance;
+                        yPosition += 8;
+                    });
+                    
+                    // Total général
+                    yPosition += 10;
+                    doc.line(20, yPosition - 5, 200, yPosition - 5);
+                    doc.setFontSize(12);
+                    doc.text(`TOTAL ENCOURS: ${totalEncours.toLocaleString('fr-FR')} CFA`, 130, yPosition);
+                }
+                
+                // Pied de page
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.text(`Page ${i} sur ${pageCount} - KAMLAC Dashboard`, 20, 290);
+                }
+                
+                // Télécharger le PDF
+                const filename = `KAMLAC_Encours_${new Date().toISOString().split('T')[0]}.pdf`;
+                doc.save(filename);
+                
+                showAlert('Export PDF des encours terminé avec succès! 📄', 'success');
+            } catch (error) {
+                console.error('Erreur export PDF:', error);
+                showAlert('Erreur lors de l\'export PDF', 'error');
+            }
         }
 
         function clearAllData() {
