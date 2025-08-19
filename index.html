@@ -1075,35 +1075,59 @@
             color: white;
         }
         
-        /* Couleurs pastels spécifiques pour chaque onglet */
+        /* Couleurs distinctives pour chaque onglet */
         .sub-nav-tab.sales-tab.active {
-            background: linear-gradient(135deg, #a8e6cf, #7fcdcd);
-            color: #2c3e50;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            border: 2px solid #27ae60;
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
         }
         
         .sub-nav-tab.payments-tab.active {
-            background: linear-gradient(135deg, #ffd3a5, #fd9853);
-            color: #2c3e50;
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            color: white;
+            border: 2px solid #d35400;
+            box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3);
         }
         
         .sub-nav-tab.global-tab.active {
-            background: linear-gradient(135deg, #d4a8ff, #a8c8ff);
-            color: #2c3e50;
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            border: 2px solid #8e44ad;
+            box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
         }
         
         .sub-nav-tab.sales-tab:hover {
-            background: #e8f8f5;
-            color: #2c3e50;
+            background: linear-gradient(135deg, #58d68d, #2ecc71);
+            color: white;
+            border: 2px solid #27ae60;
+            transform: translateY(-2px);
         }
         
         .sub-nav-tab.payments-tab:hover {
-            background: #fff2e6;
-            color: #2c3e50;
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            border: 2px solid #d35400;
+            transform: translateY(-2px);
         }
         
         .sub-nav-tab.global-tab:hover {
-            background: #f4f0ff;
-            color: #2c3e50;
+            background: linear-gradient(135deg, #bb8fce, #9b59b6);
+            color: white;
+            border: 2px solid #8e44ad;
+            transform: translateY(-2px);
+        }
+        
+        .sub-nav-tab.sales-tab {
+            border: 2px solid #bdc3c7;
+        }
+        
+        .sub-nav-tab.payments-tab {
+            border: 2px solid #bdc3c7;
+        }
+        
+        .sub-nav-tab.global-tab {
+            border: 2px solid #bdc3c7;
         }
         
         .sub-section {
@@ -1764,6 +1788,8 @@
             pointer-events: none;
             min-width: 200px;
             overflow: hidden;
+            max-height: 80vh;
+            overflow-y: auto;
         }
         
         .floating-menu.show {
@@ -1920,7 +1946,8 @@
                 top: 130px;
                 right: 15px;
                 width: calc(100vw - 30px);
-                max-width: 250px;
+                max-width: 280px;
+                max-height: 70vh;
             }
             
             .mini-chat {
@@ -2534,15 +2561,21 @@
                         <h3 style="margin-bottom: 15px;">💾 Gestion des données</h3>
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Exports CSV</label>
+                                <label>Export Ventes Excel</label>
                                 <button class="btn btn-success" onclick="exportToCSV()">📊 Export Ventes</button>
+                                <small style="color: #28a745; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    💡 Format Excel XLSX
+                                </small>
                             </div>
                             <div class="form-group">
-                                <label>Encaissements CSV</label>
+                                <label>Export Encaissements Excel</label>
                                 <button class="btn btn-primary" onclick="exportPaymentsToCSV()">💰 Export Encaisse</button>
+                                <small style="color: #007bff; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    💡 Format Excel XLSX
+                                </small>
                             </div>
                             <div class="form-group">
-                                <label>Export Excel XLSX</label>
+                                <label>Export Excel Global</label>
                                 <button class="btn btn-warning" onclick="exportToExcel()">📈 Export Complet</button>
                                 <small style="color: #856404; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
                                     💡 3 onglets: En-cours, Ventes, Encaissements
@@ -2741,9 +2774,25 @@
     </button>
 
     <div class="floating-menu" id="floatingMenu">
+        <div class="floating-menu-item" onclick="openQuickSale()">
+            <span class="icon">📦</span>
+            <span>+ Vente</span>
+        </div>
+        <div class="floating-menu-item" onclick="openQuickPayment()">
+            <span class="icon">💰</span>
+            <span>+ Encaissement</span>
+        </div>
         <div class="floating-menu-item" onclick="openQuickNote()">
             <span class="icon">📝</span>
-            <span>Nouvelle note</span>
+            <span>+ Note</span>
+        </div>
+        <div class="floating-menu-item" onclick="exportOutstandingToPDF()">
+            <span class="icon">📄</span>
+            <span>PDF En-cours</span>
+        </div>
+        <div class="floating-menu-item" onclick="exportToExcel()">
+            <span class="icon">📈</span>
+            <span>Excel Global</span>
         </div>
         <div class="floating-menu-item" onclick="openQuickChat()">
             <span class="icon">🤖</span>
@@ -2751,7 +2800,7 @@
         </div>
         <div class="floating-menu-item" onclick="showAllNotes()">
             <span class="icon">📋</span>
-            <span>Toutes les notes</span>
+            <span>Mes notes</span>
         </div>
     </div>
 
@@ -6045,40 +6094,74 @@ Date [ESPACES] Client [ESPACES] Montant
 
         // Export
         function exportToCSV() {
-            const headers = ['Client', 'Date', 'N° Facture', 'Produit', 'Quantité', 'Prix Unitaire', 'Valeur Total'];
-            const csvContent = [
-                headers.join(','),
-                ...salesData.map(sale => [
-                    `"${sale.client}"`,
-                    sale.date,
-                    `"${sale.invoice || ''}"`,
-                    `"${sale.product || ''}"`,
-                    sale.quantity || '',
-                    sale.unitPrice || '',
-                    sale.valeur
-                ].join(','))
-            ].join('\n');
-            
-            downloadFile(csvContent, `kamlac_ventes_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
-            showAlert('Export ventes CSV terminé', 'success');
+            try {
+                const wb = XLSX.utils.book_new();
+                
+                // Préparer les données de ventes
+                const salesData_export = [
+                    ['Client', 'Date', 'N° Facture', 'Produit', 'Quantité', 'Prix Unitaire', 'Valeur Total']
+                ];
+                
+                salesData.forEach(sale => {
+                    salesData_export.push([
+                        sale.client,
+                        sale.date,
+                        sale.invoice || '',
+                        sale.product || '',
+                        sale.quantity || 0,
+                        sale.unitPrice || 0,
+                        sale.valeur || 0
+                    ]);
+                });
+                
+                const ws = XLSX.utils.aoa_to_sheet(salesData_export);
+                XLSX.utils.book_append_sheet(wb, ws, 'Ventes');
+                
+                // Télécharger le fichier
+                const filename = `KAMLAC_Ventes_${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(wb, filename);
+                
+                showAlert('📊 Export ventes Excel terminé', 'success');
+                
+            } catch (error) {
+                console.error('Erreur export ventes Excel:', error);
+                showAlert('❌ Erreur lors de l\'export ventes Excel.', 'error');
+            }
         }
 
         function exportPaymentsToCSV() {
-            const headers = ['Date', 'Client', 'Montant', 'Mode', 'Référence', 'Notes'];
-            const csvContent = [
-                headers.join(','),
-                ...paymentsData.map(payment => [
-                    payment.date,
-                    `"${payment.client}"`,
-                    payment.amount,
-                    `"${payment.method}"`,
-                    `"${payment.reference || ''}"`,
-                    `"${payment.notes || ''}"`
-                ].join(','))
-            ].join('\n');
-            
-            downloadFile(csvContent, `kamlac_encaissements_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
-            showAlert('Export encaissements CSV terminé', 'success');
+            try {
+                const wb = XLSX.utils.book_new();
+                
+                // Préparer les données d'encaissements
+                const paymentsData_export = [
+                    ['Date', 'Client', 'Montant', 'Mode', 'Référence', 'Notes']
+                ];
+                
+                paymentsData.forEach(payment => {
+                    paymentsData_export.push([
+                        payment.date,
+                        payment.client,
+                        payment.amount || 0,
+                        payment.method || '',
+                        payment.reference || '',
+                        payment.notes || ''
+                    ]);
+                });
+                
+                const ws = XLSX.utils.aoa_to_sheet(paymentsData_export);
+                XLSX.utils.book_append_sheet(wb, ws, 'Encaissements');
+                
+                // Télécharger le fichier
+                const filename = `KAMLAC_Encaissements_${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(wb, filename);
+                
+                showAlert('💰 Export encaissements Excel terminé', 'success');
+                
+            } catch (error) {
+                console.error('Erreur export encaissements Excel:', error);
+                showAlert('❌ Erreur lors de l\'export encaissements Excel.', 'error');
+            }
         }
 
         // Export Excel avec 3 onglets
@@ -6201,67 +6284,135 @@ Date [ESPACES] Client [ESPACES] Montant
                     .filter(([client, data]) => (data.sales - data.payments) > 0)
                     .sort(([,a], [,b]) => (b.sales - b.payments) - (a.sales - a.payments));
                 
-                // Header
+                // === PAGE 1: TABLEAU RÉCAPITULATIF ===
                 doc.setFontSize(18);
                 doc.text('📊 KAMLAC - En-cours Clients', 20, 20);
                 
-                doc.setFontSize(12);
+                doc.setFontSize(10);
                 doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, 20, 30);
-                
-                let yPosition = 50;
-                const pageHeight = doc.internal.pageSize.height;
                 
                 if (clientsWithOutstanding.length === 0) {
                     doc.setFontSize(14);
-                    doc.text('✅ Aucun en-cours client - Tous les clients sont soldés !', 20, yPosition);
+                    doc.text('✅ Aucun en-cours client - Tous les clients sont soldés !', 20, 50);
                 } else {
-                    // Résumé
+                    // Résumé global
                     const totalOutstanding = clientsWithOutstanding.reduce((sum, [,data]) => sum + (data.sales - data.payments), 0);
-                    doc.setFontSize(14);
-                    doc.text(`📈 Résumé: ${clientsWithOutstanding.length} clients avec en-cours`, 20, yPosition);
-                    yPosition += 10;
-                    doc.text(`💰 Total en-cours: ${formatCurrency(totalOutstanding)}`, 20, yPosition);
-                    yPosition += 20;
+                    doc.setFontSize(12);
+                    doc.text(`📈 ${clientsWithOutstanding.length} clients avec en-cours • Total: ${formatCurrency(totalOutstanding)}`, 20, 45);
                     
-                    // Détail par client
+                    // Tableau récapitulatif
+                    let yPos = 60;
+                    
+                    // En-tête du tableau
+                    doc.setFontSize(9);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Client', 20, yPos);
+                    doc.text('CA Total', 90, yPos);
+                    doc.text('Encaissements', 130, yPos);
+                    doc.text('En-cours', 170, yPos);
+                    
+                    // Ligne de séparation
+                    doc.line(20, yPos + 2, 190, yPos + 2);
+                    yPos += 8;
+                    
+                    // Données du tableau
+                    doc.setFont(undefined, 'normal');
                     clientsWithOutstanding.forEach(([client, data], index) => {
-                        // Vérifier si on a assez de place pour ce client
-                        if (yPosition > pageHeight - 60) {
-                            doc.addPage();
-                            yPosition = 20;
-                        }
+                        if (yPos > 270) return; // Limite pour la première page
                         
                         const balance = data.sales - data.payments;
+                        const clientName = client.length > 25 ? client.substring(0, 22) + '...' : client;
+                        
+                        doc.text(`${index + 1}. ${clientName}`, 20, yPos);
+                        doc.text(formatCurrency(data.sales), 90, yPos);
+                        doc.text(formatCurrency(data.payments), 130, yPos);
+                        
+                        // En-cours en gras si > 0
+                        doc.setFont(undefined, 'bold');
+                        doc.text(formatCurrency(balance), 170, yPos);
+                        doc.setFont(undefined, 'normal');
+                        
+                        yPos += 6;
+                    });
+                    
+                    // Note si plus de clients
+                    if (clientsWithOutstanding.length > 30) {
+                        doc.setFontSize(8);
+                        doc.text('(Voir détails pages suivantes)', 20, yPos + 10);
+                    }
+                }
+                
+                // === PAGES SUIVANTES: DÉTAILS PAR CLIENT ===
+                if (clientsWithOutstanding.length > 0) {
+                    doc.addPage();
+                    let currentPage = 2;
+                    let yPosition = 20;
+                    
+                    // En-tête des pages de détail
+                    doc.setFontSize(14);
+                    doc.text('📝 Détail par Client', 20, yPosition);
+                    yPosition += 20;
+                    
+                    clientsWithOutstanding.forEach(([client, data], index) => {
+                        const balance = data.sales - data.payments;
+                        
+                        // Vérifier si on a assez de place (minimum 40mm pour un client)
+                        if (yPosition > 250) {
+                            doc.addPage();
+                            currentPage++;
+                            yPosition = 20;
+                            
+                            // En-tête répété
+                            doc.setFontSize(14);
+                            doc.text('📝 Détail par Client (suite)', 20, yPosition);
+                            yPosition += 20;
+                        }
                         
                         // En-tête client
-                        doc.setFontSize(12);
+                        doc.setFontSize(11);
                         doc.setFont(undefined, 'bold');
                         doc.text(`${index + 1}. ${client}`, 20, yPosition);
                         yPosition += 8;
                         
+                        // Informations financières
+                        doc.setFontSize(9);
                         doc.setFont(undefined, 'normal');
-                        doc.setFontSize(10);
                         doc.text(`CA Total: ${formatCurrency(data.sales)}`, 25, yPosition);
-                        doc.text(`Encaissements: ${formatCurrency(data.payments)}`, 120, yPosition);
-                        yPosition += 6;
+                        doc.text(`Encaissements: ${formatCurrency(data.payments)}`, 25, yPosition + 5);
                         
                         doc.setFont(undefined, 'bold');
-                        doc.text(`En-cours: ${formatCurrency(balance)}`, 25, yPosition);
-                        yPosition += 10;
+                        doc.text(`En-cours: ${formatCurrency(balance)}`, 25, yPosition + 10);
+                        yPosition += 18;
                         
-                        // Détail des ventes récentes (3 dernières)
+                        // Ventes récentes (3 dernières)
                         const recentSales = data.salesDetails
                             .sort((a, b) => new Date(parseDate(b.date)) - new Date(parseDate(a.date)))
                             .slice(0, 3);
                         
                         if (recentSales.length > 0) {
                             doc.setFont(undefined, 'normal');
-                            doc.setFontSize(9);
+                            doc.setFontSize(8);
                             doc.text('Ventes récentes:', 30, yPosition);
                             yPosition += 5;
                             
                             recentSales.forEach(sale => {
-                                doc.text(`• ${sale.date} - ${sale.product || 'Produit'} - ${formatCurrency(sale.valeur)}`, 35, yPosition);
+                                doc.text(`• ${sale.date} - ${(sale.product || 'Produit').substring(0, 30)} - ${formatCurrency(sale.valeur)}`, 35, yPosition);
+                                yPosition += 4;
+                            });
+                        }
+                        
+                        // Encaissements récents (2 derniers)
+                        const recentPayments = data.paymentsDetails
+                            .sort((a, b) => new Date(parseDate(b.date)) - new Date(parseDate(a.date)))
+                            .slice(0, 2);
+                        
+                        if (recentPayments.length > 0) {
+                            doc.setFontSize(8);
+                            doc.text('Encaissements récents:', 30, yPosition);
+                            yPosition += 5;
+                            
+                            recentPayments.forEach(payment => {
+                                doc.text(`• ${payment.date} - ${payment.method} - ${formatCurrency(payment.amount)}`, 35, yPosition);
                                 yPosition += 4;
                             });
                         }
@@ -6270,12 +6421,12 @@ Date [ESPACES] Client [ESPACES] Montant
                     });
                 }
                 
-                // Footer
+                // Footer sur toutes les pages
                 const pageCount = doc.internal.getNumberOfPages();
                 for (let i = 1; i <= pageCount; i++) {
                     doc.setPage(i);
                     doc.setFontSize(8);
-                    doc.text(`Page ${i} / ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
+                    doc.text(`KAMLAC - Page ${i}/${pageCount}`, doc.internal.pageSize.width - 50, doc.internal.pageSize.height - 10);
                 }
                 
                 // Télécharger
@@ -7142,6 +7293,30 @@ Date [ESPACES] Client [ESPACES] Montant
             toggleFloatingMenu(); // Fermer le menu
             const miniChat = document.getElementById('miniChat');
             miniChat.classList.add('show');
+        }
+
+        function openQuickSale() {
+            toggleFloatingMenu(); // Fermer le menu
+            // Aller à l'onglet Facturation et focus sur le premier champ
+            showTab('invoice');
+            setTimeout(() => {
+                const clientInput = document.getElementById('invoiceClient');
+                if (clientInput) {
+                    clientInput.focus();
+                }
+            }, 100);
+        }
+
+        function openQuickPayment() {
+            toggleFloatingMenu(); // Fermer le menu
+            // Aller à l'onglet Encaissements et focus sur le premier champ
+            showTab('payments');
+            setTimeout(() => {
+                const clientInput = document.getElementById('paymentClient');
+                if (clientInput) {
+                    clientInput.focus();
+                }
+            }, 100);
         }
 
         function closeMiniChat() {
