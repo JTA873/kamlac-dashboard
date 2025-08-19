@@ -1054,80 +1054,81 @@
         
         .sub-nav-tab {
             background: none;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            padding: 12px 18px;
+            border-radius: 12px;
             color: #666;
             cursor: pointer;
             font-size: clamp(12px, 3vw, 14px);
-            font-weight: 600;
+            font-weight: 700;
             transition: all 0.3s ease;
-            min-height: 40px;
+            min-height: 45px;
             touch-action: manipulation;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .sub-nav-tab:hover {
-            background: #f8f9fa;
-            color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
         }
         
         .sub-nav-tab.active {
             color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
         }
         
-        /* Couleurs distinctives pour chaque onglet */
+        /* Couleurs très distinctives pour chaque onglet */
+        .sub-nav-tab.sales-tab {
+            border: 2px solid #27ae60;
+            background: linear-gradient(135deg, #f8fff9, #e8f8f0);
+        }
+        
         .sub-nav-tab.sales-tab.active {
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            background: linear-gradient(135deg, #27ae60, #1e8449);
+            border: 2px solid #1e8449;
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
+        }
+        
+        .sub-nav-tab.sales-tab:hover:not(.active) {
+            background: linear-gradient(135deg, #58d68d, #48c9b0);
             color: white;
             border: 2px solid #27ae60;
-            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+        }
+        
+        .sub-nav-tab.payments-tab {
+            border: 2px solid #e67e22;
+            background: linear-gradient(135deg, #fff9f5, #fdf2e9);
         }
         
         .sub-nav-tab.payments-tab.active {
             background: linear-gradient(135deg, #e67e22, #d35400);
-            color: white;
             border: 2px solid #d35400;
-            box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3);
+            box-shadow: 0 8px 25px rgba(230, 126, 34, 0.4);
         }
         
-        .sub-nav-tab.global-tab.active {
-            background: linear-gradient(135deg, #9b59b6, #8e44ad);
-            color: white;
-            border: 2px solid #8e44ad;
-            box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
-        }
-        
-        .sub-nav-tab.sales-tab:hover {
-            background: linear-gradient(135deg, #58d68d, #2ecc71);
-            color: white;
-            border: 2px solid #27ae60;
-            transform: translateY(-2px);
-        }
-        
-        .sub-nav-tab.payments-tab:hover {
+        .sub-nav-tab.payments-tab:hover:not(.active) {
             background: linear-gradient(135deg, #f39c12, #e67e22);
             color: white;
-            border: 2px solid #d35400;
-            transform: translateY(-2px);
-        }
-        
-        .sub-nav-tab.global-tab:hover {
-            background: linear-gradient(135deg, #bb8fce, #9b59b6);
-            color: white;
-            border: 2px solid #8e44ad;
-            transform: translateY(-2px);
-        }
-        
-        .sub-nav-tab.sales-tab {
-            border: 2px solid #bdc3c7;
-        }
-        
-        .sub-nav-tab.payments-tab {
-            border: 2px solid #bdc3c7;
+            border: 2px solid #e67e22;
         }
         
         .sub-nav-tab.global-tab {
-            border: 2px solid #bdc3c7;
+            border: 2px solid #8e44ad;
+            background: linear-gradient(135deg, #faf5ff, #f4ecf7);
+        }
+        
+        .sub-nav-tab.global-tab.active {
+            background: linear-gradient(135deg, #8e44ad, #7d3c98);
+            border: 2px solid #7d3c98;
+            box-shadow: 0 8px 25px rgba(142, 68, 173, 0.4);
+        }
+        
+        .sub-nav-tab.global-tab:hover:not(.active) {
+            background: linear-gradient(135deg, #bb8fce, #a569bd);
+            color: white;
+            border: 2px solid #8e44ad;
         }
         
         .sub-section {
@@ -1786,7 +1787,7 @@
             transform: translateY(-10px) scale(0.95);
             transition: all 0.3s ease;
             pointer-events: none;
-            min-width: 200px;
+            min-width: 220px;
             overflow: hidden;
             max-height: 80vh;
             overflow-y: auto;
@@ -1798,16 +1799,42 @@
             pointer-events: auto;
         }
         
+        .floating-menu-category {
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .floating-menu-category:last-child {
+            border-bottom: none;
+        }
+        
+        .floating-menu-header {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 700;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .floating-submenu {
+            background: #fafafa;
+        }
+        
         .floating-menu-item {
-            padding: 15px 20px;
+            padding: 12px 25px;
             cursor: pointer;
             transition: all 0.2s ease;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid #e9ecef;
             display: flex;
             align-items: center;
             gap: 12px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
+            color: #555;
         }
         
         .floating-menu-item:last-child {
@@ -1815,13 +1842,14 @@
         }
         
         .floating-menu-item:hover {
-            background: #f8f9fa;
-            color: #667eea;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            transform: translateX(5px);
         }
         
         .floating-menu-item .icon {
-            font-size: 18px;
-            width: 24px;
+            font-size: 16px;
+            width: 20px;
             text-align: center;
         }
         
@@ -1946,7 +1974,7 @@
                 top: 130px;
                 right: 15px;
                 width: calc(100vw - 30px);
-                max-width: 280px;
+                max-width: 300px;
                 max-height: 70vh;
             }
             
@@ -2774,33 +2802,76 @@
     </button>
 
     <div class="floating-menu" id="floatingMenu">
-        <div class="floating-menu-item" onclick="openQuickSale()">
-            <span class="icon">📦</span>
-            <span>+ Vente</span>
+        <!-- Menu Saisie -->
+        <div class="floating-menu-category">
+            <div class="floating-menu-header">
+                <span class="icon">✍️</span>
+                <span>Saisie</span>
+            </div>
+            <div class="floating-submenu">
+                <div class="floating-menu-item" onclick="openQuickSale()">
+                    <span class="icon">📦</span>
+                    <span>Nouvelle Vente</span>
+                </div>
+                <div class="floating-menu-item" onclick="openQuickPayment()">
+                    <span class="icon">💰</span>
+                    <span>Nouvel Encaissement</span>
+                </div>
+            </div>
         </div>
-        <div class="floating-menu-item" onclick="openQuickPayment()">
-            <span class="icon">💰</span>
-            <span>+ Encaissement</span>
+        
+        <!-- Menu Export -->
+        <div class="floating-menu-category">
+            <div class="floating-menu-header">
+                <span class="icon">�</span>
+                <span>Export</span>
+            </div>
+            <div class="floating-submenu">
+                <div class="floating-menu-item" onclick="exportOutstandingToPDF()">
+                    <span class="icon">📄</span>
+                    <span>PDF En-cours</span>
+                </div>
+                <div class="floating-menu-item" onclick="exportToExcel()">
+                    <span class="icon">📈</span>
+                    <span>Excel Global</span>
+                </div>
+            </div>
         </div>
-        <div class="floating-menu-item" onclick="openQuickNote()">
-            <span class="icon">📝</span>
-            <span>+ Note</span>
+        
+        <!-- Menu Analyse -->
+        <div class="floating-menu-category">
+            <div class="floating-menu-header">
+                <span class="icon">📊</span>
+                <span>Analyse</span>
+            </div>
+            <div class="floating-submenu">
+                <div class="floating-menu-item" onclick="openQuickChat()">
+                    <span class="icon">🤖</span>
+                    <span>IA BOT</span>
+                </div>
+                <div class="floating-menu-item" onclick="openQuickRecap()">
+                    <span class="icon">📋</span>
+                    <span>Récapitulatif</span>
+                </div>
+            </div>
         </div>
-        <div class="floating-menu-item" onclick="exportOutstandingToPDF()">
-            <span class="icon">📄</span>
-            <span>PDF En-cours</span>
-        </div>
-        <div class="floating-menu-item" onclick="exportToExcel()">
-            <span class="icon">📈</span>
-            <span>Excel Global</span>
-        </div>
-        <div class="floating-menu-item" onclick="openQuickChat()">
-            <span class="icon">🤖</span>
-            <span>IA BOT</span>
-        </div>
-        <div class="floating-menu-item" onclick="showAllNotes()">
-            <span class="icon">📋</span>
-            <span>Mes notes</span>
+        
+        <!-- Menu Notes -->
+        <div class="floating-menu-category">
+            <div class="floating-menu-header">
+                <span class="icon">📝</span>
+                <span>Notes</span>
+            </div>
+            <div class="floating-submenu">
+                <div class="floating-menu-item" onclick="openQuickNote()">
+                    <span class="icon">➕</span>
+                    <span>Ajouter Note</span>
+                </div>
+                <div class="floating-menu-item" onclick="showAllNotes()">
+                    <span class="icon">�</span>
+                    <span>Consulter Notes</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -6008,6 +6079,18 @@ Date [ESPACES] Client [ESPACES] Montant
             }).format(value) + ' CFA';
         }
 
+        // Fonction de formatage spéciale pour PDF (évite les problèmes d'encodage)
+        function formatCurrencyForPDF(value) {
+            if (isNaN(value) || value === null || value === undefined) {
+                return '0 CFA';
+            }
+            
+            // Formatage manuel simple pour éviter les problèmes d'encodage
+            const numValue = Math.round(Number(value));
+            const formattedNumber = numValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+            return formattedNumber + ' CFA';
+        }
+
         function refreshData() {
             updateLastUpdateTime();
             populateFilters();
@@ -6298,7 +6381,7 @@ Date [ESPACES] Client [ESPACES] Montant
                     // Résumé global
                     const totalOutstanding = clientsWithOutstanding.reduce((sum, [,data]) => sum + (data.sales - data.payments), 0);
                     doc.setFontSize(12);
-                    doc.text(`📈 ${clientsWithOutstanding.length} clients avec en-cours • Total: ${formatCurrency(totalOutstanding)}`, 20, 45);
+                    doc.text(`${clientsWithOutstanding.length} clients avec en-cours • Total: ${formatCurrencyForPDF(totalOutstanding)}`, 20, 45);
                     
                     // Tableau récapitulatif
                     let yPos = 60;
@@ -6324,12 +6407,12 @@ Date [ESPACES] Client [ESPACES] Montant
                         const clientName = client.length > 25 ? client.substring(0, 22) + '...' : client;
                         
                         doc.text(`${index + 1}. ${clientName}`, 20, yPos);
-                        doc.text(formatCurrency(data.sales), 90, yPos);
-                        doc.text(formatCurrency(data.payments), 130, yPos);
+                        doc.text(formatCurrencyForPDF(data.sales), 90, yPos);
+                        doc.text(formatCurrencyForPDF(data.payments), 130, yPos);
                         
                         // En-cours en gras si > 0
                         doc.setFont(undefined, 'bold');
-                        doc.text(formatCurrency(balance), 170, yPos);
+                        doc.text(formatCurrencyForPDF(balance), 170, yPos);
                         doc.setFont(undefined, 'normal');
                         
                         yPos += 6;
@@ -6377,11 +6460,11 @@ Date [ESPACES] Client [ESPACES] Montant
                         // Informations financières
                         doc.setFontSize(9);
                         doc.setFont(undefined, 'normal');
-                        doc.text(`CA Total: ${formatCurrency(data.sales)}`, 25, yPosition);
-                        doc.text(`Encaissements: ${formatCurrency(data.payments)}`, 25, yPosition + 5);
+                        doc.text(`CA Total: ${formatCurrencyForPDF(data.sales)}`, 25, yPosition);
+                        doc.text(`Encaissements: ${formatCurrencyForPDF(data.payments)}`, 25, yPosition + 5);
                         
                         doc.setFont(undefined, 'bold');
-                        doc.text(`En-cours: ${formatCurrency(balance)}`, 25, yPosition + 10);
+                        doc.text(`En-cours: ${formatCurrencyForPDF(balance)}`, 25, yPosition + 10);
                         yPosition += 18;
                         
                         // Ventes récentes (3 dernières)
@@ -6396,7 +6479,7 @@ Date [ESPACES] Client [ESPACES] Montant
                             yPosition += 5;
                             
                             recentSales.forEach(sale => {
-                                doc.text(`• ${sale.date} - ${(sale.product || 'Produit').substring(0, 30)} - ${formatCurrency(sale.valeur)}`, 35, yPosition);
+                                doc.text(`• ${sale.date} - ${(sale.product || 'Produit').substring(0, 30)} - ${formatCurrencyForPDF(sale.valeur)}`, 35, yPosition);
                                 yPosition += 4;
                             });
                         }
@@ -6412,7 +6495,7 @@ Date [ESPACES] Client [ESPACES] Montant
                             yPosition += 5;
                             
                             recentPayments.forEach(payment => {
-                                doc.text(`• ${payment.date} - ${payment.method} - ${formatCurrency(payment.amount)}`, 35, yPosition);
+                                doc.text(`• ${payment.date} - ${payment.method} - ${formatCurrencyForPDF(payment.amount)}`, 35, yPosition);
                                 yPosition += 4;
                             });
                         }
@@ -7297,8 +7380,8 @@ Date [ESPACES] Client [ESPACES] Montant
 
         function openQuickSale() {
             toggleFloatingMenu(); // Fermer le menu
-            // Aller à l'onglet Facturation et focus sur le premier champ
-            showTab('invoice');
+            // Aller à l'onglet Ventes et focus sur le premier champ
+            showSection('sales');
             setTimeout(() => {
                 const clientInput = document.getElementById('invoiceClient');
                 if (clientInput) {
@@ -7310,13 +7393,19 @@ Date [ESPACES] Client [ESPACES] Montant
         function openQuickPayment() {
             toggleFloatingMenu(); // Fermer le menu
             // Aller à l'onglet Encaissements et focus sur le premier champ
-            showTab('payments');
+            showSection('payments');
             setTimeout(() => {
                 const clientInput = document.getElementById('paymentClient');
                 if (clientInput) {
                     clientInput.focus();
                 }
             }, 100);
+        }
+
+        function openQuickRecap() {
+            toggleFloatingMenu(); // Fermer le menu
+            // Aller à l'onglet Récapitulatif
+            showSection('recap');
         }
 
         function closeMiniChat() {
