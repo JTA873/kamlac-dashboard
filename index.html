@@ -2140,8 +2140,10 @@
                     </div>
                     <div class="chart-card">
                         <h3 class="chart-title">🍰 Répartition En-cours</h3>
-                        <div class="chart-container">
-                            <canvas id="outstandingChart"></canvas>
+                        <div class="chart-container" style="height: 300px; display: flex; flex-direction: column;">
+                            <div style="flex: 1; position: relative; min-height: 0;">
+                                <canvas id="outstandingChart" style="max-height: 100%;"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -4643,18 +4645,25 @@
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            bottom: 10
+                        }
+                    },
                     plugins: {
                         legend: {
                             display: true,
                             position: 'bottom',
+                            align: 'center',
                             labels: {
-                                boxWidth: 15,
-                                padding: 15,
+                                boxWidth: 12,
+                                padding: 8,
                                 usePointStyle: true,
                                 font: {
-                                    size: 12
+                                    size: 10
                                 },
+                                maxWidth: 120,
                                 generateLabels: function(chart) {
                                     const dataset = chart.data.datasets[0];
                                     const total = dataset.data.reduce((a, b) => a + b, 0);
@@ -4663,8 +4672,11 @@
                                         const value = dataset.data[index];
                                         const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                                         
+                                        // Raccourcir le texte si trop long
+                                        let shortLabel = label.length > 12 ? label.substring(0, 12) + '...' : label;
+                                        
                                         return {
-                                            text: `${label}: ${formatCurrency(value)} (${percentage}%)`,
+                                            text: `${shortLabel}: ${percentage}%`,
                                             fillStyle: dataset.backgroundColor[index],
                                             strokeStyle: dataset.backgroundColor[index],
                                             lineWidth: 0,
@@ -4691,7 +4703,7 @@
                             }
                         }
                     },
-                    cutout: '45%',
+                    cutout: '40%',
                     animation: {
                         animateRotate: true,
                         duration: 1200
