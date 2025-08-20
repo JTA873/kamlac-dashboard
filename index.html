@@ -420,21 +420,14 @@
             background: #f8f9fa;
         }
         
-        /* Responsive pour la carte en-cours compact */
+        /* Responsive pour les nouvelles cartes */
         @media (max-width: 768px) {
-            .chart-card .clients-summary-table {
-                max-height: 150px;
+            .charts-grid > div {
+                grid-template-columns: 1fr !important;
             }
             
-            .chart-card > div {
-                flex-direction: column !important;
-                align-items: center !important;
-            }
-            
-            .chart-card > div > div:last-child {
-                width: 100px !important;
-                height: 100px !important;
-                margin-top: 15px !important;
+            .chart-card .chart-container {
+                height: 250px !important;
             }
         }
 
@@ -2123,32 +2116,33 @@
                     </div>
                     <div class="chart-card">
                         <h3 class="chart-title">👥 En-cours Clients</h3>
-                        <div style="display: flex; gap: 15px; align-items: flex-start; height: 100%;">
-                            <div style="flex: 1; min-width: 0;">
-                                <div class="clients-summary-table" style="max-height: 200px; overflow-y: auto;">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Client</th>
-                                                <th style="text-align: right;">En-cours</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="clientsSummaryBody">
-                                            <!-- Rempli dynamiquement -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div style="width: 120px; height: 120px; flex-shrink: 0; margin-top: 10px;">
-                                <canvas id="outstandingChart" style="max-width: 100%; max-height: 100%;"></canvas>
-                            </div>
+                        <div class="clients-summary-table" style="max-height: 250px; overflow-y: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Client</th>
+                                        <th style="text-align: right;">En-cours</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clientsSummaryBody">
+                                    <!-- Rempli dynamiquement -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <h3 class="chart-title">📈 Évolution CA vs Encaissements</h3>
-                    <div class="chart-container tall">
-                        <canvas id="evolutionChart"></canvas>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div class="chart-card">
+                        <h3 class="chart-title">📈 Évolution CA vs Encaissements</h3>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="evolutionChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3 class="chart-title">🍰 Répartition En-cours</h3>
+                        <div class="chart-container">
+                            <canvas id="outstandingChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -4561,7 +4555,7 @@
             updateCompactOutstandingChart(clients);
         }
 
-        // Petit graphique compact des en-cours
+        // Graphique camembert des en-cours clients (carte séparée)
         function updateCompactOutstandingChart(clientsData) {
             const ctx = document.getElementById('outstandingChart');
             if (!ctx) return;
@@ -4573,23 +4567,42 @@
             
             if (clientsData.length === 0) {
                 ctx.style.display = 'none';
+                // Afficher un message dans le conteneur
+                const container = ctx.parentElement;
+                if (container) {
+                    container.innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #666; text-align: center;">
+                            <div style="font-size: 3rem; margin-bottom: 15px;">✅</div>
+                            <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 5px;">Aucun en-cours</div>
+                            <div style="font-size: 0.9rem;">Tous vos clients sont soldés !</div>
+                        </div>
+                    `;
+                }
                 return;
+            }
+            
+            // Restaurer le canvas si nécessaire
+            const container = ctx.parentElement;
+            if (container && !container.querySelector('canvas')) {
+                container.innerHTML = '<canvas id="outstandingChart"></canvas>';
             }
             
             ctx.style.display = 'block';
             
-            // Prendre les 4 premiers clients max
-            const topClients = clientsData.slice(0, 4);
-            const otherClients = clientsData.slice(4);
+            // Prendre les 6 premiers clients et grouper les autres
+            const topClients = clientsData.slice(0, 6);
+            const otherClients = clientsData.slice(6);
             
-            const labels = topClients.map(client => client.name.length > 8 ? client.name.substring(0, 8) + '...' : client.name);
+            const labels = topClients.map(client => client.name);
             const data = topClients.map(client => client.balance);
-            const colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b'];
+            const colors = [
+                '#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#ffecd2'
+            ];
             
             // Ajouter "Autres" si nécessaire
             if (otherClients.length > 0) {
                 const otherTotal = otherClients.reduce((sum, client) => sum + client.balance, 0);
-                labels.push('Autres');
+                labels.push(`Autres (${otherClients.length})`);
                 data.push(otherTotal);
                 colors.push('#ccc');
             }
@@ -4601,7 +4614,7 @@
                     datasets: [{
                         data: data,
                         backgroundColor: colors.slice(0, labels.length),
-                        borderWidth: 1,
+                        borderWidth: 3,
                         borderColor: '#fff'
                     }]
                 },
@@ -4610,19 +4623,54 @@
                     maintainAspectRatio: true,
                     plugins: {
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 10,
+                                usePointStyle: true,
+                                font: {
+                                    size: 11
+                                },
+                                generateLabels: function(chart) {
+                                    const original = Chart.defaults.plugins.legend.labels.generateLabels;
+                                    const labels = original.call(this, chart);
+                                    
+                                    // Ajouter les montants aux légendes
+                                    labels.forEach((label, index) => {
+                                        const value = data[index];
+                                        const total = data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        label.text = `${label.text}: ${formatCurrency(value)} (${percentage}%)`;
+                                    });
+                                    
+                                    return labels;
+                                }
+                            }
                         },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return formatCurrency(context.parsed);
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${formatCurrency(value)} (${percentage}%)`;
                                 }
                             }
                         }
                     },
-                    cutout: '60%',
+                    cutout: '50%',
                     animation: {
-                        duration: 800
+                        duration: 1000
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const clientName = labels[index];
+                            if (!clientName.startsWith('Autres')) {
+                                showClientDetails(clientName);
+                            }
+                        }
                     }
                 }
             });
