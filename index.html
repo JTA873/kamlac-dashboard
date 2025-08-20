@@ -4585,6 +4585,7 @@
             const container = ctx.parentElement;
             if (container && !container.querySelector('canvas')) {
                 container.innerHTML = '<canvas id="outstandingChart"></canvas>';
+                ctx = document.getElementById('outstandingChart'); // Mettre à jour la référence
             }
             
             ctx.style.display = 'block';
@@ -4594,17 +4595,38 @@
             const otherClients = clientsData.slice(6);
             
             const labels = topClients.map(client => client.name);
-            const data = topClients.map(client => client.balance);
+            const data = topClients.map(client => Math.abs(client.balance)); // S'assurer que les valeurs sont positives
             const colors = [
                 '#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#ffecd2'
             ];
             
             // Ajouter "Autres" si nécessaire
             if (otherClients.length > 0) {
-                const otherTotal = otherClients.reduce((sum, client) => sum + client.balance, 0);
+                const otherTotal = otherClients.reduce((sum, client) => sum + Math.abs(client.balance), 0);
                 labels.push(`Autres (${otherClients.length})`);
                 data.push(otherTotal);
-                colors.push('#ccc');
+                colors.push('#999');
+            }
+            
+            // Calculer le total pour les pourcentages
+            const totalAmount = data.reduce((a, b) => a + b, 0);
+            
+            console.log('Données camembert:', { labels, data, totalAmount }); // Debug
+            
+            // Vérifier qu'on a des données valides
+            if (totalAmount === 0 || data.every(d => d === 0)) {
+                console.warn('Aucune donnée valide pour le camembert');
+                const container = ctx.parentElement;
+                if (container) {
+                    container.innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #666; text-align: center;">
+                            <div style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
+                            <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 5px;">Données invalides</div>
+                            <div style="font-size: 0.9rem;">Impossible d'afficher le graphique</div>
+                        </div>
+                    `;
+                }
+                return;
             }
             
             charts.outstanding = new Chart(ctx, {
@@ -4614,8 +4636,9 @@
                     datasets: [{
                         data: data,
                         backgroundColor: colors.slice(0, labels.length),
-                        borderWidth: 3,
-                        borderColor: '#fff'
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                        hoverBorderWidth: 3
                     }]
                 },
                 options: {
@@ -4626,42 +4649,55 @@
                             display: true,
                             position: 'bottom',
                             labels: {
-                                boxWidth: 12,
-                                padding: 10,
+                                boxWidth: 15,
+                                padding: 15,
                                 usePointStyle: true,
                                 font: {
-                                    size: 11
+                                    size: 12
                                 },
                                 generateLabels: function(chart) {
-                                    const original = Chart.defaults.plugins.legend.labels.generateLabels;
-                                    const labels = original.call(this, chart);
+                                    const dataset = chart.data.datasets[0];
+                                    const total = dataset.data.reduce((a, b) => a + b, 0);
                                     
-                                    // Ajouter les montants aux légendes
-                                    labels.forEach((label, index) => {
-                                        const value = data[index];
-                                        const total = data.reduce((a, b) => a + b, 0);
-                                        const percentage = ((value / total) * 100).toFixed(1);
-                                        label.text = `${label.text}: ${formatCurrency(value)} (${percentage}%)`;
+                                    return chart.data.labels.map((label, index) => {
+                                        const value = dataset.data[index];
+                                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                        
+                                        return {
+                                            text: `${label}: ${formatCurrency(value)} (${percentage}%)`,
+                                            fillStyle: dataset.backgroundColor[index],
+                                            strokeStyle: dataset.backgroundColor[index],
+                                            lineWidth: 0,
+                                            hidden: false,
+                                            index: index
+                                        };
                                     });
-                                    
-                                    return labels;
                                 }
                             }
                         },
                         tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#667eea',
+                            borderWidth: 1,
                             callbacks: {
                                 label: function(context) {
                                     const value = context.parsed;
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    return `${formatCurrency(value)} (${percentage}%)`;
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return `${context.label}: ${formatCurrency(value)} (${percentage}%)`;
                                 }
                             }
                         }
                     },
-                    cutout: '50%',
+                    cutout: '45%',
                     animation: {
-                        duration: 1000
+                        animateRotate: true,
+                        duration: 1200
+                    },
+                    onHover: (event, elements) => {
+                        ctx.style.cursor = elements.length > 0 ? 'pointer' : 'default';
                     },
                     onClick: (event, elements) => {
                         if (elements.length > 0) {
