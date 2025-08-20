@@ -4100,57 +4100,74 @@
 
         // Analyseur de questions intelligent
         function analyzeQuestion(question) {
-            const q = question.toLowerCase();
+            console.log('Question reçue:', question); // Debug
             
-            // Analyser le type de question et extraire les informations
-            try {
-                // Questions sur le CA
-                if (q.includes('ca') || q.includes('chiffre') || q.includes('affaires') || q.includes('revenus')) {
-                    return analyzeRevenueQuestion(q);
+            const normalizedQ = normalizeQuestion(question);
+            console.log('Question normalisée:', normalizedQ); // Debug
+            
+            // Patterns prioritaires avec ordre d'importance
+            const patterns = [
+                // PRODUITS/FORMATS - Priority 1 (plus spécifique en premier)
+                { pattern: /(?:quel|quels?).*(?:meilleur|top|premier).*(?:format|produit|article)/i, handler: () => analyzeTopFormats(normalizedQ) },
+                { pattern: /(?:meilleur|top|premier).*(?:format|produit|article)/i, handler: () => analyzeTopFormats(normalizedQ) },
+                { pattern: /(?:quel|quels?).*(?:format|produit|article).*(?:vend|vendu|rapporte|marche)/i, handler: () => analyzeTopFormats(normalizedQ) },
+                { pattern: /(?:classement|ranking|liste).*(?:format|produit|article)/i, handler: () => analyzeTopFormats(normalizedQ) },
+                { pattern: /format/i, handler: () => analyzeTopFormats(normalizedQ) }, // Catch-all pour "format"
+                
+                // CLIENTS - Priority 2 (après les formats)
+                { pattern: /(?:quel|quels?).*(?:meilleur|top|premier).*(?:client|acheteur)/i, handler: () => analyzeTopClients(normalizedQ) },
+                { pattern: /(?:meilleur|top|premier).*(?:client|acheteur)/i, handler: () => analyzeTopClients(normalizedQ) },
+                { pattern: /(?:client|acheteur).*(?:fidèle|régulier|important)/i, handler: () => analyzeTopClients(normalizedQ) },
+                
+                // CA ET REVENUS - Priority 3
+                { pattern: /(?:combien|quel).*(?:ca|chiffre.*affaires|revenus?|ventes?)/i, handler: () => analyzeTotalRevenue(normalizedQ) },
+                { pattern: /(?:évolution|progression).*(?:ca|chiffre.*affaires)/i, handler: () => analyzeRevenueEvolution(normalizedQ) },
+                
+                // EN-COURS ET PAIEMENTS - Priority 4
+                { pattern: /(?:en.?cours|encours|crédit|dette|solde|impayé)/i, handler: () => analyzeOutstanding(normalizedQ) },
+                { pattern: /(?:encaissement|paiement|règlement|versement)/i, handler: () => analyzePayments(normalizedQ) },
+                
+                // PÉRIODES - Priority 5
+                { pattern: /(?:ce|cette).*(?:mois|semaine|année)/i, handler: () => analyzeCurrentPeriod(normalizedQ) },
+                { pattern: /(?:dernier|dernière).*(?:mois|semaine|année)/i, handler: () => analyzeLastPeriod(normalizedQ) }
+            ];
+            
+            // Chercher le premier pattern qui match
+            for (let { pattern, handler } of patterns) {
+                if (pattern.test(normalizedQ)) {
+                    console.log('Pattern trouvé:', pattern, 'pour question:', normalizedQ); // Debug
+                    try {
+                        return handler();
+                    } catch (error) {
+                        console.error('Erreur dans le handler:', error);
+                        return `Erreur lors de l'analyse de votre question. Veuillez la reformuler.`;
+                    }
                 }
-                
-                // Questions sur les clients
-                if (q.includes('client') || q.includes('meilleur') || q.includes('top client')) {
-                    return analyzeClientQuestion(q);
-                }
-                
-                // Questions sur les produits
-                if (q.includes('produit') || q.includes('article') || q.includes('top produit')) {
-                    return analyzeProductQuestion(q);
-                }
-                
-                // Questions sur les encaissements
-                if (q.includes('encaiss') || q.includes('en-cours') || q.includes('encours') || q.includes('crédit') || q.includes('solde')) {
-                    return analyzePaymentQuestion(q);
-                }
-                
-                // Questions sur les périodes
-                if (q.includes('mois') || q.includes('semaine') || q.includes('trimestre') || q.includes('année') || q.includes('période')) {
-                    return analyzePeriodQuestion(q);
-                }
-                
-                // Questions de comparaison
-                if (q.includes('compar') || q.includes('vs') || q.includes('entre') || q.includes('différence')) {
-                    return analyzeComparisonQuestion(q);
-                }
-                
-                // Question générale sur les statistiques
-                if (q.includes('stat') || q.includes('résumé') || q.includes('bilan') || q.includes('synthèse')) {
-                    return generateGeneralStats();
-                }
-                
-                // Aide
-                if (q.includes('aide') || q.includes('help') || q.includes('comment') || q.includes('que peux')) {
-                    return generateHelpMessage();
-                }
-                
-                // Réponse par défaut avec suggestions
-                return generateDefaultResponse(question);
-                
-            } catch (error) {
-                console.error('Erreur analyse question:', error);
-                return "❌ <strong>Erreur d'analyse</strong><br><br>Désolé, j'ai rencontré une erreur en analysant votre question. Pouvez-vous la reformuler ?";
             }
+            
+            // Aucun pattern trouvé
+            console.log('Aucun pattern trouvé pour:', normalizedQ); // Debug
+            
+            // Aide
+            if (normalizedQ.includes('aide') || normalizedQ.includes('help') || normalizedQ.includes('comment') || normalizedQ.includes('que peux')) {
+                return generateHelpMessage();
+            }
+            
+            // Réponse par défaut avec suggestions
+            return `🤖 <strong>Question non comprise</strong><br><br>
+                Je ne comprends pas votre question. Voici ce que je peux analyser :<br><br>
+                
+                📊 <strong>Analyses disponibles :</strong><br>
+                • "Quel est mon meilleur format ?" - Top des produits/formats<br>
+                • "Qui sont mes meilleurs clients ?" - Top des clients<br>
+                • "Quel est mon CA ?" - Chiffre d'affaires total<br>
+                • "Quels sont mes en-cours ?" - Créances en attente<br><br>
+                
+                <div class="chat-suggestions">
+                    <div class="chat-suggestion" onclick="sendChatMessage('Quel est mon meilleur format ?')">Top formats</div>
+                    <div class="chat-suggestion" onclick="sendChatMessage('Qui sont mes meilleurs clients ?')">Top clients</div>
+                    <div class="chat-suggestion" onclick="sendChatMessage('Quel est mon CA total ?')">CA total</div>
+                </div>`;
         }
 
         function analyzeRevenueQuestion(question) {
