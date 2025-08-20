@@ -420,77 +420,22 @@
             background: #f8f9fa;
         }
         
-        
-        /* Responsive pour mobile - Légende des en-cours */
+        /* Responsive pour la carte en-cours compact */
         @media (max-width: 768px) {
-            .outstanding-legend {
-                position: relative;
-                bottom: auto;
-                left: auto;
-                right: auto;
-                margin-top: 15px;
+            .chart-card .clients-summary-table {
                 max-height: 150px;
             }
             
-            .legend-item {
-                font-size: 0.9rem;
-                padding: 6px 10px;
+            .chart-card > div {
+                flex-direction: column !important;
+                align-items: center !important;
             }
-        }
-        
-        /* Style pour la légende du graphique en-cours */
-        .outstanding-legend {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 8px;
-            padding: 10px;
-            max-height: 120px;
-            overflow-y: auto;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .legend-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 4px 8px;
-            margin: 2px 0;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-size: 0.85rem;
-        }
-        
-        .legend-item:hover {
-            background: rgba(102, 126, 234, 0.1);
-        }
-        
-        .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-            flex-shrink: 0;
-        }
-        
-        .legend-label {
-            flex: 1;
-            font-weight: 500;
-            color: #333;
-            text-overflow: ellipsis;
-            overflow: hidden;
-            white-space: nowrap;
-        }
-        
-        .legend-value {
-            font-weight: 600;
-            color: #667eea;
-            margin-left: 8px;
+            
+            .chart-card > div > div:last-child {
+                width: 100px !important;
+                height: 100px !important;
+                margin-top: 15px !important;
+            }
         }
 
         .balance-badge {
@@ -2178,10 +2123,24 @@
                     </div>
                     <div class="chart-card">
                         <h3 class="chart-title">👥 En-cours Clients</h3>
-                        <div class="chart-container" style="position: relative;">
-                            <canvas id="outstandingChart"></canvas>
-                            <div class="outstanding-legend" id="outstandingLegend">
-                                <!-- Légende dynamique -->
+                        <div style="display: flex; gap: 15px; align-items: flex-start; height: 100%;">
+                            <div style="flex: 1; min-width: 0;">
+                                <div class="clients-summary-table" style="max-height: 200px; overflow-y: auto;">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Client</th>
+                                                <th style="text-align: right;">En-cours</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="clientsSummaryBody">
+                                            <!-- Rempli dynamiquement -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div style="width: 120px; height: 120px; flex-shrink: 0; margin-top: 10px;">
+                                <canvas id="outstandingChart" style="max-width: 100%; max-height: 100%;"></canvas>
                             </div>
                         </div>
                     </div>
@@ -4536,8 +4495,13 @@
             showAlert('Filtres étendus à toutes les périodes', 'success');
         }
 
-        // Mise à jour graphique En-cours Clients dans dashboard (NON FILTRÉE)
+        // Mise à jour tableau et graphique En-cours Clients dans dashboard (NON FILTRÉE)
         function updateClientsSummaryTable() {
+            const tbody = document.getElementById('clientsSummaryBody');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
             const clientsData = {};
             
             // Calcul des ventes par client (TOUTES les données)
@@ -4573,56 +4537,63 @@
             }).filter(client => client.balance > 0) // Seulement les clients avec encours
               .sort((a, b) => b.balance - a.balance); // Tri décroissant
             
-            // Mettre à jour le graphique en camembert des en-cours
-            updateOutstandingChart(clients);
+            // Affichage du tableau
+            if (clients.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: #666; padding: 20px;">✅ Aucun en-cours</td></tr>';
+            } else {
+                clients.forEach(client => {
+                    const row = tbody.insertRow();
+                    row.style.cursor = 'pointer';
+                    row.onclick = () => showClientDetails(client.name);
+                    
+                    row.innerHTML = `
+                        <td title="${client.name}" style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${client.name}</td>
+                        <td style="text-align: right;">
+                            <span class="balance-badge balance-negative" style="font-size: 0.8rem;">
+                                ${formatCurrency(client.balance)}
+                            </span>
+                        </td>
+                    `;
+                });
+            }
+            
+            // Mettre à jour le petit graphique
+            updateCompactOutstandingChart(clients);
         }
 
-        // Graphique en camembert des en-cours par client avec légende interactive
-        function updateOutstandingChart(clientsData) {
+        // Petit graphique compact des en-cours
+        function updateCompactOutstandingChart(clientsData) {
             const ctx = document.getElementById('outstandingChart');
-            const legendContainer = document.getElementById('outstandingLegend');
+            if (!ctx) return;
             
-            if (!ctx || !legendContainer) return;
-            
-            // Détruire le graphique existant s'il y en a un
+            // Détruire le graphique existant
             if (charts.outstanding) {
                 charts.outstanding.destroy();
             }
             
             if (clientsData.length === 0) {
-                // Afficher un message si aucun en-cours
                 ctx.style.display = 'none';
-                legendContainer.innerHTML = `
-                    <div style="text-align: center; padding: 20px; color: #666;">
-                        <div style="font-size: 2rem; margin-bottom: 10px;">✅</div>
-                        <div>Aucun en-cours client</div>
-                        <div style="font-size: 0.8rem; margin-top: 5px;">Tous vos clients sont soldés !</div>
-                    </div>
-                `;
                 return;
             }
             
             ctx.style.display = 'block';
             
-            // Prendre les 6 premiers clients et grouper les autres
-            const topClients = clientsData.slice(0, 6);
-            const otherClients = clientsData.slice(6);
+            // Prendre les 4 premiers clients max
+            const topClients = clientsData.slice(0, 4);
+            const otherClients = clientsData.slice(4);
             
-            const labels = topClients.map(client => client.name);
+            const labels = topClients.map(client => client.name.length > 8 ? client.name.substring(0, 8) + '...' : client.name);
             const data = topClients.map(client => client.balance);
-            const colors = [
-                '#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#ffecd2'
-            ];
+            const colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b'];
             
             // Ajouter "Autres" si nécessaire
             if (otherClients.length > 0) {
                 const otherTotal = otherClients.reduce((sum, client) => sum + client.balance, 0);
-                labels.push(`Autres (${otherClients.length})`);
+                labels.push('Autres');
                 data.push(otherTotal);
                 colors.push('#ccc');
             }
             
-            // Créer le graphique
             charts.outstanding = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -4630,9 +4601,8 @@
                     datasets: [{
                         data: data,
                         backgroundColor: colors.slice(0, labels.length),
-                        borderWidth: 3,
-                        borderColor: '#fff',
-                        hoverBorderWidth: 4
+                        borderWidth: 1,
+                        borderColor: '#fff'
                     }]
                 },
                 options: {
@@ -4643,77 +4613,19 @@
                             display: false
                         },
                         tooltip: {
-                            backgroundColor: 'rgba(0,0,0,0.8)',
-                            titleColor: '#fff',
-                            bodyColor: '#fff',
-                            borderColor: '#667eea',
-                            borderWidth: 1,
                             callbacks: {
                                 label: function(context) {
-                                    const value = context.parsed;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    return `${formatCurrency(value)} (${percentage}%)`;
+                                    return formatCurrency(context.parsed);
                                 }
                             }
                         }
                     },
-                    cutout: '65%',
+                    cutout: '60%',
                     animation: {
-                        animateRotate: true,
-                        duration: 1000
-                    },
-                    onHover: (event, elements) => {
-                        ctx.style.cursor = elements.length > 0 ? 'pointer' : 'default';
-                    },
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const index = elements[0].index;
-                            const clientName = labels[index];
-                            if (!clientName.startsWith('Autres')) {
-                                showClientDetails(clientName);
-                            }
-                        }
+                        duration: 800
                     }
                 }
             });
-            
-            // Générer la légende interactive
-            generateOutstandingLegend(labels, data, colors, clientsData);
-        }
-        
-        // Générer la légende interactive pour le graphique des en-cours
-        function generateOutstandingLegend(labels, data, colors, allClientsData) {
-            const legendContainer = document.getElementById('outstandingLegend');
-            if (!legendContainer) return;
-            
-            const total = data.reduce((a, b) => a + b, 0);
-            let legendHtml = '';
-            
-            labels.forEach((label, index) => {
-                const value = data[index];
-                const percentage = ((value / total) * 100).toFixed(1);
-                const color = colors[index];
-                
-                legendHtml += `
-                    <div class="legend-item" onclick="handleLegendClick('${label}')" title="Cliquer pour voir les détails">
-                        <div style="display: flex; align-items: center; flex: 1; min-width: 0;">
-                            <div class="legend-color" style="background-color: ${color};"></div>
-                            <div class="legend-label" title="${label}">${label}</div>
-                        </div>
-                        <div class="legend-value">${formatCurrency(value)}</div>
-                    </div>
-                `;
-            });
-            
-            legendContainer.innerHTML = legendHtml;
-        }
-        
-        // Gérer les clics sur la légende
-        function handleLegendClick(clientName) {
-            if (!clientName.startsWith('Autres')) {
-                showClientDetails(clientName);
-            }
         }
 
         // Afficher détails client
@@ -6063,7 +5975,34 @@ Date [ESPACES] Client [ESPACES] Montant
                 charts.evolution.destroy();
             }
             
-            // Données CA par date
+            // Appliquer les mêmes filtres aux encaissements que pour les ventes
+            const dateStart = document.getElementById('dateStart').value;
+            const dateEnd = document.getElementById('dateEnd').value;
+            const clientFilter = document.getElementById('clientFilter').value;
+            
+            const filteredPayments = paymentsData.filter(payment => {
+                let include = true;
+                
+                if (dateStart) {
+                    const paymentDate = parseDate(payment.date);
+                    const startDate = new Date(dateStart);
+                    if (paymentDate < startDate) include = false;
+                }
+                
+                if (dateEnd) {
+                    const paymentDate = parseDate(payment.date);
+                    const endDate = new Date(dateEnd);
+                    if (paymentDate > endDate) include = false;
+                }
+                
+                if (clientFilter && payment.client !== clientFilter) {
+                    include = false;
+                }
+                
+                return include;
+            });
+            
+            // Données CA par date (filtrées)
             const dailySales = {};
             filteredData.forEach(sale => {
                 const date = parseDate(sale.date);
@@ -6073,9 +6012,9 @@ Date [ESPACES] Client [ESPACES] Montant
                 }
             });
             
-            // Données encaissements par date
+            // Données encaissements par date (filtrés avec les mêmes critères)
             const dailyPayments = {};
-            paymentsData.forEach(payment => {
+            filteredPayments.forEach(payment => {
                 const date = parseDate(payment.date);
                 if (date) {
                     const dateKey = date.toISOString().split('T')[0];
