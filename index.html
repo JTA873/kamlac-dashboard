@@ -3685,14 +3685,17 @@
                 // Préprocessing pour normaliser la question
                 const normalizedQ = normalizeQuestion(q);
                 
-                // Système de patterns avec priorités
+                // Système de patterns avec priorités (ordre important!)
                 const patterns = [
-                    // Questions spécifiques sur les formats/produits
-                    { pattern: /(?:top|meilleur|premier).*(?:format|produit|article)/i, handler: () => analyzeTopFormats(normalizedQ) },
-                    { pattern: /(?:quel|quels).*(?:format|produit|article).*(?:vend|vendu|rapporte)/i, handler: () => analyzeTopFormats(normalizedQ) },
+                    // Questions spécifiques sur les formats/produits (priorité haute)
+                    { pattern: /(?:quel|quels?).*(?:meilleur|top|premier).*(?:format|produit|article)/i, handler: () => analyzeTopFormats(normalizedQ) },
+                    { pattern: /(?:meilleur|top|premier).*(?:format|produit|article)/i, handler: () => analyzeTopFormats(normalizedQ) },
+                    { pattern: /(?:quel|quels?).*(?:format|produit|article).*(?:vend|vendu|rapporte|marche)/i, handler: () => analyzeTopFormats(normalizedQ) },
                     { pattern: /(?:classement|ranking|liste).*(?:format|produit|article)/i, handler: () => analyzeTopFormats(normalizedQ) },
+                    { pattern: /format/i, handler: () => analyzeTopFormats(normalizedQ) }, // Catch-all pour "format"
                     
-                    // Questions sur les clients
+                    // Questions spécifiques sur les clients (après les formats)
+                    { pattern: /(?:quel|quels?).*(?:meilleur|top|premier).*client/i, handler: () => analyzeTopClients(normalizedQ) },
                     { pattern: /(?:top|meilleur|premier).*client/i, handler: () => analyzeTopClients(normalizedQ) },
                     { pattern: /(?:quel|qui).*(?:client|meilleur).*(?:achète|paie|dépense)/i, handler: () => analyzeTopClients(normalizedQ) },
                     { pattern: /(?:client.*fidèle|fidélité|régulier)/i, handler: () => analyzeClientLoyalty(normalizedQ) },
@@ -3739,23 +3742,43 @@
             }
         }
         
-        // Normalisation de la question
+        // Normalisation avancée de la question
         function normalizeQuestion(q) {
-            const synonyms = {
-                'ca': ['chiffre affaires', 'revenus', 'ventes', 'turnover'],
-                'client': ['customer', 'acheteur', 'clientèle'],
-                'produit': ['article', 'format', 'item', 'marchandise'],
-                'top': ['meilleur', 'premier', 'best', 'leading'],
-                'mois': ['mensuel', 'monthly'],
-                'année': ['annuel', 'yearly', 'annual']
+            // Corrections de frappe courantes
+            const corrections = {
+                'quel mon': 'quel est mon',
+                'quels mon': 'quels sont mes',
+                'qu est': 'quel est',
+                'koi': 'quoi',
+                'cmb': 'combien',
+                'meileur': 'meilleur',
+                'meieur': 'meilleur',
+                'meilleur format': 'meilleur format',
+                'encour': 'en-cours',
+                'toop': 'top'
             };
             
-            let normalized = q;
-            Object.entries(synonyms).forEach(([key, values]) => {
-                values.forEach(synonym => {
-                    normalized = normalized.replace(new RegExp(synonym, 'g'), key);
-                });
+            // Synonymes améliorés
+            const synonyms = {
+                'format': ['produit', 'article', 'item', 'marchandise', 'référence'],
+                'client': ['customer', 'acheteur', 'clientèle', 'prospect'],
+                'meilleur': ['top', 'premier', 'best', 'leading', 'principal'],
+                'ca': ['chiffre affaires', 'revenus', 'ventes', 'turnover', 'business'],
+                'encaissement': ['paiement', 'versement', 'règlement'],
+                'en-cours': ['encours', 'crédit', 'dette', 'solde', 'dû']
+            };
+            
+            let normalized = q.toLowerCase().trim();
+            
+            // Appliquer les corrections de frappe
+            Object.entries(corrections).forEach(([wrong, correct]) => {
+                normalized = normalized.replace(new RegExp(wrong, 'g'), correct);
             });
+            
+            // Nettoyer les espaces multiples
+            normalized = normalized.replace(/\s+/g, ' ');
+            
+            console.log('Question normalisée:', normalized); // Debug
             
             return normalized;
         }
