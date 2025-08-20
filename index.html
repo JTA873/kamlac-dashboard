@@ -3676,68 +3676,194 @@
         let pendingAction = null;
         let editingNoteId = null; // ID de la note en cours d'édition
 
-        // Assistant IA simplifié - Analyseur d'intentions
+        // Assistant IA avancé - Analyseur d'intentions intelligent
         function analyzeQuestion(question) {
-            const q = question.toLowerCase();
+            const q = question.toLowerCase().trim();
             console.log('Question reçue:', question, 'Processée:', q); // Debug
             
             try {
-                // Afficher les notes
-                if ((q.includes('affiche') && q.includes('note')) || 
-                    (q.includes('voir') && q.includes('note')) || 
-                    q.includes('mes notes') || 
-                    (q.includes('mes') && q.includes('note'))) {
-                    console.log('Condition notes détectée, aiNotes.length:', aiNotes.length); // Debug
-                    return getAllNotesHtml();
+                // Préprocessing pour normaliser la question
+                const normalizedQ = normalizeQuestion(q);
+                
+                // Système de patterns avec priorités
+                const patterns = [
+                    // Questions spécifiques sur les formats/produits
+                    { pattern: /(?:top|meilleur|premier).*(?:format|produit|article)/i, handler: () => analyzeTopFormats(normalizedQ) },
+                    { pattern: /(?:quel|quels).*(?:format|produit|article).*(?:vend|vendu|rapporte)/i, handler: () => analyzeTopFormats(normalizedQ) },
+                    { pattern: /(?:classement|ranking|liste).*(?:format|produit|article)/i, handler: () => analyzeTopFormats(normalizedQ) },
+                    
+                    // Questions sur les clients
+                    { pattern: /(?:top|meilleur|premier).*client/i, handler: () => analyzeTopClients(normalizedQ) },
+                    { pattern: /(?:quel|qui).*(?:client|meilleur).*(?:achète|paie|dépense)/i, handler: () => analyzeTopClients(normalizedQ) },
+                    { pattern: /(?:client.*fidèle|fidélité|régulier)/i, handler: () => analyzeClientLoyalty(normalizedQ) },
+                    { pattern: /(?:client.*débiteur|en-cours|encours|doit)/i, handler: () => analyzeOutstandingClients(normalizedQ) },
+                    
+                    // Questions financières avancées
+                    { pattern: /(?:ca|chiffre.*affaires|revenus?).*(?:total|global|annuel|mensuel)/i, handler: () => analyzeRevenue(normalizedQ) },
+                    { pattern: /(?:bénéfice|marge|profit|rentabilité)/i, handler: () => analyzeProfitability(normalizedQ) },
+                    { pattern: /(?:évolution|tendance|progression|croissance)/i, handler: () => analyzeEvolution(normalizedQ) },
+                    { pattern: /(?:moyenne|mean|typical)/i, handler: () => analyzeAverages(normalizedQ) },
+                    
+                    // Questions de performance
+                    { pattern: /(?:performance|résultat).*(?:mois|semaine|trimestre|année)/i, handler: () => analyzePerformancePeriod(normalizedQ) },
+                    { pattern: /(?:comparaison|compare|vs|versus|différence)/i, handler: () => analyzeComparison(normalizedQ) },
+                    
+                    // Questions d'analyse temporelle
+                    { pattern: /(?:ce mois|mois.*cours|mois.*actuel)/i, handler: () => analyzeCurrentMonth() },
+                    { pattern: /(?:cette.*semaine|semaine.*cours)/i, handler: () => analyzeCurrentWeek() },
+                    { pattern: /(?:aujourd'hui|jour.*cours)/i, handler: () => analyzeToday() },
+                    
+                    // Questions sur les encaissements
+                    { pattern: /(?:encaissement|encaissé|payé|payment)/i, handler: () => analyzePayments(normalizedQ) },
+                    { pattern: /(?:en-cours|encours|crédit|dette|solde)/i, handler: () => analyzeOutstanding(normalizedQ) },
+                    
+                    // Questions générales
+                    { pattern: /(?:statistique|stat|bilan|synthèse|résumé)/i, handler: () => generateAdvancedStats() },
+                    { pattern: /(?:mes notes|affiche.*note|voir.*note)/i, handler: () => getAllNotesHtml() },
+                    { pattern: /(?:aide|help|comment|que.*peux)/i, handler: () => generateAdvancedHelp() }
+                ];
+                
+                // Recherche du premier pattern correspondant
+                for (const { pattern, handler } of patterns) {
+                    if (pattern.test(question)) {
+                        return handler();
+                    }
                 }
                 
-                // Questions sur le CA
-                if (q.includes('ca') || q.includes('chiffre') || q.includes('affaires') || q.includes('revenus')) {
-                    return analyzeRevenueQuestion(q);
-                }
-                
-                // Questions sur les clients
-                if (q.includes('client') || q.includes('meilleur') || q.includes('top client')) {
-                    return analyzeClientQuestion(q);
-                }
-                
-                // Questions sur les produits
-                if (q.includes('produit') || q.includes('article') || q.includes('top produit')) {
-                    return analyzeProductQuestion(q);
-                }
-                
-                // Questions sur les encaissements
-                if (q.includes('encaiss') || q.includes('en-cours') || q.includes('encours') || q.includes('crédit') || q.includes('solde')) {
-                    return analyzePaymentQuestion(q);
-                }
-                
-                // Questions sur les périodes
-                if (q.includes('mois') || q.includes('semaine') || q.includes('trimestre') || q.includes('année') || q.includes('période')) {
-                    return analyzePeriodQuestion(q);
-                }
-                
-                // Questions de comparaison
-                if (q.includes('compar') || q.includes('vs') || q.includes('entre') || q.includes('différence')) {
-                    return analyzeComparisonQuestion(q);
-                }
-                
-                // Question générale sur les statistiques
-                if (q.includes('stat') || q.includes('résumé') || q.includes('bilan') || q.includes('synthèse')) {
-                    return generateGeneralStats();
-                }
-                
-                // Aide
-                if (q.includes('aide') || q.includes('help') || q.includes('comment') || q.includes('que peux')) {
-                    return generateSimpleHelpMessage();
-                }
-                
-                // Réponse par défaut avec suggestions
-                return generateDefaultResponse(question);
+                // Si aucun pattern spécifique, analyse intelligente
+                return smartAnalysis(normalizedQ, question);
                 
             } catch (error) {
                 console.error('Erreur analyse question:', error);
-                return "❌ <strong>Erreur d'analyse</strong><br><br>Désolé, j'ai rencontré une erreur en analysant votre question. Pouvez-vous la reformuler ?";
+                return "❌ <strong>Erreur d'analyse</strong><br><br>Désolé, j'ai rencontré une erreur. Pouvez-vous reformuler votre question ?";
             }
+        }
+        
+        // Normalisation de la question
+        function normalizeQuestion(q) {
+            const synonyms = {
+                'ca': ['chiffre affaires', 'revenus', 'ventes', 'turnover'],
+                'client': ['customer', 'acheteur', 'clientèle'],
+                'produit': ['article', 'format', 'item', 'marchandise'],
+                'top': ['meilleur', 'premier', 'best', 'leading'],
+                'mois': ['mensuel', 'monthly'],
+                'année': ['annuel', 'yearly', 'annual']
+            };
+            
+            let normalized = q;
+            Object.entries(synonyms).forEach(([key, values]) => {
+                values.forEach(synonym => {
+                    normalized = normalized.replace(new RegExp(synonym, 'g'), key);
+                });
+            });
+            
+            return normalized;
+        }
+        
+        // Analyse intelligente des top formats/produits
+        function analyzeTopFormats(question) {
+            if (!salesData || salesData.length === 0) {
+                return "📦 <strong>Aucune donnée de vente</strong><br><br>Pas de données pour analyser les formats.";
+            }
+            
+            const productStats = {};
+            const productQuantities = {};
+            let totalRevenue = 0;
+            
+            salesData.forEach(sale => {
+                const product = sale.product || 'Produit non spécifié';
+                const value = sale.valeur || 0;
+                const qty = sale.quantity || 0;
+                
+                productStats[product] = (productStats[product] || 0) + value;
+                productQuantities[product] = (productQuantities[product] || 0) + qty;
+                totalRevenue += value;
+            });
+            
+            const sortedProducts = Object.entries(productStats)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 8);
+            
+            if (sortedProducts.length === 0) {
+                return "📦 <strong>Aucun produit trouvé</strong><br><br>Aucune donnée de produit disponible.";
+            }
+            
+            let response = `📦 <strong>Top Formats/Produits</strong><br><br>`;
+            
+            sortedProducts.forEach(([product, value], index) => {
+                const percentage = ((value / totalRevenue) * 100).toFixed(1);
+                const quantity = productQuantities[product] || 0;
+                const avgPrice = quantity > 0 ? (value / quantity) : 0;
+                
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                
+                response += `<div style="margin: 12px 0; padding: 10px; background: ${index < 3 ? '#f8f9ff' : '#f9f9f9'}; border-radius: 8px;">
+                    <strong>${medal} ${product}</strong><br>
+                    💰 CA: ${formatCurrency(value)} (${percentage}%)<br>
+                    📦 Quantité: ${quantity} unités<br>
+                    💵 Prix moyen: ${formatCurrency(avgPrice)}
+                </div>`;
+            });
+            
+            response += `<br><div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendChatMessage('Détails du produit ${sortedProducts[0][0]}')">Détails produit #1</div>
+                <div class="chat-suggestion" onclick="sendChatMessage('Évolution ventes ${sortedProducts[0][0]}')">Évolution top produit</div>
+                <div class="chat-suggestion" onclick="sendChatMessage('Comparer ${sortedProducts[0][0]} et ${sortedProducts[1] ? sortedProducts[1][0] : 'autres'}')">Comparer produits</div>
+            </div>`;
+            
+            return response;
+        }
+        
+        // Analyse des top clients
+        function analyzeTopClients(question) {
+            if (!salesData || salesData.length === 0) {
+                return "👥 <strong>Aucune donnée client</strong><br><br>Pas de données pour analyser les clients.";
+            }
+            
+            const clientStats = {};
+            const clientTransactions = {};
+            let totalRevenue = 0;
+            
+            salesData.forEach(sale => {
+                const client = sale.client || 'Client non spécifié';
+                const value = sale.valeur || 0;
+                
+                clientStats[client] = (clientStats[client] || 0) + value;
+                clientTransactions[client] = (clientTransactions[client] || 0) + 1;
+                totalRevenue += value;
+            });
+            
+            const sortedClients = Object.entries(clientStats)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 10);
+            
+            let response = `👥 <strong>Top Clients</strong><br><br>`;
+            
+            sortedClients.forEach(([client, value], index) => {
+                const percentage = ((value / totalRevenue) * 100).toFixed(1);
+                const transactions = clientTransactions[client] || 0;
+                const avgTransaction = transactions > 0 ? (value / transactions) : 0;
+                const balance = getClientBalance(client);
+                
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                const statusIcon = balance > 0 ? '⚠️' : balance < 0 ? '💳' : '✅';
+                
+                response += `<div style="margin: 12px 0; padding: 10px; background: ${index < 3 ? '#f8fff8' : '#f9f9f9'}; border-radius: 8px;">
+                    <strong>${medal} ${client} ${statusIcon}</strong><br>
+                    💰 CA total: ${formatCurrency(value)} (${percentage}%)<br>
+                    🔄 Transactions: ${transactions}<br>
+                    💵 Panier moyen: ${formatCurrency(avgTransaction)}<br>
+                    📊 Solde: ${balance > 0 ? 'Doit ' + formatCurrency(balance) : balance < 0 ? 'Crédit ' + formatCurrency(Math.abs(balance)) : 'Soldé'}
+                </div>`;
+            });
+            
+            response += `<br><div class="chat-suggestions">
+                <div class="chat-suggestion" onclick="sendChatMessage('Détails client ${sortedClients[0][0]}')">Détails client #1</div>
+                <div class="chat-suggestion" onclick="sendChatMessage('Clients en-cours')">Clients en-cours</div>
+                <div class="chat-suggestion" onclick="sendChatMessage('Fidélité clients')">Analyse fidélité</div>
+            </div>`;
+            
+            return response;
         }
 
         // Actions directes - Encaissement
@@ -3863,11 +3989,16 @@
             sendChatMessage();
         }
 
-        function sendChatMessage() {
+        function sendChatMessage(predefinedMessage = null) {
             const input = document.getElementById('chatInput');
-            const message = input.value.trim();
+            const message = predefinedMessage || input.value.trim();
             
             if (!message) return;
+            
+            // Mettre à jour l'input si c'est un message prédéfini
+            if (predefinedMessage) {
+                input.value = predefinedMessage;
+            }
             
             // Ajouter le message utilisateur
             addChatMessage(message, 'user');
