@@ -420,6 +420,25 @@
             background: #f8f9fa;
         }
         
+        /* Style pour le layout avec graphique */
+        .clients-summary-card .clients-summary-table {
+            margin-top: 0;
+        }
+        
+        /* Responsive pour mobile */
+        @media (max-width: 768px) {
+            .clients-summary-card > div {
+                flex-direction: column !important;
+                gap: 20px !important;
+            }
+            
+            .clients-summary-card > div > div:last-child {
+                width: 200px !important;
+                height: 200px !important;
+                align-self: center;
+            }
+        }
+        
         .balance-badge {
             padding: 4px 8px;
             border-radius: 6px;
@@ -2105,18 +2124,23 @@
                     </div>
                     <div class="clients-summary-card">
                         <h3 style="margin-bottom: 15px; color: #667eea;">👥 En-cours Clients (Toutes données)</h3>
-                        <div class="clients-summary-table">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Client</th>
-                                        <th>En-cours</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="clientsSummaryBody">
-                                    <!-- Rempli dynamiquement -->
-                                </tbody>
-                            </table>
+                        <div style="display: flex; gap: 15px; align-items: flex-start;">
+                            <div class="clients-summary-table" style="flex: 1;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Client</th>
+                                            <th>En-cours</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="clientsSummaryBody">
+                                        <!-- Rempli dynamiquement -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="width: 180px; height: 180px; flex-shrink: 0;">
+                                <canvas id="outstandingChart" style="max-width: 100%; max-height: 100%;"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -4529,6 +4553,79 @@
             if (clients.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: #666;">Aucun en-cours</td></tr>';
             }
+            
+            // Mettre à jour le graphique en camembert des en-cours
+            updateOutstandingChart(clients);
+        }
+
+        // Graphique en camembert des en-cours par client
+        function updateOutstandingChart(clientsData) {
+            const ctx = document.getElementById('outstandingChart');
+            if (!ctx) return;
+            
+            // Détruire le graphique existant s'il y en a un
+            if (charts.outstanding) {
+                charts.outstanding.destroy();
+            }
+            
+            if (clientsData.length === 0) {
+                // Afficher un message si aucun en-cours
+                ctx.style.display = 'none';
+                return;
+            }
+            
+            ctx.style.display = 'block';
+            
+            // Prendre les 5 premiers clients et grouper les autres
+            const topClients = clientsData.slice(0, 5);
+            const otherClients = clientsData.slice(5);
+            
+            const labels = topClients.map(client => client.name);
+            const data = topClients.map(client => client.balance);
+            const colors = [
+                '#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a',
+                '#ffecd2', '#fcb69f', '#a8edea', '#fed6e3', '#d299c2'
+            ];
+            
+            // Ajouter "Autres" si nécessaire
+            if (otherClients.length > 0) {
+                const otherTotal = otherClients.reduce((sum, client) => sum + client.balance, 0);
+                labels.push(`Autres (${otherClients.length})`);
+                data.push(otherTotal);
+            }
+            
+            charts.outstanding = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: ${formatCurrency(value)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
         }
 
         // Afficher détails client
