@@ -2042,45 +2042,8 @@
             <button class="nav-tab" onclick="showSection('recap')">📋 Récap.</button>
             <button class="nav-tab" onclick="showSection('sales')">💼 + Vente</button>
             <button class="nav-tab" onclick="showSection('payments')">💰 + Encaisser</button>
-            <button class="nav-tab" onclick="showSection('chat')">📊 Analyses</button>
+            <button class="nav-tab" onclick="showSection('chat')">🤖 Assistant IA</button>
             <button class="nav-tab" onclick="showSection('settings')">⚙️ Paramètres</button>
-        </div>
-        
-        <!-- Barre de filtres de période -->
-        <div class="period-filter-bar" id="periodFilterBar">
-            <div class="period-filter-label">
-                <span>📅</span>
-                <span>Période d'affichage :</span>
-            </div>
-            <div class="period-filter-buttons">
-                <button class="period-filter-btn active" onclick="applyPeriodFilter('all')" data-period="all">
-                    <span class="icon">📊</span>
-                    <span class="text">Toutes données</span>
-                </button>
-                <button class="period-filter-btn" onclick="applyPeriodFilter('current-week')" data-period="current-week">
-                    <span class="icon">📆</span>
-                    <span class="text">Semaine actuelle</span>
-                </button>
-                <button class="period-filter-btn" onclick="applyPeriodFilter('current-month')" data-period="current-month">
-                    <span class="icon">📅</span>
-                    <span class="text">Mois en cours</span>
-                </button>
-                <button class="period-filter-btn" onclick="applyPeriodFilter('current-year')" data-period="current-year">
-                    <span class="icon">🗓️</span>
-                    <span class="text">Année en cours</span>
-                </button>
-                <button class="period-filter-btn" onclick="applyPeriodFilter('last-30-days')" data-period="last-30-days">
-                    <span class="icon">⏰</span>
-                    <span class="text">30 derniers jours</span>
-                </button>
-                <button class="period-filter-btn custom" onclick="openCustomPeriodDialog()" data-period="custom">
-                    <span class="icon">🎯</span>
-                    <span class="text">Période personnalisée</span>
-                </button>
-            </div>
-            <div class="current-period-info" id="currentPeriodInfo">
-                <span>📈 Affichage : Toutes les données disponibles</span>
-            </div>
         </div>
         
         <!-- Dashboard Section -->
@@ -2517,72 +2480,44 @@
                 
                 <div class="chat-container">
                     <div class="chat-header">
-                        <span>📊</span>
+                        <span>🤖</span>
                         <div>
-                            <div style="font-size: 1.1rem;">Analyses Intelligentes KAMLAC</div>
-                            <div style="font-size: 0.85rem; opacity: 0.9;">Sélectionnez l'analyse souhaitée</div>
+                            <div style="font-size: 1.1rem;">Assistant IA KAMLAC</div>
+                            <div style="font-size: 0.85rem; opacity: 0.9;">Analyses et calculs sur vos données</div>
                         </div>
                     </div>
                     
                     <div class="chat-messages" id="chatMessages">
-                        <!-- Messages d'analyses apparaîtront ici -->
-                    </div>
-                    
-                    <!-- Menu des analyses -->
-                    <div class="analysis-menu" id="analysisMenu">
-                        <div class="analysis-category">
-                            <h4>🏷️ Produits & Formats</h4>
-                            <button class="analysis-btn" onclick="startAnalysis('top-formats')">📈 Top des Formats</button>
-                            <button class="analysis-btn" onclick="startAnalysis('product-performance')">⭐ Performance Produits</button>
-                            <button class="analysis-btn" onclick="startAnalysis('product-trends')">📊 Tendances Produits</button>
-                        </div>
-                        
-                        <div class="analysis-category">
-                            <h4>👥 Clients</h4>
-                            <button class="analysis-btn" onclick="startAnalysis('top-clients')">🏆 Top des Clients</button>
-                            <button class="analysis-btn" onclick="startAnalysis('client-loyalty')">💎 Fidélité Clients</button>
-                            <button class="analysis-btn" onclick="startAnalysis('client-segments')">🎯 Segmentation</button>
-                        </div>
-                        
-                        <div class="analysis-category">
-                            <h4>💰 Chiffre d'Affaires</h4>
-                            <button class="analysis-btn" onclick="startAnalysis('revenue-overview')">📊 Vue d'Ensemble CA</button>
-                            <button class="analysis-btn" onclick="startAnalysis('revenue-evolution')">📈 Évolution CA</button>
-                            <button class="analysis-btn" onclick="startAnalysis('monthly-breakdown')">🗓️ Répartition Mensuelle</button>
-                        </div>
-                        
-                        <div class="analysis-category">
-                            <h4>💳 Paiements</h4>
-                            <button class="analysis-btn" onclick="startAnalysis('outstanding-analysis')">⚠️ Analyse En-cours</button>
-                            <button class="analysis-btn" onclick="startAnalysis('payment-delays')">⏰ Délais Paiement</button>
-                            <button class="analysis-btn" onclick="startAnalysis('cash-flow')">💹 Flux Trésorerie</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Sélecteur de période -->
-                    <div class="period-selector" id="periodSelector" style="display: none;">
-                        <h4>📅 Période d'Analyse</h4>
-                        <div class="period-buttons">
-                            <button class="period-btn active" onclick="selectPredefinedPeriod('all')">📊 Toutes données</button>
-                            <button class="period-btn" onclick="selectPredefinedPeriod('current-month')">📅 Mois en cours</button>
-                            <button class="period-btn" onclick="selectPredefinedPeriod('current-week')">📆 Semaine en cours</button>
-                            <button class="period-btn" onclick="selectPredefinedPeriod('current-year')">🗓️ Année en cours</button>
-                            <button class="period-btn" onclick="selectPredefinedPeriod('last-30-days')">⏰ 30 derniers jours</button>
-                        </div>
-                        <div class="custom-period">
-                            <label>🎯 Période personnalisée :</label>
-                            <div class="date-inputs">
-                                <input type="date" id="startDate" placeholder="Date de début">
-                                <span>→</span>
-                                <input type="date" id="endDate" placeholder="Date de fin">
+                        <div class="chat-message">
+                            <div class="chat-avatar ai">🤖</div>
+                            <div class="chat-bubble ai">
+                                <strong>Bonjour ! 👋</strong><br><br>
+                                Je peux analyser vos données KAMLAC :<br><br>
+                                📊 <strong>Analyses</strong> : CA, top clients, produits<br>
+                                📈 <strong>Calculs</strong> : Moyennes, totaux, évolutions<br>
+                                  <strong>Notes</strong> : Consultez vos notes avec "affiche mes notes"<br>
+                                  <strong>Comparaisons</strong> : Entre clients et produits
+                                <br><br>
+                                <div class="chat-suggestions">
+                                    <div class="chat-suggestion" onclick="sendSuggestion('Quel est mon CA total ?')">CA total</div>
+                                    <div class="chat-suggestion" onclick="sendSuggestion('Qui est mon meilleur client ?')">Meilleur client</div>
+                                    <div class="chat-suggestion" onclick="sendSuggestion('Mes ventes ce mois')">Ventes du mois</div>
+                                    <div class="chat-suggestion" onclick="sendSuggestion('Affiche mes notes')">Mes notes</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="analysis-actions">
-                            <button class="action-btn primary" onclick="runSelectedAnalysis()">🔍 Lancer l'Analyse</button>
-                            <button class="action-btn secondary" onclick="exportAnalysis()">📊 Export Excel</button>
-                            <button class="action-btn tertiary" onclick="cancelAnalysis()">❌ Annuler</button>
-                        </div>
                     </div>
+                    
+                    <div class="chat-input-container">
+                        <div class="chat-input-wrapper">
+                            <input type="text" class="chat-input" id="chatInput" placeholder="Posez votre question..." onkeypress="handleChatKeyPress(event)" oninput="handleChatInputChange(event)" onfocus="showChatSuggestions()" onblur="hideChatSuggestions()">
+                            <div class="chat-suggestions-dropdown" id="chatSuggestionsDropdown">
+                                <!-- Les suggestions apparaîtront ici -->
+                            </div>
+                        </div>
+                        <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">
+                            ➤
+                        </button>
                     </div>
                 </div>
             </div>
@@ -3201,9 +3136,6 @@
             updatePaymentsDisplay();
             setTodayForNewInvoice();
             updateClientsSummaryTable();
-            
-            // Initialiser le système d'analyses intelligentes
-            initializeAnalysisSystem();
             
         // Message de bienvenue avec fonctionnalités
         setTimeout(() => {
