@@ -1776,6 +1776,105 @@
             touch-action: manipulation;
         }
         
+        /* === NAVIGATION MODULES === */
+        .module-nav {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 25px;
+            padding: 0 10px;
+        }
+        
+        .module-tab {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 3px solid #dee2e6;
+            padding: 16px 24px;
+            border-radius: 15px;
+            color: #495057;
+            cursor: pointer;
+            font-size: clamp(14px, 3.5vw, 18px);
+            font-weight: 700;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            min-height: 50px;
+            min-width: 200px;
+            touch-action: manipulation;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .module-tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.6s ease;
+        }
+        
+        .module-tab:hover::before {
+            left: 100%;
+        }
+        
+        .module-tab:hover {
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .module-tab.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: #5a67d8;
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 35px rgba(102, 126, 234, 0.4);
+        }
+        
+        .module-tab.active:hover {
+            transform: translateY(-4px) scale(1.04);
+        }
+        
+        /* === MODULES === */
+        .module {
+            display: none;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .module.active {
+            display: block;
+            animation: slideIn 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        
+        /* Responsive modules */
+        @media (max-width: 768px) {
+            .module-nav {
+                flex-direction: column;
+                gap: 10px;
+                padding: 0 5px;
+            }
+            
+            .module-tab {
+                width: 100%;
+                padding: 14px 20px;
+                min-width: auto;
+                font-size: 16px;
+                text-align: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .module-tab {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+        }
+        
         .floating-btn:hover {
             transform: scale(1.1) rotate(90deg);
             box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
@@ -2036,15 +2135,24 @@
             </div>
             <span class="cloud-status" id="cloudStatus">🔄 Initialisation...</span>
         </div>
-        <div class="nav-tabs">
-            <button class="nav-tab active" onclick="showSection('dashboard')">📈 Dashboard</button>
-            <button class="nav-tab" onclick="showSection('clients')">👥 Compte client</button>
-            <button class="nav-tab" onclick="showSection('recap')">📋 Récap.</button>
-            <button class="nav-tab" onclick="showSection('sales')">💼 + Vente</button>
-            <button class="nav-tab" onclick="showSection('payments')">💰 + Encaisser</button>
-            <button class="nav-tab" onclick="showSection('chat')">🤖 Assistant IA</button>
-            <button class="nav-tab" onclick="showSection('settings')">⚙️ Paramètres</button>
+        
+        <!-- Navigation principale des modules -->
+        <div class="module-nav">
+            <button class="module-tab active" onclick="showModule('commercial')">💼 Module Commercial</button>
+            <button class="module-tab" onclick="showModule('stocks')">📦 Module Stocks</button>
         </div>
+        
+        <!-- Module Commercial -->
+        <div id="commercialModule" class="module active">
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="showSection('dashboard')">📈 Dashboard</button>
+                <button class="nav-tab" onclick="showSection('clients')">👥 Compte client</button>
+                <button class="nav-tab" onclick="showSection('recap')">📋 Récap.</button>
+                <button class="nav-tab" onclick="showSection('sales')">💼 + Vente</button>
+                <button class="nav-tab" onclick="showSection('payments')">💰 + Encaisser</button>
+                <button class="nav-tab" onclick="showSection('chat')">🤖 Assistant IA</button>
+                <button class="nav-tab" onclick="showSection('settings')">⚙️ Paramètres</button>
+            </div>
         
         <!-- Dashboard Section -->
         <div id="dashboard" class="section active">
@@ -2658,6 +2766,646 @@
                 <div id="importStatus"></div>
             </div>
         </div>
+        </div>
+        
+        <!-- Module Stocks -->
+        <div id="stocksModule" class="module">
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="showStocksSection('stock-dashboard')">📊 Dashboard Stocks</button>
+                <button class="nav-tab" onclick="showStocksSection('stock-entries')">📥 Entrées</button>
+                <button class="nav-tab" onclick="showStocksSection('stock-exits')">📤 Sorties</button>
+                <button class="nav-tab" onclick="showStocksSection('stock-recap')">📋 Mouvements</button>
+                <button class="nav-tab" onclick="showStocksSection('stock-inventory')">📦 Inventaire</button>
+                <button class="nav-tab" onclick="showStocksSection('stock-settings')">⚙️ Config</button>
+            </div>
+
+            <!-- Dashboard Stocks Section -->
+            <div id="stock-dashboard" class="section active">
+                <div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #e3f2fd, #f3e5f5); border-radius: 8px; border-left: 4px solid #2196F3;">
+                    <h3 style="margin: 0 0 10px 0; color: #1976D2;">📊 Dashboard Stocks</h3>
+                    <div id="analysisInfo" style="margin: 0; padding: 8px; background: rgba(255,255,255,0.8); border-radius: 4px; color: #666;">
+                        💡 Liaison Firebase active - Analyse en cours...
+                    </div>
+                </div>
+                
+                <div class="filters-section">
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label for="stockDateStart">Date début</label>
+                            <input type="date" id="stockDateStart" onchange="applyStockFilters()">
+                        </div>
+                        <div class="filter-group">
+                            <label for="stockDateEnd">Date fin</label>
+                            <input type="date" id="stockDateEnd" onchange="applyStockFilters()">
+                        </div>
+                        <div class="filter-group">
+                            <label for="stockProductFilter">Produit</label>
+                            <select id="stockProductFilter" onchange="applyStockFilters()">
+                                <option value="">Tous les produits</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn btn-info" onclick="setStockAllTimeFilters()">📅 Toutes périodes</button>
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn btn-warning" onclick="resetStockFilters()">📅 Mois en cours</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="kpi-grid" id="stockKpiGrid">
+                    <div class="kpi-card" style="cursor: pointer;" title="Total des entrées">
+                        <div class="kpi-icon">📥</div>
+                        <div class="kpi-value" id="totalEntries">0</div>
+                        <div class="kpi-label">Total Entrées</div>
+                    </div>
+                    <div class="kpi-card" style="cursor: pointer;" title="Total des sorties">
+                        <div class="kpi-icon">📤</div>
+                        <div class="kpi-value" id="totalExits">0</div>
+                        <div class="kpi-label">Total Sorties</div>
+                    </div>
+                    <div class="kpi-card" style="cursor: pointer;" title="Stock actuel">
+                        <div class="kpi-icon">📦</div>
+                        <div class="kpi-value" id="currentStock">0</div>
+                        <div class="kpi-label">Stock Actuel</div>
+                    </div>
+                    <div class="kpi-card" style="cursor: pointer;" title="Valeur du stock">
+                        <div class="kpi-icon">💰</div>
+                        <div class="kpi-value" id="stockValue">0 CFA</div>
+                        <div class="kpi-label">Valeur Stock</div>
+                    </div>
+                    <div class="kpi-card" style="cursor: pointer;" title="Alertes stock bas">
+                        <div class="kpi-icon">⚠️</div>
+                        <div class="kpi-value" id="lowStockAlerts">0</div>
+                        <div class="kpi-label">Alertes Stock</div>
+                    </div>
+                </div>
+                
+                <div class="charts-grid">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div class="chart-card">
+                            <h3 class="chart-title">📈 Évolution Stock</h3>
+                            <div class="chart-container">
+                                <canvas id="stockEvolutionChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3 class="chart-title">📊 Stock par Produit</h3>
+                            <div class="chart-container">
+                                <canvas id="stockByProductChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3 class="chart-title">⚠️ Alertes Stock Bas</h3>
+                            <div class="clients-summary-table" style="max-height: 250px; overflow-y: auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Produit</th>
+                                            <th style="text-align: right;">Stock</th>
+                                            <th style="text-align: right;">Seuil</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lowStockTableBody">
+                                        <!-- Rempli dynamiquement -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div class="chart-card">
+                            <h3 class="chart-title">📥📤 Entrées vs Sorties</h3>
+                            <div class="chart-container" style="height: 300px;">
+                                <canvas id="entriesExitsChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3 class="chart-title">🔄 Rotation des Stocks</h3>
+                            <div class="chart-container" style="height: 300px;">
+                                <canvas id="stockRotationChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Entrées Section -->
+            <div id="stock-entries" class="section">
+                <div class="card">
+                    <h2 style="margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.5rem);">📥 Nouvelle Entrée de Stock</h2>
+                    
+                    <div class="invoice-section">
+                        <h3 style="margin-bottom: 15px; color: #27ae60;">📋 Informations de l'Entrée</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="entryDate">Date *</label>
+                                <input type="date" id="entryDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="entryType">Type d'Entrée *</label>
+                                <select id="entryType" required>
+                                    <option value="">Sélectionner...</option>
+                                    <option value="Achat">Achat</option>
+                                    <option value="Production">Production</option>
+                                    <option value="Retour">Retour client</option>
+                                    <option value="Ajustement">Ajustement inventaire</option>
+                                    <option value="Autre">Autre</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="entryReference">Référence</label>
+                                <input type="text" id="entryReference" placeholder="Bon de commande, facture...">
+                            </div>
+                            <div class="form-group">
+                                <label for="entrySupplier">Fournisseur</label>
+                                <input type="text" id="entrySupplier" placeholder="Nom du fournisseur">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="invoice-section">
+                        <h3 style="margin-bottom: 15px; color: #27ae60;">📦 Détails du Produit</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="entryProduct">Produit *</label>
+                                <div class="input-container">
+                                    <input type="text" id="entryProduct" placeholder="Nom du produit" required autocomplete="off" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)">
+                                    <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'entryProduct', 'products')">▼</span>
+                                    <div class="custom-dropdown" id="entryProductDropdown"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="entryQuantity">Quantité *</label>
+                                <input type="number" id="entryQuantity" min="0" step="0.01" placeholder="0" required oninput="calculateEntryTotal()">
+                            </div>
+                            <div class="form-group">
+                                <label for="entryUnit">Unité</label>
+                                <select id="entryUnit">
+                                    <option value="Cartons">Cartons</option>
+                                    <option value="Pièces">Pièces</option>
+                                    <option value="Kg">Kg</option>
+                                    <option value="Litres">Litres</option>
+                                    <option value="Autres">Autres</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="entryUnitCost">Coût Unitaire (CFA)</label>
+                                <input type="number" id="entryUnitCost" min="0" placeholder="0" oninput="calculateEntryTotal()">
+                            </div>
+                            <div class="form-group">
+                                <label for="entryTotalCost">Coût Total (CFA)</label>
+                                <input type="number" id="entryTotalCost" min="0" placeholder="0" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="entryNotes">Notes</label>
+                                <textarea id="entryNotes" placeholder="Commentaires..." rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin-top: 15px;">
+                            <button class="btn btn-success" onclick="saveStockEntry()" style="min-width: 200px;">💾 Enregistrer Entrée</button>
+                            <button class="btn btn-warning" onclick="clearStockEntry()" style="min-width: 200px; margin-left: 10px;">🔄 Effacer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sorties Section -->
+            <div id="stock-exits" class="section">
+                <div class="card">
+                    <h2 style="margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.5rem);">📤 Nouvelle Sortie de Stock</h2>
+                    
+                    <div class="invoice-section">
+                        <h3 style="margin-bottom: 15px; color: #e74c3c;">📋 Informations de la Sortie</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="exitDate">Date *</label>
+                                <input type="date" id="exitDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="exitType">Type de Sortie *</label>
+                                <select id="exitType" required>
+                                    <option value="">Sélectionner...</option>
+                                    <option value="Vente">Vente</option>
+                                    <option value="Production">Consommation production</option>
+                                    <option value="Perte">Perte/Casse</option>
+                                    <option value="Prelevement">Prélèvement</option>
+                                    <option value="Ajustement">Ajustement inventaire</option>
+                                    <option value="Autre">Autre</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="exitReference">Référence</label>
+                                <input type="text" id="exitReference" placeholder="Bon de livraison, facture...">
+                            </div>
+                            <div class="form-group">
+                                <label for="exitDestination">Destination</label>
+                                <input type="text" id="exitDestination" placeholder="Client, service...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="invoice-section">
+                        <h3 style="margin-bottom: 15px; color: #e74c3c;">📦 Détails du Produit</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="exitProduct">Produit *</label>
+                                <div class="input-container">
+                                    <input type="text" id="exitProduct" placeholder="Nom du produit" required autocomplete="off" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)">
+                                    <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'exitProduct', 'products')">▼</span>
+                                    <div class="custom-dropdown" id="exitProductDropdown"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="exitQuantity">Quantité *</label>
+                                <input type="number" id="exitQuantity" min="0" step="0.01" placeholder="0" required oninput="calculateExitTotal(); checkStockAvailability()">
+                            </div>
+                            <div class="form-group">
+                                <label for="exitUnit">Unité</label>
+                                <select id="exitUnit">
+                                    <option value="Cartons">Cartons</option>
+                                    <option value="Pièces">Pièces</option>
+                                    <option value="Kg">Kg</option>
+                                    <option value="Litres">Litres</option>
+                                    <option value="Autres">Autres</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="exitUnitCost">Coût Unitaire (CFA)</label>
+                                <input type="number" id="exitUnitCost" min="0" placeholder="0" oninput="calculateExitTotal()">
+                            </div>
+                            <div class="form-group">
+                                <label for="exitTotalCost">Coût Total (CFA)</label>
+                                <input type="number" id="exitTotalCost" min="0" placeholder="0" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="exitNotes">Notes</label>
+                                <textarea id="exitNotes" placeholder="Commentaires..." rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div id="stockAvailabilityAlert" style="display: none; margin: 15px 0; padding: 12px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; color: #856404;">
+                            ⚠️ <strong>Attention :</strong> Stock insuffisant pour cette quantité
+                        </div>
+                        <div style="text-align: center; margin-top: 15px;">
+                            <button class="btn btn-danger" onclick="saveStockExit()" style="min-width: 200px;">💾 Enregistrer Sortie</button>
+                            <button class="btn btn-warning" onclick="clearStockExit()" style="min-width: 200px; margin-left: 10px;">🔄 Effacer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mouvements Section -->
+            <div id="stock-recap" class="section">
+                <div class="card">
+                    <h2 style="margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.5rem);">📋 Historique des Mouvements</h2>
+                    
+                    <!-- Filtres pour mouvements -->
+                    <div class="filters-section">
+                        <div class="filters-grid">
+                            <div class="filter-group">
+                                <label for="movementProductFilter">Produit</label>
+                                <select id="movementProductFilter" onchange="applyMovementFilters()">
+                                    <option value="">Tous les produits</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="movementTypeFilter">Type</label>
+                                <select id="movementTypeFilter" onchange="applyMovementFilters()">
+                                    <option value="">Tous les types</option>
+                                    <option value="Entrée">Entrées</option>
+                                    <option value="Sortie">Sorties</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="movementDateStart">Date début</label>
+                                <input type="date" id="movementDateStart" onchange="applyMovementFilters()">
+                            </div>
+                            <div class="filter-group">
+                                <label for="movementDateEnd">Date fin</label>
+                                <input type="date" id="movementDateEnd" onchange="applyMovementFilters()">
+                            </div>
+                            <div class="filter-group">
+                                <button class="btn btn-info" onclick="setMovementAllTimeFilters()">📅 Toutes périodes</button>
+                            </div>
+                            <div class="filter-group">
+                                <button class="btn btn-warning" onclick="setMovementCurrentMonth()">📅 Mois en cours</button>
+                            </div>
+                            <div class="filter-group">
+                                <button class="btn btn-secondary" onclick="resetMovementFilters()">🗑️ Reset</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="sub-nav-tabs">
+                        <button class="sub-nav-tab sales-tab active" onclick="showStockSubSection('movements-all')">🔄 Tous Mouvements</button>
+                        <button class="sub-nav-tab payments-tab" onclick="showStockSubSection('movements-entries')">📥 Entrées</button>
+                        <button class="sub-nav-tab global-tab" onclick="showStockSubSection('movements-exits')">📤 Sorties</button>
+                    </div>
+
+                    <!-- Sous-section Tous Mouvements -->
+                    <div id="movements-all" class="sub-section active">
+                        <h3 style="margin-bottom: 15px; color: #667eea;">🔄 Tous les Mouvements de Stock</h3>
+                        
+                        <div class="stats-row" style="margin-bottom: 20px;">
+                            <div class="stat-item">
+                                <div class="stat-value" id="allMovementsCount">0</div>
+                                <div class="stat-label">Total Mouvements</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="allEntriesCount">0</div>
+                                <div class="stat-label">Entrées</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="allExitsCount">0</div>
+                                <div class="stat-label">Sorties</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="netMovement">0</div>
+                                <div class="stat-label">Mouvement Net</div>
+                            </div>
+                        </div>
+                        
+                        <div style="overflow-x: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Produit</th>
+                                        <th>Quantité</th>
+                                        <th>Unité</th>
+                                        <th>Coût Unit.</th>
+                                        <th>Coût Total</th>
+                                        <th>Référence</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="allMovementsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Sous-section Entrées -->
+                    <div id="movements-entries" class="sub-section">
+                        <h3 style="margin-bottom: 15px; color: #27ae60;">📥 Historique des Entrées</h3>
+                        
+                        <div class="stats-row" style="margin-bottom: 20px;">
+                            <div class="stat-item">
+                                <div class="stat-value" id="entriesMovementsCount">0</div>
+                                <div class="stat-label">Entrées</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="totalEntriesQuantity">0</div>
+                                <div class="stat-label">Quantité Totale</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="totalEntriesCost">0 CFA</div>
+                                <div class="stat-label">Coût Total</div>
+                            </div>
+                        </div>
+                        
+                        <div style="overflow-x: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Produit</th>
+                                        <th>Quantité</th>
+                                        <th>Unité</th>
+                                        <th>Coût Unit.</th>
+                                        <th>Coût Total</th>
+                                        <th>Type</th>
+                                        <th>Fournisseur</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="entriesMovementsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Sous-section Sorties -->
+                    <div id="movements-exits" class="sub-section">
+                        <h3 style="margin-bottom: 15px; color: #e74c3c;">📤 Historique des Sorties</h3>
+                        
+                        <div class="stats-row" style="margin-bottom: 20px;">
+                            <div class="stat-item">
+                                <div class="stat-value" id="exitsMovementsCount">0</div>
+                                <div class="stat-label">Sorties</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="totalExitsQuantity">0</div>
+                                <div class="stat-label">Quantité Totale</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="totalExitsCost">0 CFA</div>
+                                <div class="stat-label">Coût Total</div>
+                            </div>
+                        </div>
+                        
+                        <div style="overflow-x: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Produit</th>
+                                        <th>Quantité</th>
+                                        <th>Unité</th>
+                                        <th>Coût Unit.</th>
+                                        <th>Coût Total</th>
+                                        <th>Type</th>
+                                        <th>Destination</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="exitsMovementsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventaire Section -->
+            <div id="stock-inventory" class="section">
+                <div class="card">
+                    <h2 style="margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.5rem);">📦 État des Stocks</h2>
+                    
+                    <div class="filters-section">
+                        <div class="filters-grid">
+                            <div class="filter-group">
+                                <label for="inventoryProductFilter">Produit</label>
+                                <select id="inventoryProductFilter" onchange="applyInventoryFilters()">
+                                    <option value="">Tous les produits</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="inventoryBrandFilter">Marque</label>
+                                <select id="inventoryBrandFilter" onchange="applyInventoryFilters()">
+                                    <option value="">Toutes les marques</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="inventoryStatusFilter">Statut</label>
+                                <select id="inventoryStatusFilter" onchange="applyInventoryFilters()">
+                                    <option value="">Tous les statuts</option>
+                                    <option value="OK">Stock OK</option>
+                                    <option value="LOW">Stock Bas</option>
+                                    <option value="OUT">Rupture</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <button class="btn btn-success" onclick="exportInventoryToExcel()">📊 Export Excel</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-row" style="margin-bottom: 20px;">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalProductsInStock">0</div>
+                            <div class="stat-label">Produits en Stock</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalStockValue">0 CFA</div>
+                            <div class="stat-label">Valeur Totale</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="lowStockProductsCount">0</div>
+                            <div class="stat-label">Alertes Stock Bas</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="outOfStockProductsCount">0</div>
+                            <div class="stat-label">Ruptures</div>
+                        </div>
+                    </div>
+                    
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Marque</th>
+                                    <th>Stock Actuel</th>
+                                    <th>Unité</th>
+                                    <th>Seuil Min.</th>
+                                    <th>Coût Moyen</th>
+                                    <th>Valeur Stock</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryTableBody">
+                                <!-- Rempli dynamiquement -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Stocks Section -->
+            <div id="stock-settings" class="section">
+                <div class="card">
+                    <h2 style="margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.5rem);">⚙️ Configuration Stocks</h2>
+                    
+                    <!-- Seuils d'alerte -->
+                    <div class="invoice-section">
+                        <h3 style="margin-bottom: 15px; color: #667eea;">⚠️ Gestion des Seuils d'Alerte</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="alertProduct">Produit</label>
+                                <div class="input-container">
+                                    <input type="text" id="alertProduct" placeholder="Sélectionner un produit" autocomplete="off" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)">
+                                    <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'alertProduct', 'products')">▼</span>
+                                    <div class="custom-dropdown" id="alertProductDropdown"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="alertThreshold">Seuil Minimum</label>
+                                <input type="number" id="alertThreshold" min="0" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="alertUnit">Unité</label>
+                                <select id="alertUnit">
+                                    <option value="Cartons">Cartons</option>
+                                    <option value="Pièces">Pièces</option>
+                                    <option value="Kg">Kg</option>
+                                    <option value="Litres">Litres</option>
+                                    <option value="Autres">Autres</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <button class="btn btn-primary" onclick="saveStockAlert()">💾 Définir Seuil</button>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px;">
+                            <h4 style="color: #667eea; margin-bottom: 10px;">Seuils Configurés</h4>
+                            <div style="overflow-x: auto;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Produit</th>
+                                            <th>Seuil Minimum</th>
+                                            <th>Unité</th>
+                                            <th>Stock Actuel</th>
+                                            <th>Statut</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="alertsTableBody">
+                                        <!-- Rempli dynamiquement -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export et Gestion -->
+                    <div class="invoice-section">
+                        <h3 style="margin-bottom: 15px; color: #667eea;">💾 Gestion des Données Stocks</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Export Mouvements Excel</label>
+                                <button class="btn btn-success" onclick="exportStockMovementsToExcel()">📊 Export Mouvements</button>
+                                <small style="color: #28a745; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    💡 Tous les mouvements de stock
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label>Export Inventaire Excel</label>
+                                <button class="btn btn-primary" onclick="exportInventoryToExcel()">📦 Export Inventaire</button>
+                                <small style="color: #007bff; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    💡 État actuel des stocks
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label>Analyse Stocks vs Ventes</label>
+                                <button class="btn btn-info" onclick="showStockAnalysisInUI()">📊 Rapport Analyse</button>
+                                <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);" id="analysisInfo">
+                                    💡 Analyse basée sur les ventes existantes
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label>Synchronisation Stocks</label>
+                                <button class="btn btn-info" onclick="syncStockData()">🔄 Sync Stocks</button>
+                                <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    💡 Synchroniser avec le cloud
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label>Réinitialiser Stocks</label>
+                                <button class="btn btn-danger" onclick="clearStockData()">🗑️ Effacer Stocks</button>
+                                <small style="color: #dc3545; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    ⚠️ Supprime toutes les données stocks
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <!-- Modal Produit -->
@@ -2931,12 +3679,721 @@
         let clientsList = [];
         let productsList = [];
 
+        // Variables pour le module Stocks
+        let stockEntriesData = [];
+        let stockExitsData = [];
+        let stockAlertsData = [];
+        let currentStockLevels = {};
+        let filteredStockMovements = [];
+        let stockCharts = {};
+
         // Version de l'application - À incrémenter à chaque mise à jour
         const APP_VERSION = "2.1.1";
         let autoSyncInterval = null;
         
         // Gestion des thèmes
         let currentTheme = 'light';
+        
+        // ========================================
+        // GESTION DES MODULES
+        // ========================================
+        
+        function showModule(moduleId) {
+            // Cacher tous les modules
+            const modules = document.querySelectorAll('.module');
+            modules.forEach(module => {
+                module.classList.remove('active');
+            });
+            
+            // Cacher tous les onglets de modules
+            const moduleTabs = document.querySelectorAll('.module-tab');
+            moduleTabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Afficher le module sélectionné
+            const selectedModule = document.getElementById(moduleId + 'Module');
+            if (selectedModule) {
+                selectedModule.classList.add('active');
+            }
+            
+            // Activer l'onglet correspondant
+            event.target.classList.add('active');
+            
+            // Initialiser le module si nécessaire
+            if (moduleId === 'stocks') {
+                initializeStocksModule();
+            } else if (moduleId === 'commercial') {
+                initializeCommercialModule();
+            }
+        }
+        
+        function initializeCommercialModule() {
+            // Réinitialiser l'affichage du module commercial
+            showSection('dashboard');
+            updateDashboard();
+        }
+        
+        function initializeStocksModule() {
+            console.log('Initialisation du module Stocks avec données Firebase existantes...');
+            
+            // Charger les données de stock depuis localStorage ou Firebase
+            loadStockData();
+            
+            // Vérifier que les données de ventes sont chargées
+            if (salesData.length === 0) {
+                console.log('Aucune donnée de vente trouvée localement, tentative de récupération depuis Firebase...');
+                // Attendre un peu que Firebase se charge
+                setTimeout(() => {
+                    if (salesData.length > 0) {
+                        console.log(`${salesData.length} ventes récupérées, recalcul des stocks...`);
+                        calculateCurrentStockLevels();
+                        updateStockDashboard();
+                    }
+                }, 2000);
+            } else {
+                console.log(`${salesData.length} ventes trouvées, calcul des stocks basé sur ces données...`);
+            }
+            
+            // Afficher le dashboard stocks par défaut
+            showStocksSection('stock-dashboard');
+            
+            // Mettre à jour les KPI stocks
+            updateStockDashboard();
+            
+            // Initialiser les dates par défaut
+            setStockDefaultDates();
+            
+            // Message d'information pour l'utilisateur
+            setTimeout(() => {
+                const negativeProducts = Object.keys(currentStockLevels).filter(
+                    product => currentStockLevels[product].quantity < 0
+                ).length;
+                
+                if (negativeProducts > 0) {
+                    showAlert(`📊 Module Stocks initialisé avec ${salesData.length} ventes existantes. ${negativeProducts} produits ont des stocks négatifs - normal au début, ajoutez vos entrées de stock pour rééquilibrer.`, 'info');
+                }
+            }, 1500);
+        }
+        
+        // ========================================
+        // GESTION DES SECTIONS STOCKS
+        // ========================================
+        
+        function showStocksSection(sectionId) {
+            // Cacher toutes les sections du module stocks
+            const sections = document.querySelectorAll('#stocksModule .section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Cacher tous les onglets
+            const tabs = document.querySelectorAll('#stocksModule .nav-tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Afficher la section sélectionnée
+            const selectedSection = document.getElementById(sectionId);
+            if (selectedSection) {
+                selectedSection.classList.add('active');
+            }
+            
+            // Activer l'onglet correspondant
+            event.target.classList.add('active');
+            
+            // Mettre à jour les données selon la section
+            switch(sectionId) {
+                case 'stock-dashboard':
+                    updateStockDashboard();
+                    break;
+                case 'stock-entries':
+                    setEntryDefaultValues();
+                    break;
+                case 'stock-exits':
+                    setExitDefaultValues();
+                    break;
+                case 'stock-recap':
+                    updateStockRecap();
+                    break;
+                case 'stock-inventory':
+                    updateInventory();
+                    break;
+                case 'stock-settings':
+                    updateStockSettings();
+                    break;
+            }
+        }
+        
+        function showStockSubSection(subSectionId) {
+            // Cacher toutes les sous-sections
+            const subSections = document.querySelectorAll('#stock-recap .sub-section');
+            subSections.forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Cacher tous les sous-onglets
+            const subTabs = document.querySelectorAll('#stock-recap .sub-nav-tab');
+            subTabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Afficher la sous-section sélectionnée
+            const selectedSubSection = document.getElementById(subSectionId);
+            if (selectedSubSection) {
+                selectedSubSection.classList.add('active');
+            }
+            
+            // Activer le sous-onglet correspondant
+            event.target.classList.add('active');
+            
+            // Mettre à jour les données
+            updateStockRecapData();
+        }
+        
+                // ========================================
+                // FONCTIONS DE GESTION DES STOCKS
+                // ========================================
+        
+                // ========================================
+                // RAPPORT D'ANALYSE DES STOCKS BASÉ SUR LES VENTES
+                // ========================================
+                
+                function generateStockAnalysisReport() {
+                    console.log('=== RAPPORT D\'ANALYSE DES STOCKS ===');
+                    console.log(`Nombre total de ventes analysées: ${salesData.length}`);
+                    
+                    const salesByProduct = {};
+                    let totalSalesQuantity = 0;
+                    
+                    // Analyser les ventes par produit
+                    salesData.forEach(sale => {
+                        const product = sale.product;
+                        const quantity = parseFloat(sale.quantity) || 0;
+                        
+                        if (product) {
+                            if (!salesByProduct[product]) {
+                                salesByProduct[product] = {
+                                    quantity: 0,
+                                    count: 0,
+                                    value: 0
+                                };
+                            }
+                            
+                            salesByProduct[product].quantity += quantity;
+                            salesByProduct[product].count += 1;
+                            salesByProduct[product].value += (parseFloat(sale.valeur) || 0);
+                            totalSalesQuantity += quantity;
+                        }
+                    });
+                    
+                    console.log(`Quantité totale vendue: ${totalSalesQuantity.toLocaleString()}`);
+                    console.log(`Nombre de produits vendus: ${Object.keys(salesByProduct).length}`);
+                    
+                    // Trier par quantité vendue
+                    const topProducts = Object.entries(salesByProduct)
+                        .sort((a, b) => b[1].quantity - a[1].quantity)
+                        .slice(0, 10);
+                    
+                    console.log('\n=== TOP 10 PRODUITS VENDUS ===');
+                    topProducts.forEach(([product, data], index) => {
+                        const currentStock = currentStockLevels[product] ? currentStockLevels[product].quantity : 0;
+                        const status = currentStock < 0 ? '❌ NÉGATIF' : currentStock === 0 ? '⚠️ ZÉRO' : '✅ POSITIF';
+                        
+                        console.log(`${index + 1}. ${product}`);
+                        console.log(`   Vendus: ${data.quantity.toLocaleString()} | Stock actuel: ${currentStock.toLocaleString()} | ${status}`);
+                        console.log(`   CA: ${data.value.toLocaleString()} CFA | Nb ventes: ${data.count}`);
+                        console.log('');
+                    });
+                    
+                    // Recommandations
+                    const negativeStocks = Object.keys(currentStockLevels).filter(
+                        product => currentStockLevels[product].quantity < 0
+                    );
+                    
+                    console.log('=== RECOMMANDATIONS ===');
+                    if (negativeStocks.length > 0) {
+                        console.log(`🔴 ${negativeStocks.length} produits en stock négatif à régulariser:`);
+                        negativeStocks.forEach(product => {
+                            const level = currentStockLevels[product];
+                            const sales = salesByProduct[product];
+                            console.log(`   - ${product}: ${level.quantity} (${sales ? sales.quantity + ' vendus' : 'aucune vente'})`);
+                        });
+                    }
+                    
+                    return {
+                        totalSales: salesData.length,
+                        totalQuantity: totalSalesQuantity,
+                        productsCount: Object.keys(salesByProduct).length,
+                        negativeStocksCount: negativeStocks.length,
+                        topProducts: topProducts,
+                        salesByProduct: salesByProduct
+                    };
+                }
+                
+                // Fonction pour afficher le rapport dans l'interface
+                function showStockAnalysisInUI() {
+                    const report = generateStockAnalysisReport();
+                    
+                    const message = `
+        📊 ANALYSE DES STOCKS KAMLAC
+        ════════════════════════════
+        
+        📈 ${report.totalSales} ventes analysées
+        📦 ${report.totalQuantity.toLocaleString()} unités vendues
+        🏷️ ${report.productsCount} produits différents
+        ⚠️ ${report.negativeStocksCount} stocks négatifs
+        
+        TOP 3 PRODUITS VENDUS:
+        ${report.topProducts.slice(0, 3).map((item, i) => 
+            `${i+1}. ${item[0]} (${item[1].quantity.toLocaleString()} vendus)`
+        ).join('\n')}
+        
+        💡 Conseil: Ajoutez des entrées de stock pour les produits en négatif.
+                    `;
+                    
+                    alert(message);
+                }
+        
+        // ========================================
+        // DASHBOARD STOCKS AMÉLIORÉ AVEC INTÉGRATION VENTES
+        // ========================================
+        
+        function updateStockDashboard() {
+            calculateCurrentStockLevels();
+            
+            // Calculer les KPI en tenant compte des ventes
+            const totalEntries = stockEntriesData.reduce((sum, entry) => sum + (parseFloat(entry.quantity) || 0), 0);
+            const totalStockExits = stockExitsData.reduce((sum, exit) => sum + (parseFloat(exit.quantity) || 0), 0);
+            const totalSalesExits = Object.values(currentStockLevels).reduce((sum, level) => sum + (level.salesQuantity || 0), 0);
+            const totalExits = totalStockExits + totalSalesExits;
+            const currentStock = totalEntries - totalExits;
+            
+            let stockValue = 0;
+            let lowStockCount = 0;
+            let negativeStockCount = 0;
+            
+            Object.keys(currentStockLevels).forEach(product => {
+                const level = currentStockLevels[product];
+                
+                // Pour les stocks négatifs, on ne compte pas la valeur négative
+                if (level.quantity > 0) {
+                    stockValue += level.value || 0;
+                } else if (level.quantity < 0) {
+                    negativeStockCount++;
+                }
+                
+                // Vérifier les alertes de stock bas
+                const alert = stockAlertsData.find(a => a.product === product);
+                if (alert && level.quantity <= alert.threshold) {
+                    lowStockCount++;
+                }
+            });
+            
+            // Mettre à jour les KPI avec des informations enrichies
+            document.getElementById('totalEntries').textContent = totalEntries.toLocaleString();
+            
+            const totalExitsElement = document.getElementById('totalExits');
+            if (totalExitsElement) {
+                totalExitsElement.innerHTML = `
+                    ${totalExits.toLocaleString()}
+                    <small style="display: block; font-size: 0.7em; color: #666;">
+                        (${totalSalesExits.toLocaleString()} ventes + ${totalStockExits.toLocaleString()} autres)
+                    </small>
+                `;
+            }
+            
+            // Afficher le stock avec indication si négatif
+            const currentStockElement = document.getElementById('currentStock');
+            if (currentStockElement) {
+                const stockDisplay = currentStock < 0 ? 
+                    `<span style="color: #e74c3c;">${currentStock.toLocaleString()}</span>` : 
+                    currentStock.toLocaleString();
+                currentStockElement.innerHTML = stockDisplay;
+            }
+            
+            const stockValueElement = document.getElementById('stockValue');
+            if (stockValueElement) {
+                stockValueElement.textContent = `${stockValue.toLocaleString()} CFA`;
+            }
+            
+            // Combiner alertes stock bas + stocks négatifs
+            const totalAlerts = lowStockCount + negativeStockCount;
+            const alertsElement = document.getElementById('lowStockAlerts');
+            if (alertsElement) {
+                alertsElement.innerHTML = `
+                    ${totalAlerts}
+                    <small style="display: block; font-size: 0.7em; color: #666;">
+                        (${negativeStockCount} négatifs)
+                    </small>
+                `;
+            }
+            
+            // Mettre à jour les graphiques
+            updateStockCharts();
+            
+            // Mettre à jour le tableau des alertes avec les stocks négatifs
+            updateLowStockTable();
+            
+            // Mettre à jour les filtres de produits
+            updateStockProductFilters();
+            
+            // Message informatif si c'est la première fois
+            if (negativeStockCount > 0 && totalEntries === 0) {
+                setTimeout(() => {
+                    showAlert(`Info: ${negativeStockCount} produits ont des stocks négatifs basés sur vos ${salesData.length} ventes existantes. Ajoutez des entrées de stock pour rééquilibrer.`, 'info');
+                }, 2000);
+            }
+        }
+
+        function loadStockData() {
+            // Charger depuis localStorage
+            const savedEntries = localStorage.getItem('stockEntries');
+            const savedExits = localStorage.getItem('stockExits');
+            const savedAlerts = localStorage.getItem('stockAlerts');
+            
+            if (savedEntries) {
+                stockEntriesData = JSON.parse(savedEntries);
+            }
+            
+            if (savedExits) {
+                stockExitsData = JSON.parse(savedExits);
+            }
+            
+            if (savedAlerts) {
+                stockAlertsData = JSON.parse(savedAlerts);
+            }
+            
+            // Calculer les niveaux de stock actuels
+            calculateCurrentStockLevels();
+        }
+        
+        function saveStockData() {
+            // Sauvegarder dans localStorage
+            localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
+            localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+            localStorage.setItem('stockAlerts', JSON.stringify(stockAlertsData));
+            
+            // Sauvegarder dans Firebase si disponible
+            if (isFirebaseInitialized && db) {
+                try {
+                    db.collection('stockEntries').doc('data').set({
+                        entries: stockEntriesData,
+                        lastUpdate: new Date()
+                    });
+                    db.collection('stockExits').doc('data').set({
+                        exits: stockExitsData,
+                        lastUpdate: new Date()
+                    });
+                    db.collection('stockAlerts').doc('data').set({
+                        alerts: stockAlertsData,
+                        lastUpdate: new Date()
+                    });
+                } catch (error) {
+                    console.error('Erreur lors de la sauvegarde dans Firebase:', error);
+                }
+            }
+        }
+        
+        function calculateCurrentStockLevels() {
+            currentStockLevels = {};
+            
+            // ÉTAPE 1: D'abord, calculer les sorties basées sur les VENTES du module commercial
+            console.log('Calcul des stocks basé sur les ventes existantes...');
+            salesData.forEach(sale => {
+                const product = sale.product;
+                if (product) {
+                    if (!currentStockLevels[product]) {
+                        currentStockLevels[product] = {
+                            quantity: 0,
+                            value: 0,
+                            unit: 'Cartons', // Unité par défaut
+                            averageCost: 0,
+                            salesQuantity: 0 // Tracker les ventes
+                        };
+                    }
+                    
+                    // Soustraire les quantités vendues (sorties dues aux ventes)
+                    const soldQuantity = parseFloat(sale.quantity) || 0;
+                    currentStockLevels[product].quantity -= soldQuantity;
+                    currentStockLevels[product].salesQuantity += soldQuantity;
+                }
+            });
+            
+            // ÉTAPE 2: Additionner les entrées de stock
+            stockEntriesData.forEach(entry => {
+                if (!currentStockLevels[entry.product]) {
+                    currentStockLevels[entry.product] = {
+                        quantity: 0,
+                        value: 0,
+                        unit: entry.unit || 'Cartons',
+                        averageCost: 0,
+                        salesQuantity: 0
+                    };
+                }
+                
+                const quantity = parseFloat(entry.quantity) || 0;
+                const cost = parseFloat(entry.unitCost) || 0;
+                
+                currentStockLevels[entry.product].quantity += quantity;
+                currentStockLevels[entry.product].value += quantity * cost;
+                currentStockLevels[entry.product].unit = entry.unit || currentStockLevels[entry.product].unit;
+            });
+            
+            // ÉTAPE 3: Soustraire les autres sorties de stock (non-ventes)
+            stockExitsData.forEach(exit => {
+                if (!currentStockLevels[exit.product]) {
+                    currentStockLevels[exit.product] = {
+                        quantity: 0,
+                        value: 0,
+                        unit: exit.unit || 'Cartons',
+                        averageCost: 0,
+                        salesQuantity: 0
+                    };
+                }
+                
+                const quantity = parseFloat(exit.quantity) || 0;
+                currentStockLevels[exit.product].quantity -= quantity;
+            });
+            
+            // ÉTAPE 4: Calculer le coût moyen et logger les stocks négatifs
+            Object.keys(currentStockLevels).forEach(product => {
+                const level = currentStockLevels[product];
+                if (level.quantity > 0 && level.value > 0) {
+                    level.averageCost = level.value / level.quantity;
+                }
+                
+                // Logger les produits en stock négatif (normal au début)
+                if (level.quantity < 0) {
+                    console.log(`⚠️ Stock négatif détecté pour ${product}: ${level.quantity} ${level.unit} (vendus: ${level.salesQuantity})`);
+                }
+            });
+            
+            console.log('Niveaux de stock calculés:', currentStockLevels);
+        }
+        
+        function setStockDefaultDates() {
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            // Dates pour les filtres généraux
+            if (document.getElementById('stockDateStart')) {
+                document.getElementById('stockDateStart').value = firstDayOfMonth.toISOString().split('T')[0];
+            }
+            if (document.getElementById('stockDateEnd')) {
+                document.getElementById('stockDateEnd').value = today.toISOString().split('T')[0];
+            }
+            
+            // Dates pour les mouvements
+            if (document.getElementById('movementDateStart')) {
+                document.getElementById('movementDateStart').value = firstDayOfMonth.toISOString().split('T')[0];
+            }
+            if (document.getElementById('movementDateEnd')) {
+                document.getElementById('movementDateEnd').value = today.toISOString().split('T')[0];
+            }
+        }
+        
+        function setEntryDefaultValues() {
+            const today = new Date();
+            if (document.getElementById('entryDate')) {
+                document.getElementById('entryDate').value = today.toISOString().split('T')[0];
+            }
+        }
+        
+        function setExitDefaultValues() {
+            const today = new Date();
+            if (document.getElementById('exitDate')) {
+                document.getElementById('exitDate').value = today.toISOString().split('T')[0];
+            }
+        }
+        
+        // ========================================
+        // FONCTIONS D'ENTRÉE DE STOCK
+        // ========================================
+        
+        function calculateEntryTotal() {
+            const quantity = parseFloat(document.getElementById('entryQuantity').value) || 0;
+            const unitCost = parseFloat(document.getElementById('entryUnitCost').value) || 0;
+            const total = quantity * unitCost;
+            
+            document.getElementById('entryTotalCost').value = total;
+        }
+        
+        function saveStockEntry() {
+            const date = document.getElementById('entryDate').value;
+            const type = document.getElementById('entryType').value;
+            const reference = document.getElementById('entryReference').value;
+            const supplier = document.getElementById('entrySupplier').value;
+            const product = document.getElementById('entryProduct').value;
+            const quantity = parseFloat(document.getElementById('entryQuantity').value) || 0;
+            const unit = document.getElementById('entryUnit').value;
+            const unitCost = parseFloat(document.getElementById('entryUnitCost').value) || 0;
+            const totalCost = parseFloat(document.getElementById('entryTotalCost').value) || 0;
+            const notes = document.getElementById('entryNotes').value;
+            
+            // Validation
+            if (!date || !type || !product || quantity <= 0) {
+                showAlert('Veuillez remplir tous les champs obligatoires', 'error');
+                return;
+            }
+            
+            // Créer l'entrée
+            const entry = {
+                id: Date.now().toString(),
+                date: date,
+                type: type,
+                reference: reference,
+                supplier: supplier,
+                product: product,
+                quantity: quantity,
+                unit: unit,
+                unitCost: unitCost,
+                totalCost: totalCost,
+                notes: notes,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Ajouter à la liste
+            stockEntriesData.push(entry);
+            
+            // Sauvegarder
+            saveStockData();
+            
+            // Recalculer les niveaux de stock
+            calculateCurrentStockLevels();
+            
+            // Vider le formulaire
+            clearStockEntry();
+            
+            // Afficher un message de succès
+            showAlert('Entrée de stock enregistrée avec succès', 'success');
+            
+            // Mettre à jour l'affichage
+            updateStockDashboard();
+        }
+        
+        function clearStockEntry() {
+            document.getElementById('entryType').value = '';
+            document.getElementById('entryReference').value = '';
+            document.getElementById('entrySupplier').value = '';
+            document.getElementById('entryProduct').value = '';
+            document.getElementById('entryQuantity').value = '';
+            document.getElementById('entryUnit').value = 'Cartons';
+            document.getElementById('entryUnitCost').value = '';
+            document.getElementById('entryTotalCost').value = '';
+            document.getElementById('entryNotes').value = '';
+            
+            // Remettre la date du jour
+            setEntryDefaultValues();
+        }
+        
+        // ========================================
+        // FONCTIONS DE SORTIE DE STOCK
+        // ========================================
+        
+        function calculateExitTotal() {
+            const quantity = parseFloat(document.getElementById('exitQuantity').value) || 0;
+            const unitCost = parseFloat(document.getElementById('exitUnitCost').value) || 0;
+            const total = quantity * unitCost;
+            
+            document.getElementById('exitTotalCost').value = total;
+        }
+        
+        function checkStockAvailability() {
+            const product = document.getElementById('exitProduct').value;
+            const quantity = parseFloat(document.getElementById('exitQuantity').value) || 0;
+            const alert = document.getElementById('stockAvailabilityAlert');
+            
+            if (product && quantity > 0) {
+                const currentLevel = currentStockLevels[product];
+                if (!currentLevel || currentLevel.quantity < quantity) {
+                    alert.style.display = 'block';
+                    alert.innerHTML = `⚠️ <strong>Attention :</strong> Stock insuffisant. Stock actuel : ${currentLevel ? currentLevel.quantity : 0} ${currentLevel ? currentLevel.unit : 'unités'}`;
+                } else {
+                    alert.style.display = 'none';
+                }
+            } else {
+                alert.style.display = 'none';
+            }
+        }
+        
+        function saveStockExit() {
+            const date = document.getElementById('exitDate').value;
+            const type = document.getElementById('exitType').value;
+            const reference = document.getElementById('exitReference').value;
+            const destination = document.getElementById('exitDestination').value;
+            const product = document.getElementById('exitProduct').value;
+            const quantity = parseFloat(document.getElementById('exitQuantity').value) || 0;
+            const unit = document.getElementById('exitUnit').value;
+            const unitCost = parseFloat(document.getElementById('exitUnitCost').value) || 0;
+            const totalCost = parseFloat(document.getElementById('exitTotalCost').value) || 0;
+            const notes = document.getElementById('exitNotes').value;
+            
+            // Validation
+            if (!date || !type || !product || quantity <= 0) {
+                showAlert('Veuillez remplir tous les champs obligatoires', 'error');
+                return;
+            }
+            
+            // Vérifier la disponibilité du stock
+            const currentLevel = currentStockLevels[product];
+            if (!currentLevel || currentLevel.quantity < quantity) {
+                const available = currentLevel ? currentLevel.quantity : 0;
+                if (!confirm(`Stock insuffisant !\nStock disponible : ${available} ${currentLevel ? currentLevel.unit : 'unités'}\nQuantité demandée : ${quantity} ${unit}\n\nVoulez-vous continuer quand même ?`)) {
+                    return;
+                }
+            }
+            
+            // Créer la sortie
+            const exit = {
+                id: Date.now().toString(),
+                date: date,
+                type: type,
+                reference: reference,
+                destination: destination,
+                product: product,
+                quantity: quantity,
+                unit: unit,
+                unitCost: unitCost,
+                totalCost: totalCost,
+                notes: notes,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Ajouter à la liste
+            stockExitsData.push(exit);
+            
+            // Sauvegarder
+            saveStockData();
+            
+            // Recalculer les niveaux de stock
+            calculateCurrentStockLevels();
+            
+            // Vider le formulaire
+            clearStockExit();
+            
+            // Afficher un message de succès
+            showAlert('Sortie de stock enregistrée avec succès', 'success');
+            
+            // Mettre à jour l'affichage
+            updateStockDashboard();
+        }
+        
+        function clearStockExit() {
+            document.getElementById('exitType').value = '';
+            document.getElementById('exitReference').value = '';
+            document.getElementById('exitDestination').value = '';
+            document.getElementById('exitProduct').value = '';
+            document.getElementById('exitQuantity').value = '';
+            document.getElementById('exitUnit').value = 'Cartons';
+            document.getElementById('exitUnitCost').value = '';
+            document.getElementById('exitTotalCost').value = '';
+            document.getElementById('exitNotes').value = '';
+            document.getElementById('stockAvailabilityAlert').style.display = 'none';
+            
+            // Remettre la date du jour
+            setExitDefaultValues();
+        }
         
         // Fonction d'alerte simple (version restaurée)
         function showAlert(message, type = 'success') {
@@ -3120,6 +4577,7 @@
             updateLastUpdateTime();
             
             loadFromLocalStorage();
+            loadStockData(); // Charger les données de stock
             extractCategoriesFromNotes(); // Extraire les catégories des notes existantes
             updateCategoriesList(); // Charger les catégories des notes
             initializeFirebase();
@@ -3137,11 +4595,14 @@
             setTodayForNewInvoice();
             updateClientsSummaryTable();
             
+            // Afficher le module commercial par défaut
+            showModule('commercial');
+            
         // Message de bienvenue avec fonctionnalités
         setTimeout(() => {
             showToast('Bienvenue dans KAMLAC Dashboard ! 🎉', 'success');
             setTimeout(() => {
-                showToast('Nouvelles fonctionnalités: Mode sombre 🌙, Reconnaissance vocale 🎤, Animations fluides ✨', 'info');
+                showToast('Nouvelles fonctionnalités: Module Stocks 📦, Gestion modulaire 🔧, Analyses avancées 📊', 'info');
             }, 2000);
         }, 1000);
         }
