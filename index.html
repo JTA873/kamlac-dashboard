@@ -3695,6 +3695,41 @@
         let currentTheme = 'light';
         
         // ========================================
+        // MISE À JOUR INFORMATIONS FIREBASE
+        // ========================================
+        
+        function updateFirebaseInfo() {
+            // Mettre à jour le statut Firebase
+            const firebaseStatus = document.getElementById('firebaseStatus');
+            if (firebaseStatus) {
+                const isConnected = typeof firebase !== 'undefined' && firebase.apps.length > 0;
+                firebaseStatus.innerHTML = isConnected ? 
+                    '✅ Connecté à Firebase Firestore' : 
+                    '❌ Firebase non connecté';
+            }
+            
+            // Mettre à jour le compteur de ventes
+            const salesDataCount = document.getElementById('salesDataCount');
+            if (salesDataCount) {
+                salesDataCount.innerHTML = `📊 ${salesData.length} ventes chargées depuis le module commercial`;
+            }
+            
+            // Mettre à jour le statut de synchronisation
+            const stockSyncStatus = document.getElementById('stockSyncStatus');
+            if (stockSyncStatus) {
+                const negativeCount = Object.keys(currentStockLevels).filter(
+                    product => currentStockLevels[product].quantity < 0
+                ).length;
+                
+                stockSyncStatus.innerHTML = negativeCount > 0 ? 
+                    `🔄 Synchronisation active - ${negativeCount} stocks négatifs détectés` :
+                    `✅ Synchronisation active - Stocks équilibrés`;
+            }
+            
+            console.log(`🔄 Informations Firebase mises à jour: ${salesData.length} ventes`);
+        }
+
+        // ========================================
         // GESTION DES MODULES
         // ========================================
         
@@ -3749,10 +3784,30 @@
                         console.log(`${salesData.length} ventes récupérées, recalcul des stocks...`);
                         calculateCurrentStockLevels();
                         updateStockDashboard();
+                        
+                        // CHARGER TOUS LES TABLEAUX
+                        loadStockMovementsTable();
+                        updateLowStockTable();
+                        updateInventoryTable();
+                        updateStockAnalysisInfo();
+                        
+                        // Générer automatiquement le rapport en console
+                        generateStockAnalysisReport();
                     }
                 }, 2000);
             } else {
                 console.log(`${salesData.length} ventes trouvées, calcul des stocks basé sur ces données...`);
+                
+                // IMMÉDIATEMENT CHARGER TOUS LES TABLEAUX
+                calculateCurrentStockLevels();
+                updateStockDashboard();
+                loadStockMovementsTable();
+                updateLowStockTable();
+                updateInventoryTable();
+                updateStockAnalysisInfo();
+                
+                // Générer automatiquement le rapport en console
+                setTimeout(() => generateStockAnalysisReport(), 500);
             }
             
             // Afficher le dashboard stocks par défaut
@@ -3990,7 +4045,7 @@
                 }
             });
             
-            // Mettre à jour les KPI avec des informations enrichies
+            // Mettre à jour les KPI avec des informations enrichies basées sur les VRAIES données Firebase
             document.getElementById('totalEntries').textContent = totalEntries.toLocaleString();
             
             const totalExitsElement = document.getElementById('totalExits');
@@ -3998,23 +4053,31 @@
                 totalExitsElement.innerHTML = `
                     ${totalExits.toLocaleString()}
                     <small style="display: block; font-size: 0.7em; color: #666;">
-                        (${totalSalesExits.toLocaleString()} ventes + ${totalStockExits.toLocaleString()} autres)
+                        ${salesData.length} ventes • ${totalStockExits} autres sorties
                     </small>
                 `;
             }
             
-            // Afficher le stock avec indication si négatif
+            // Afficher le stock avec indication si négatif et détails
             const currentStockElement = document.getElementById('currentStock');
             if (currentStockElement) {
-                const stockDisplay = currentStock < 0 ? 
-                    `<span style="color: #e74c3c;">${currentStock.toLocaleString()}</span>` : 
-                    currentStock.toLocaleString();
-                currentStockElement.innerHTML = stockDisplay;
+                const stockColor = negativeStockCount > 0 ? '#dc3545' : currentStock > 0 ? '#28a745' : '#ffc107';
+                currentStockElement.innerHTML = `
+                    <span style="color: ${stockColor};">${currentStock.toLocaleString()}</span>
+                    <small style="display: block; font-size: 0.7em; color: #666;">
+                        ${negativeStockCount} négatifs • ${Object.keys(currentStockLevels).length - negativeStockCount} positifs
+                    </small>
+                `;
             }
             
             const stockValueElement = document.getElementById('stockValue');
             if (stockValueElement) {
-                stockValueElement.textContent = `${stockValue.toLocaleString()} CFA`;
+                stockValueElement.innerHTML = `
+                    ${stockValue.toLocaleString()} CFA
+                    <small style="display: block; font-size: 0.7em; color: #666;">
+                        ${Object.keys(currentStockLevels).length} produits suivis
+                    </small>
+                `;
             }
             
             // Combiner alertes stock bas + stocks négatifs
@@ -4290,7 +4353,120 @@
         // ========================================
         // FONCTIONS DE SORTIE DE STOCK
         // ========================================
+
+        // ========================================
+        // MISE À JOUR TABLE INVENTAIRE
+        // ========================================
         
+        function updateInventoryTable() {
+            console.log('📦 Mise à jour du tableau d\'inventaire...');
+            
+            const inventoryTableBody = document.getElementById('inventoryTableBody');
+            if (!inventoryTableBody) {
+                console.log('❌ Tableau d\'inventaire non trouvé');
+                return;
+            }
+            
+            // Vider le tableau
+            inventoryTableBody.innerHTML = '';
+            
+            // Trier les produits par stock (négatifs en premier)
+            const sortedProducts = Object.keys(currentStockLevels)
+                .sort((a, b) => currentStockLevels[a].quantity - currentStockLevels[b].quantity);
+            
+            let totalProducts = 0;
+            let negativeStockProducts = 0;
+            let positiveStockProducts = 0;
+            
+            sortedProducts.forEach(product => {
+                const stock = currentStockLevels[product];
+                const quantity = stock.quantity;
+                
+                // Statistiques
+                totalProducts++;
+                if (quantity < 0) negativeStockProducts++;
+                else positiveStockProducts++;
+                
+                // Calculer les ventes totales pour ce produit
+                const totalSales = salesData
+                    .filter(sale => sale.product === product)
+                    .reduce((total, sale) => total + (parseFloat(sale.quantity) || 0), 0);
+                
+                // Calculer le CA total pour ce produit
+                const totalRevenue = salesData
+                    .filter(sale => sale.product === product)
+                    .reduce((total, sale) => total + (parseFloat(sale.valeur) || 0), 0);
+                
+                const row = document.createElement('tr');
+                
+                // Style selon le niveau de stock
+                let statusIcon, statusClass, statusText;
+                if (quantity < 0) {
+                    statusIcon = '🔴';
+                    statusClass = 'text-danger';
+                    statusText = 'NÉGATIF';
+                } else if (quantity === 0) {
+                    statusIcon = '⚠️';
+                    statusClass = 'text-warning';
+                    statusText = 'ZÉRO';
+                } else if (quantity <= 10) {
+                    statusIcon = '🟡';
+                    statusClass = 'text-warning';
+                    statusText = 'FAIBLE';
+                } else {
+                    statusIcon = '🟢';
+                    statusClass = 'text-success';
+                    statusText = 'OK';
+                }
+                
+                row.innerHTML = `
+                    <td style="font-weight: 500;">${product}</td>
+                    <td class="${statusClass}" style="font-weight: bold;">
+                        ${quantity.toLocaleString()}
+                    </td>
+                    <td>
+                        <span style="display: inline-flex; align-items: center; gap: 5px;">
+                            ${statusIcon} <span class="${statusClass}">${statusText}</span>
+                        </span>
+                    </td>
+                    <td style="color: #666;">${totalSales.toLocaleString()}</td>
+                    <td style="color: #666;">${totalRevenue.toLocaleString()} CFA</td>
+                    <td style="font-size: 0.8rem; color: #888;">
+                        ${stock.lastMovement ? new Date(stock.lastMovement).toLocaleDateString() : 'N/A'}
+                    </td>
+                `;
+                
+                inventoryTableBody.appendChild(row);
+            });
+            
+            console.log(`✅ ${totalProducts} produits affichés dans l'inventaire`);
+            
+            // Mettre à jour les statistiques d'inventaire
+            const inventoryStats = document.getElementById('inventoryStats');
+            if (inventoryStats) {
+                inventoryStats.innerHTML = `
+                    <div style="display: flex; gap: 20px; justify-content: space-around; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #333;">${totalProducts}</div>
+                            <div style="font-size: 0.8rem; color: #666;">Total Produits</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #dc3545;">${negativeStockProducts}</div>
+                            <div style="font-size: 0.8rem; color: #666;">Stocks Négatifs</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #28a745;">${positiveStockProducts}</div>
+                            <div style="font-size: 0.8rem; color: #666;">Stocks Positifs</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #007bff;">${salesData.length}</div>
+                            <div style="font-size: 0.8rem; color: #666;">Ventes Totales</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
         function calculateExitTotal() {
             const quantity = parseFloat(document.getElementById('exitQuantity').value) || 0;
             const unitCost = parseFloat(document.getElementById('exitUnitCost').value) || 0;
