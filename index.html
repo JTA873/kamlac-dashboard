@@ -3752,8 +3752,11 @@
                 selectedModule.classList.add('active');
             }
             
-            // Activer l'onglet correspondant
-            event.target.classList.add('active');
+            // Activer l'onglet correspondant - correction de l'erreur
+            const activeTab = document.querySelector(`[onclick="showModule('${moduleId}')"]`);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
             
             // Initialiser le module si nécessaire
             if (moduleId === 'stocks') {
@@ -3782,14 +3785,9 @@
                 setTimeout(() => {
                     if (salesData.length > 0) {
                         console.log(`${salesData.length} ventes récupérées, recalcul des stocks...`);
-                        calculateCurrentStockLevels();
-                        updateStockDashboard();
                         
-                        // CHARGER TOUS LES TABLEAUX
-                        loadStockMovementsTable();
-                        updateLowStockTable();
-                        updateInventoryTable();
-                        updateStockAnalysisInfo();
+                        // UTILISER LA FONCTION FORCÉE
+                        forceUpdateStockKPIs();
                         
                         // Générer automatiquement le rapport en console
                         generateStockAnalysisReport();
@@ -3798,13 +3796,8 @@
             } else {
                 console.log(`${salesData.length} ventes trouvées, calcul des stocks basé sur ces données...`);
                 
-                // IMMÉDIATEMENT CHARGER TOUS LES TABLEAUX
-                calculateCurrentStockLevels();
-                updateStockDashboard();
-                loadStockMovementsTable();
-                updateLowStockTable();
-                updateInventoryTable();
-                updateStockAnalysisInfo();
+                // FORCER LA MISE À JOUR COMPLÈTE
+                forceUpdateStockKPIs();
                 
                 // Générer automatiquement le rapport en console
                 setTimeout(() => generateStockAnalysisReport(), 500);
@@ -3813,11 +3806,11 @@
             // Afficher le dashboard stocks par défaut
             showStocksSection('stock-dashboard');
             
-            // Mettre à jour les KPI stocks
-            updateStockDashboard();
-            
             // Initialiser les dates par défaut
             setStockDefaultDates();
+            
+            // Ajouter le bouton de debug
+            addDebugButton();
             
             // Message d'information pour l'utilisateur
             setTimeout(() => {
@@ -4015,38 +4008,51 @@
         // ========================================
         
         function updateStockDashboard() {
+            console.log('🔄 Début updateStockDashboard...');
             calculateCurrentStockLevels();
             
-            // Calculer les KPI en tenant compte des ventes
+            // Calculer les KPI en tenant compte des ventes RÉELLES
             const totalEntries = stockEntriesData.reduce((sum, entry) => sum + (parseFloat(entry.quantity) || 0), 0);
             const totalStockExits = stockExitsData.reduce((sum, exit) => sum + (parseFloat(exit.quantity) || 0), 0);
-            const totalSalesExits = Object.values(currentStockLevels).reduce((sum, level) => sum + (level.salesQuantity || 0), 0);
+            
+            // NOUVEAU : Calcul des sorties basé sur les VRAIES ventes Firebase
+            const totalSalesExits = salesData.reduce((sum, sale) => sum + (parseFloat(sale.quantity) || 0), 0);
             const totalExits = totalStockExits + totalSalesExits;
+            
             const currentStock = totalEntries - totalExits;
+            
+            console.log(`📊 KPI calculés: Entrées=${totalEntries}, Sorties=${totalExits}, Stock=${currentStock}`);
             
             let stockValue = 0;
             let lowStockCount = 0;
             let negativeStockCount = 0;
+            let positiveStockCount = 0;
             
             Object.keys(currentStockLevels).forEach(product => {
                 const level = currentStockLevels[product];
                 
-                // Pour les stocks négatifs, on ne compte pas la valeur négative
                 if (level.quantity > 0) {
                     stockValue += level.value || 0;
+                    positiveStockCount++;
                 } else if (level.quantity < 0) {
                     negativeStockCount++;
                 }
                 
-                // Vérifier les alertes de stock bas
-                const alert = stockAlertsData.find(a => a.product === product);
-                if (alert && level.quantity <= alert.threshold) {
+                // Vérifier les alertes de stock bas (seuil à 10 par défaut)
+                if (level.quantity <= 10) {
                     lowStockCount++;
                 }
             });
             
-            // Mettre à jour les KPI avec des informations enrichies basées sur les VRAIES données Firebase
-            document.getElementById('totalEntries').textContent = totalEntries.toLocaleString();
+            console.log(`📊 Stats: ${negativeStockCount} négatifs, ${positiveStockCount} positifs, ${lowStockCount} bas`);
+            
+            // Mettre à jour les KPI avec des informations enrichies
+            const totalEntriesElement = document.getElementById('totalEntries');
+            console.log('🔍 totalEntriesElement trouvé:', !!totalEntriesElement);
+            if (totalEntriesElement) {
+                totalEntriesElement.textContent = totalEntries.toLocaleString();
+                console.log('✅ totalEntries mis à jour:', totalEntries);
+            }
             
             const totalExitsElement = document.getElementById('totalExits');
             if (totalExitsElement) {
@@ -4165,7 +4171,13 @@
             console.log('Calcul des stocks basé sur les ventes existantes...');
             salesData.forEach(sale => {
                 const product = sale.product;
-                if (product) {
+                const quantity = parseFloat(sale.quantity) || 0;
+                
+                // FILTRER LES DONNÉES ABERRANTES
+                if (product && quantity > 0 && quantity < 1000000 && 
+                    !product.includes('Reprise de données') && 
+                    !product.includes('Reprise des données')) {
+                    
                     if (!currentStockLevels[product]) {
                         currentStockLevels[product] = {
                             quantity: 0,
@@ -4177,9 +4189,8 @@
                     }
                     
                     // Soustraire les quantités vendues (sorties dues aux ventes)
-                    const soldQuantity = parseFloat(sale.quantity) || 0;
-                    currentStockLevels[product].quantity -= soldQuantity;
-                    currentStockLevels[product].salesQuantity += soldQuantity;
+                    currentStockLevels[product].quantity -= quantity;
+                    currentStockLevels[product].salesQuantity += quantity;
                 }
             });
             
@@ -4353,6 +4364,54 @@
         // ========================================
         // FONCTIONS DE SORTIE DE STOCK
         // ========================================
+
+        // ========================================
+        // FORCER MISE À JOUR DES KPI
+        // ========================================
+        
+        function forceUpdateStockKPIs() {
+            console.log('🔄 Mise à jour forcée des KPI stocks...');
+            console.log(`📊 salesData.length: ${salesData.length}`);
+            console.log(`📦 stockEntriesData.length: ${stockEntriesData.length}`);
+            console.log(`📤 stockExitsData.length: ${stockExitsData.length}`);
+            
+            // S'assurer que le module stocks est actif
+            const stocksModule = document.getElementById('stocksModule');
+            const isStocksModuleActive = stocksModule && stocksModule.classList.contains('active');
+            console.log('📦 Module stocks actif:', isStocksModuleActive);
+            
+            // Recalculer tout
+            calculateCurrentStockLevels();
+            
+            console.log(`📋 currentStockLevels keys: ${Object.keys(currentStockLevels).length}`);
+            console.log('📋 currentStockLevels sample:', Object.keys(currentStockLevels).slice(0, 3));
+            
+            // Attendre un peu puis mettre à jour l'affichage
+            setTimeout(() => {
+                console.log('🔄 Début mise à jour des interfaces...');
+                
+                // Vérifier les éléments avant de les mettre à jour
+                const totalEntriesEl = document.getElementById('totalEntries');
+                const totalExitsEl = document.getElementById('totalExits');
+                const currentStockEl = document.getElementById('currentStock');
+                
+                console.log('🔍 Éléments HTML trouvés:', {
+                    totalEntries: !!totalEntriesEl,
+                    totalExits: !!totalExitsEl,
+                    currentStock: !!currentStockEl
+                });
+                
+                updateStockDashboard();
+                loadStockMovementsTable();
+                updateLowStockTable();
+                updateInventoryTable();
+                updateStockProductFilters();
+                updateStockAnalysisInfo();
+                updateFirebaseInfo();
+                
+                console.log('✅ KPI forcés mis à jour avec succès');
+            }, 100);
+        }
 
         // ========================================
         // MISE À JOUR TABLE INVENTAIRE
