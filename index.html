@@ -1755,9 +1755,7 @@
         
         /* === BOUTON FLOTTANT === */
         .floating-btn {
-            position: fixed;
-            top: 80px;
-            right: 20px;
+            position: static;
             width: 56px;
             height: 56px;
             background: linear-gradient(45deg, #667eea, #764ba2);
@@ -1774,12 +1772,14 @@
             align-items: center;
             justify-content: center;
             touch-action: manipulation;
+            margin-left: 15px;
         }
         
         /* === NAVIGATION MODULES === */
         .module-nav {
             display: flex;
             justify-content: center;
+            align-items: center;
             gap: 12px;
             margin-bottom: 25px;
             padding: 0 10px;
@@ -1857,6 +1857,7 @@
                 flex-direction: column;
                 gap: 10px;
                 padding: 0 5px;
+                align-items: center;
             }
             
             .module-tab {
@@ -1865,6 +1866,11 @@
                 min-width: auto;
                 font-size: 16px;
                 text-align: center;
+            }
+            
+            .floating-btn {
+                margin-left: 0;
+                margin-top: 10px;
             }
         }
         
@@ -1887,14 +1893,15 @@
         
         .floating-menu {
             position: fixed;
-            top: 145px;
-            right: 20px;
+            top: 150px;
+            right: 50%;
+            transform: translateX(50%);
             background: white;
             border-radius: 15px;
             box-shadow: 0 8px 30px rgba(0,0,0,0.15);
             z-index: 999;
             opacity: 0;
-            transform: translateY(-10px) scale(0.95);
+            transform: translateX(50%) translateY(-10px) scale(0.95);
             transition: all 0.3s ease;
             pointer-events: none;
             min-width: 220px;
@@ -1905,7 +1912,7 @@
         
         .floating-menu.show {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: translateX(50%) translateY(0) scale(1);
             pointer-events: auto;
         }
         
@@ -2073,19 +2080,25 @@
         /* Responsive mobile */
         @media (max-width: 768px) {
             .floating-btn {
-                top: 70px;
-                right: 15px;
                 width: 50px;
                 height: 50px;
                 font-size: 20px;
+                margin-left: 10px;
             }
             
             .floating-menu {
                 top: 130px;
                 right: 15px;
+                left: 15px;
+                transform: none;
                 width: calc(100vw - 30px);
                 max-width: 300px;
                 max-height: 70vh;
+                margin: 0 auto;
+            }
+            
+            .floating-menu.show {
+                transform: translateY(0) scale(1);
             }
             
             .mini-chat {
@@ -2140,6 +2153,9 @@
         <div class="module-nav">
             <button class="module-tab active" onclick="showModule('commercial')">💼 Module Commercial</button>
             <button class="module-tab" onclick="showModule('stocks')">📦 Module Stocks</button>
+            <button class="floating-btn" id="floatingBtn" onclick="toggleFloatingMenu()" title="Accès rapide">
+                +
+            </button>
         </div>
         
         <!-- Module Commercial -->
@@ -2908,8 +2924,8 @@
                                     <option value="">Sélectionner...</option>
                                     <option value="Achat">Achat</option>
                                     <option value="Production">Production</option>
-                                    <option value="Retour">Retour client</option>
-                                    <option value="Ajustement">Ajustement inventaire</option>
+                                    <option value="Retour client">Retour client</option>
+                                    <option value="Ajustement inventaire">Ajustement inventaire</option>
                                     <option value="Autre">Autre</option>
                                 </select>
                             </div>
@@ -2986,11 +3002,10 @@
                                 <label for="exitType">Type de Sortie *</label>
                                 <select id="exitType" required>
                                     <option value="">Sélectionner...</option>
-                                    <option value="Vente">Vente</option>
-                                    <option value="Production">Consommation production</option>
-                                    <option value="Perte">Perte/Casse</option>
-                                    <option value="Prelevement">Prélèvement</option>
-                                    <option value="Ajustement">Ajustement inventaire</option>
+                                    <option value="Consommation production">Consommation production</option>
+                                    <option value="Perte/Casse">Perte/Casse</option>
+                                    <option value="Prélèvement">Prélèvement</option>
+                                    <option value="Ajustement inventaire">Ajustement inventaire</option>
                                     <option value="Autre">Autre</option>
                                 </select>
                             </div>
@@ -3069,11 +3084,32 @@
                                 </select>
                             </div>
                             <div class="filter-group">
-                                <label for="movementTypeFilter">Type</label>
+                                <label for="movementDirectionFilter">Direction</label>
+                                <select id="movementDirectionFilter" onchange="applyMovementFilters()">
+                                    <option value="">Tous les mouvements</option>
+                                    <option value="Entrée">📥 Entrées</option>
+                                    <option value="Sortie">📤 Sorties</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="movementTypeFilter">Type spécifique</label>
                                 <select id="movementTypeFilter" onchange="applyMovementFilters()">
                                     <option value="">Tous les types</option>
-                                    <option value="Entrée">Entrées</option>
-                                    <option value="Sortie">Sorties</option>
+                                    <optgroup label="📥 Types d'entrées">
+                                        <option value="Achat">Achat</option>
+                                        <option value="Production">Production</option>
+                                        <option value="Retour client">Retour client</option>
+                                        <option value="Ajustement inventaire">Ajustement inventaire</option>
+                                        <option value="Autre">Autre</option>
+                                    </optgroup>
+                                    <optgroup label="📤 Types de sorties">
+                                        <option value="Vente">Vente</option>
+                                        <option value="Consommation production">Consommation production</option>
+                                        <option value="Perte/Casse">Perte/Casse</option>
+                                        <option value="Prélèvement">Prélèvement</option>
+                                        <option value="Ajustement inventaire">Ajustement inventaire</option>
+                                        <option value="Autre">Autre</option>
+                                    </optgroup>
                                 </select>
                             </div>
                             <div class="filter-group">
@@ -3097,9 +3133,9 @@
                     </div>
                     
                     <div class="sub-nav-tabs">
-                        <button class="sub-nav-tab sales-tab active" onclick="showStockSubSection('movements-all')">🔄 Tous Mouvements</button>
-                        <button class="sub-nav-tab payments-tab" onclick="showStockSubSection('movements-entries')">📥 Entrées</button>
-                        <button class="sub-nav-tab global-tab" onclick="showStockSubSection('movements-exits')">📤 Sorties</button>
+                        <button class="sub-nav-tab sales-tab active" onclick="showStockSubSection('movements-all', event)">🔄 Tous Mouvements</button>
+                        <button class="sub-nav-tab payments-tab" onclick="showStockSubSection('movements-entries', event)">📥 Entrées</button>
+                        <button class="sub-nav-tab global-tab" onclick="showStockSubSection('movements-exits', event)">📤 Sorties</button>
                     </div>
 
                     <!-- Sous-section Tous Mouvements -->
@@ -3177,6 +3213,7 @@
                                         <th>Coût Total</th>
                                         <th>Type</th>
                                         <th>Fournisseur</th>
+                                        <th>Référence</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -3217,6 +3254,7 @@
                                         <th>Coût Total</th>
                                         <th>Type</th>
                                         <th>Destination</th>
+                                        <th>Référence</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -3286,13 +3324,11 @@
                             <thead>
                                 <tr>
                                     <th>Produit</th>
-                                    <th>Marque</th>
                                     <th>Stock Actuel</th>
-                                    <th>Unité</th>
-                                    <th>Seuil Min.</th>
-                                    <th>Coût Moyen</th>
-                                    <th>Valeur Stock</th>
                                     <th>Statut</th>
+                                    <th>Total Vendus</th>
+                                    <th>CA Généré</th>
+                                    <th>Dernier Mouvement</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -3399,6 +3435,24 @@
                                 <button class="btn btn-danger" onclick="clearStockData()">🗑️ Effacer Stocks</button>
                                 <small style="color: #dc3545; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
                                     ⚠️ Supprime toutes les données stocks
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label>Diagnostic Module Stocks</label>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button class="btn btn-warning" onclick="debugStocksModule()">🔧 Debug Stocks</button>
+                                    <button class="btn btn-primary" onclick="forceUpdateAllStockTables()">🔄 Force Tableaux</button>
+                                    <button class="btn btn-success" onclick="testStockTablesDirectly()">🧪 Test Direct</button>
+                                </div>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                                    <button class="btn btn-info" onclick="diagnoseMappingIssues()">🔍 Diagnostic Colonnes</button>
+                                    <button class="btn btn-danger" onclick="fixTableMapping()">🔧 Corriger Tableau</button>
+                                    <button class="btn btn-secondary" onclick="testAllStockGraphics()">📊 Test Graphiques</button>
+                                    <button class="btn btn-success" onclick="updateStockProductFilters()">🔄 MAJ Filtres</button>
+                                </div>
+                                <small style="color: #666; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    🔍 Debug complet • 🔄 Forcer tableaux • 🧪 Test direct<br>
+                                    🔍 Diagnostic colonnes • 🔧 Corriger tableau
                                 </small>
                             </div>
                         </div>
@@ -3566,9 +3620,6 @@
     </div>
 
     <!-- Bouton flottant et interfaces -->
-    <button class="floating-btn" id="floatingBtn" onclick="toggleFloatingMenu()" title="Accès rapide">
-        +
-    </button>
 
     <div class="floating-menu" id="floatingMenu">
         <!-- Menu Saisie -->
@@ -3778,6 +3829,36 @@
             // Charger les données de stock depuis localStorage ou Firebase
             loadStockData();
             
+            // FORCER TOUJOURS LA MISE À JOUR DÈS L'INITIALISATION
+            console.log(`${salesData.length} données de vente trouvées, calcul immédiat des stocks...`);
+            
+            // Mise à jour immédiate des KPIs
+            forceUpdateStockKPIs();
+            
+            // NOUVEAU: Forcer la mise à jour de TOUS les tableaux
+            setTimeout(() => {
+                console.log('🔄 Forçage de la mise à jour de tous les tableaux stocks...');
+                try {
+                    updateAllMovementsTable();
+                    updateEntriesMovementsTable();
+                    updateExitsMovementsTable();
+                    updateInventoryTable();
+                    
+                    // NOUVEAU: Initialiser les graphiques
+                    updateStockCharts();
+                    updateStockProductFilters(); // Mise à jour des listes déroulantes
+                    
+                    // Appliquer les filtres par défaut au chargement
+                    setTimeout(() => {
+                        resetMovementFilters(); // Cela chargera tous les mouvements sans filtre
+                    }, 500);
+                    
+                    console.log('✅ Tous les tableaux stocks ont été mis à jour');
+                } catch (error) {
+                    console.error('❌ Erreur lors du forçage des tableaux:', error);
+                }
+            }, 1000);
+            
             // Vérifier que les données de ventes sont chargées
             if (salesData.length === 0) {
                 console.log('Aucune donnée de vente trouvée localement, tentative de récupération depuis Firebase...');
@@ -3789,15 +3870,24 @@
                         // UTILISER LA FONCTION FORCÉE
                         forceUpdateStockKPIs();
                         
+                        // NOUVEAU: Re-forcer la mise à jour des tableaux avec les nouvelles données
+                        setTimeout(() => {
+                            updateAllMovementsTable();
+                            updateEntriesMovementsTable();
+                            updateExitsMovementsTable();
+                            updateInventoryTable();
+                            
+                            // Mettre à jour les graphiques également
+                            updateStockCharts();
+                            updateStockProductFilters();
+                        }, 500);
+                        
                         // Générer automatiquement le rapport en console
                         generateStockAnalysisReport();
                     }
                 }, 2000);
             } else {
                 console.log(`${salesData.length} ventes trouvées, calcul des stocks basé sur ces données...`);
-                
-                // FORCER LA MISE À JOUR COMPLÈTE
-                forceUpdateStockKPIs();
                 
                 // Générer automatiquement le rapport en console
                 setTimeout(() => generateStockAnalysisReport(), 500);
@@ -3847,8 +3937,16 @@
                 selectedSection.classList.add('active');
             }
             
-            // Activer l'onglet correspondant
-            event.target.classList.add('active');
+            // Activer l'onglet correspondant - vérifier que event.target existe
+            if (typeof event !== 'undefined' && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // Chercher et activer l'onglet correspondant par onclick
+                const correspondingTab = document.querySelector(`[onclick="showStocksSection('${sectionId}')"]`);
+                if (correspondingTab) {
+                    correspondingTab.classList.add('active');
+                }
+            }
             
             // Mettre à jour les données selon la section
             switch(sectionId) {
@@ -3873,7 +3971,7 @@
             }
         }
         
-        function showStockSubSection(subSectionId) {
+        function showStockSubSection(subSectionId, event) {
             // Cacher toutes les sous-sections
             const subSections = document.querySelectorAll('#stock-recap .sub-section');
             subSections.forEach(section => {
@@ -3893,10 +3991,1489 @@
             }
             
             // Activer le sous-onglet correspondant
-            event.target.classList.add('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // Chercher et activer l'onglet correspondant par subSectionId
+                const correspondingTab = document.querySelector(`[onclick*="${subSectionId}"]`);
+                if (correspondingTab) {
+                    correspondingTab.classList.add('active');
+                }
+            }
             
             // Mettre à jour les données
             updateStockRecapData();
+        }
+        
+        // Fonction pour mettre à jour les données des récapitulatifs stocks
+        function updateStockRecapData() {
+            console.log('🔄 Mise à jour des données récapitulatives stocks...');
+            
+            try {
+                // Mettre à jour le tableau d'inventaire
+                updateInventoryTable();
+                
+                // NOUVEAU: Forcer la mise à jour des tableaux de mouvements
+                updateAllMovementsTable();
+                updateEntriesMovementsTable();
+                updateExitsMovementsTable();
+                
+                // Mettre à jour les statistiques
+                updateStockStatistics();
+                
+                // Mettre à jour les alertes
+                updateStockAlerts();
+                
+                // Mettre à jour les graphiques si nécessaire
+                updateStockCharts();
+                
+                console.log('✅ Données récapitulatives stocks mises à jour');
+            } catch (error) {
+                console.error('❌ Erreur lors de la mise à jour des données récapitulatives:', error);
+            }
+        }
+        
+        // NOUVELLE FONCTION : Mettre à jour le tableau "Tous Mouvements"
+        function updateAllMovementsTable() {
+            console.log('🔄 Mise à jour du tableau "Tous Mouvements"...');
+            
+            const tableBody = document.getElementById('allMovementsTableBody');
+            if (!tableBody) {
+                console.log('❌ Tableau allMovementsTableBody non trouvé');
+                return;
+            }
+            
+            // Vider le tableau
+            tableBody.innerHTML = '';
+            
+            // Combiner toutes les données : ventes (sorties) + entrées + autres sorties
+            const allMovements = [];
+            
+            // Ajouter les ventes comme sorties
+            salesData.forEach(sale => {
+                // DEBUG: Afficher la structure d'une vente
+                if (salesData.indexOf(sale) === 0) {
+                    console.log('🔍 Structure d\'une vente:', {
+                        date: sale.date,
+                        product: sale.product,
+                        quantity: sale.quantity,
+                        unitPrice: sale.unitPrice,
+                        valeur: sale.valeur,
+                        invoice: sale.invoice,
+                        client: sale.client
+                    });
+                }
+                
+                allMovements.push({
+                    date: sale.date,
+                    type: 'Sortie (Vente)',
+                    product: sale.product || 'Produit non spécifié',
+                    quantity: -(parseFloat(sale.quantity) || 0), // Négatif car c'est une sortie
+                    unit: sale.unit || 'Cartons',
+                    unitCost: parseFloat(sale.unitPrice) || 0,
+                    totalCost: parseFloat(sale.valeur) || 0,
+                    reference: sale.invoice || `Vente #${sale.id}`,
+                    id: sale.id,
+                    source: 'sales'
+                });
+            });
+            
+            // Ajouter les entrées de stock
+            stockEntriesData.forEach(entry => {
+                // Normaliser le type selon nos catégories définies
+                let specificType = entry.type || 'Autre';
+                if (specificType === 'Retour') specificType = 'Retour client';
+                if (specificType === 'Ajustement') specificType = 'Ajustement inventaire';
+                
+                allMovements.push({
+                    date: entry.date,
+                    type: `Entrée (${specificType})`,
+                    product: entry.product,
+                    quantity: parseFloat(entry.quantity) || 0,
+                    unit: entry.unit || 'Cartons',
+                    unitCost: parseFloat(entry.unitCost) || 0,
+                    totalCost: parseFloat(entry.totalCost) || 0,
+                    reference: entry.reference || `Entrée #${entry.id}`,
+                    id: entry.id,
+                    source: 'entries'
+                });
+            });
+            
+            // Ajouter les autres sorties
+            stockExitsData.forEach(exit => {
+                // Normaliser le type selon nos catégories définies
+                let specificType = exit.type || 'Autre';
+                if (specificType === 'Production') specificType = 'Consommation production';
+                if (specificType === 'Perte') specificType = 'Perte/Casse';
+                if (specificType === 'Prelevement') specificType = 'Prélèvement';
+                if (specificType === 'Ajustement') specificType = 'Ajustement inventaire';
+                
+                allMovements.push({
+                    date: exit.date,
+                    type: `Sortie (${specificType})`,
+                    product: exit.product,
+                    quantity: -(parseFloat(exit.quantity) || 0), // Négatif car c'est une sortie
+                    unit: exit.unit || 'Cartons',
+                    unitCost: parseFloat(exit.unitCost) || 0,
+                    totalCost: parseFloat(exit.totalCost) || 0,
+                    reference: exit.reference || `Sortie #${exit.id}`,
+                    id: exit.id,
+                    source: 'exits'
+                });
+            });
+            
+            // Trier par date (plus récent en premier)
+            allMovements.sort((a, b) => {
+                const dateA = parseDate(a.date) || new Date(0);
+                const dateB = parseDate(b.date) || new Date(0);
+                return dateB - dateA;
+            });
+            
+            // Calculer les statistiques
+            let totalEntries = 0;
+            let totalExits = 0;
+            let totalEntriesQuantity = 0;
+            let totalExitsQuantity = 0;
+            
+            allMovements.forEach(movement => {
+                if (movement.quantity > 0) {
+                    totalEntries++;
+                    totalEntriesQuantity += movement.quantity;
+                } else {
+                    totalExits++;
+                    totalExitsQuantity += Math.abs(movement.quantity);
+                }
+            });
+            
+            // Mettre à jour les statistiques d'en-tête
+            const allMovementsCount = document.getElementById('allMovementsCount');
+            const allEntriesCount = document.getElementById('allEntriesCount');
+            const allExitsCount = document.getElementById('allExitsCount');
+            const netMovement = document.getElementById('netMovement');
+            
+            if (allMovementsCount) allMovementsCount.textContent = allMovements.length.toLocaleString();
+            if (allEntriesCount) allEntriesCount.textContent = totalEntries.toLocaleString();
+            if (allExitsCount) allExitsCount.textContent = totalExits.toLocaleString();
+            if (netMovement) netMovement.textContent = (totalEntriesQuantity - totalExitsQuantity).toLocaleString();
+            
+            // Remplir le tableau (limiter à 100 lignes pour les performances)
+            const displayMovements = allMovements.slice(0, 100);
+            
+            displayMovements.forEach(movement => {
+                const row = document.createElement('tr');
+                
+                const typeClass = movement.quantity > 0 ? 'text-success' : 'text-danger';
+                const quantityDisplay = Math.abs(movement.quantity).toLocaleString();
+                
+                row.innerHTML = `
+                    <td>${movement.date}</td>
+                    <td><span class="${typeClass}" style="font-weight: 500;">${movement.type}</span></td>
+                    <td style="font-weight: 500;">${movement.product}</td>
+                    <td class="${typeClass}" style="font-weight: bold;">${quantityDisplay}</td>
+                    <td>${movement.unit}</td>
+                    <td>${movement.unitCost.toLocaleString()} CFA</td>
+                    <td>${movement.totalCost.toLocaleString()} CFA</td>
+                    <td style="color: #666; font-size: 0.9rem;">${movement.reference}</td>
+                    <td>
+                        <button onclick="editMovement('${movement.source}', '${movement.id}')" 
+                                class="btn-icon" title="Modifier" style="font-size: 0.8rem; margin-right: 5px;">
+                            ✏️
+                        </button>
+                        <button onclick="deleteMovement('${movement.source}', '${movement.id}')" 
+                                class="btn-icon" title="Supprimer" style="font-size: 0.8rem;">
+                            �️
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            if (allMovements.length > 100) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="9" style="text-align: center; color: #666; font-style: italic; padding: 20px;">
+                        ... et ${(allMovements.length - 100).toLocaleString()} autres mouvements
+                        <br><small>Affichage limité aux 100 mouvements les plus récents</small>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            }
+            
+            console.log(`✅ ${displayMovements.length} mouvements affichés sur ${allMovements.length} total`);
+        }
+        
+        // FONCTIONS DE FILTRAGE POUR LES MOUVEMENTS
+        function applyMovementFilters() {
+            console.log('🔍 Application des filtres de mouvements...');
+            
+            const productFilter = document.getElementById('movementProductFilter')?.value || '';
+            const directionFilter = document.getElementById('movementDirectionFilter')?.value || '';
+            const typeFilter = document.getElementById('movementTypeFilter')?.value || '';
+            const dateStart = document.getElementById('movementDateStart')?.value || '';
+            const dateEnd = document.getElementById('movementDateEnd')?.value || '';
+            
+            // Définir les types organisés
+            const entryTypes = ['Achat', 'Production', 'Retour client', 'Ajustement inventaire', 'Autre'];
+            const exitTypes = ['Vente', 'Consommation production', 'Perte/Casse', 'Prélèvement', 'Ajustement inventaire', 'Autre'];
+            
+            // Combiner toutes les données comme dans updateAllMovementsTable
+            const allMovements = [];
+            
+            // Ajouter les ventes comme sorties
+            salesData.forEach(sale => {
+                allMovements.push({
+                    date: sale.date,
+                    type: 'Sortie (Vente)',
+                    direction: 'Sortie',
+                    specificType: 'Vente',
+                    product: sale.product || 'Produit non spécifié',
+                    quantity: -(parseFloat(sale.quantity) || 0),
+                    unit: sale.unit || 'Cartons',
+                    unitCost: parseFloat(sale.unitPrice) || 0,
+                    totalCost: parseFloat(sale.valeur) || 0,
+                    reference: sale.invoice || `Vente #${sale.id}`,
+                    id: sale.id,
+                    source: 'sales'
+                });
+            });
+            
+            // Ajouter les entrées de stock
+            stockEntriesData.forEach(entry => {
+                // Normaliser le type selon notre liste organisée
+                let specificType = entry.type || 'Autre';
+                if (specificType === 'Retour') specificType = 'Retour client';
+                if (specificType === 'Ajustement') specificType = 'Ajustement inventaire';
+                
+                allMovements.push({
+                    date: entry.date,
+                    type: 'Entrée',
+                    direction: 'Entrée',
+                    specificType: specificType,
+                    product: entry.product,
+                    quantity: parseFloat(entry.quantity) || 0,
+                    unit: entry.unit || 'Cartons',
+                    unitCost: parseFloat(entry.unitCost) || 0,
+                    totalCost: parseFloat(entry.totalCost) || 0,
+                    reference: entry.reference || `Entrée #${entry.id}`,
+                    id: entry.id,
+                    source: 'entries'
+                });
+            });
+            
+            // Ajouter les autres sorties
+            stockExitsData.forEach(exit => {
+                // Normaliser le type selon notre liste organisée
+                let specificType = exit.type || 'Autre';
+                if (specificType === 'Production') specificType = 'Consommation production';
+                if (specificType === 'Perte') specificType = 'Perte/Casse';
+                if (specificType === 'Prelevement') specificType = 'Prélèvement';
+                if (specificType === 'Ajustement') specificType = 'Ajustement inventaire';
+                
+                allMovements.push({
+                    date: exit.date,
+                    type: 'Sortie (Autre)',
+                    direction: 'Sortie',
+                    specificType: specificType,
+                    product: exit.product,
+                    quantity: -(parseFloat(exit.quantity) || 0),
+                    unit: exit.unit || 'Cartons',
+                    unitCost: parseFloat(exit.unitCost) || 0,
+                    totalCost: parseFloat(exit.totalCost) || 0,
+                    reference: exit.reference || `Sortie #${exit.id}`,
+                    id: exit.id,
+                    source: 'exits'
+                });
+            });
+            
+            // Appliquer les filtres
+            let filteredMovements = allMovements.filter(movement => {
+                // Filtre par produit
+                if (productFilter && !movement.product.toLowerCase().includes(productFilter.toLowerCase())) {
+                    return false;
+                }
+                
+                // Filtre par direction (Entrée/Sortie)
+                if (directionFilter && movement.direction !== directionFilter) {
+                    return false;
+                }
+                
+                // Filtre par type spécifique
+                if (typeFilter && movement.specificType !== typeFilter) {
+                    return false;
+                }
+                
+                // Filtre par date
+                if (dateStart) {
+                    const movementDate = parseDate(movement.date);
+                    const startDate = new Date(dateStart);
+                    if (movementDate < startDate) return false;
+                }
+                
+                if (dateEnd) {
+                    const movementDate = parseDate(movement.date);
+                    const endDate = new Date(dateEnd);
+                    if (movementDate > endDate) return false;
+                }
+                
+                return true;
+            });
+            
+            // Trier par date (plus récent en premier)
+            filteredMovements.sort((a, b) => {
+                const dateA = parseDate(a.date) || new Date(0);
+                const dateB = parseDate(b.date) || new Date(0);
+                return dateB - dateA;
+            });
+            
+            // Mettre à jour le tableau avec les données filtrées
+            updateMovementsTableWithData(filteredMovements);
+            
+            console.log(`🔍 ${filteredMovements.length} mouvements après filtrage`);
+        }
+        
+        function updateMovementsTableWithData(movements) {
+            const tableBody = document.getElementById('allMovementsTableBody');
+            if (!tableBody) return;
+            
+            // Vider le tableau
+            tableBody.innerHTML = '';
+            
+            // Calculer les statistiques
+            let totalEntries = 0;
+            let totalExits = 0;
+            let totalEntriesQuantity = 0;
+            let totalExitsQuantity = 0;
+            
+            movements.forEach(movement => {
+                if (movement.quantity > 0) {
+                    totalEntries++;
+                    totalEntriesQuantity += movement.quantity;
+                } else {
+                    totalExits++;
+                    totalExitsQuantity += Math.abs(movement.quantity);
+                }
+            });
+            
+            // Mettre à jour les statistiques d'en-tête
+            const allMovementsCount = document.getElementById('allMovementsCount');
+            const allEntriesCount = document.getElementById('allEntriesCount');
+            const allExitsCount = document.getElementById('allExitsCount');
+            const netMovement = document.getElementById('netMovement');
+            
+            if (allMovementsCount) allMovementsCount.textContent = movements.length.toLocaleString();
+            if (allEntriesCount) allEntriesCount.textContent = totalEntries.toLocaleString();
+            if (allExitsCount) allExitsCount.textContent = totalExits.toLocaleString();
+            if (netMovement) netMovement.textContent = (totalEntriesQuantity - totalExitsQuantity).toLocaleString();
+            
+            // Remplir le tableau (limiter à 100 lignes pour les performances)
+            const displayMovements = movements.slice(0, 100);
+            
+            displayMovements.forEach(movement => {
+                const row = document.createElement('tr');
+                
+                const typeClass = movement.quantity > 0 ? 'text-success' : 'text-danger';
+                const quantityDisplay = Math.abs(movement.quantity).toLocaleString();
+                
+                row.innerHTML = `
+                    <td>${movement.date}</td>
+                    <td><span class="${typeClass}" style="font-weight: 500;">${movement.type}</span></td>
+                    <td style="font-weight: 500;">${movement.product}</td>
+                    <td class="${typeClass}" style="font-weight: bold;">${quantityDisplay}</td>
+                    <td>${movement.unit}</td>
+                    <td>${movement.unitCost.toLocaleString()} CFA</td>
+                    <td>${movement.totalCost.toLocaleString()} CFA</td>
+                    <td style="color: #666; font-size: 0.9rem;">${movement.reference}</td>
+                    <td>
+                        <button onclick="editMovement('${movement.source}', '${movement.id}')" 
+                                class="btn-icon" title="Modifier" style="font-size: 0.8rem; margin-right: 5px;">
+                            ✏️
+                        </button>
+                        <button onclick="deleteMovement('${movement.source}', '${movement.id}')" 
+                                class="btn-icon" title="Supprimer" style="font-size: 0.8rem;">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            if (movements.length > 100) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="9" style="text-align: center; color: #666; font-style: italic; padding: 20px;">
+                        ... et ${(movements.length - 100).toLocaleString()} autres mouvements
+                        <br><small>Affichage limité aux 100 mouvements les plus récents</small>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            }
+        }
+        
+        function setMovementAllTimeFilters() {
+            document.getElementById('movementDateStart').value = '';
+            document.getElementById('movementDateEnd').value = '';
+            applyMovementFilters();
+        }
+        
+        function setMovementCurrentMonth() {
+            const now = new Date();
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            
+            document.getElementById('movementDateStart').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('movementDateEnd').value = lastDay.toISOString().split('T')[0];
+            applyMovementFilters();
+        }
+        
+        function resetMovementFilters() {
+            document.getElementById('movementProductFilter').value = '';
+            document.getElementById('movementDirectionFilter').value = '';
+            document.getElementById('movementTypeFilter').value = '';
+            document.getElementById('movementDateStart').value = '';
+            document.getElementById('movementDateEnd').value = '';
+            updateAllMovementsTable(); // Revenir à l'affichage sans filtre
+        }
+        
+        // FONCTIONS POUR MODIFIER ET SUPPRIMER LES MOUVEMENTS
+        function editMovement(source, id) {
+            console.log(`✏️ Modification du mouvement ${source}:${id}`);
+            
+            let movement = null;
+            let dataArray = null;
+            
+            if (source === 'sales') {
+                movement = salesData.find(s => s.id == id);
+                dataArray = salesData;
+            } else if (source === 'entries') {
+                movement = stockEntriesData.find(e => e.id == id);
+                dataArray = stockEntriesData;
+            } else if (source === 'exits') {
+                movement = stockExitsData.find(e => e.id == id);
+                dataArray = stockExitsData;
+            }
+            
+            if (!movement) {
+                alert('❌ Mouvement introuvable');
+                return;
+            }
+            
+            // Créer un modal de modification avancé
+            showMovementEditModal(movement, source);
+        }
+        
+        function showMovementEditModal(movement, source) {
+            // Créer le modal
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            `;
+            
+            const modalContent = document.createElement('div');
+            modalContent.className = 'modal-content';
+            modalContent.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                max-width: 600px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+            `;
+            
+            // Déterminer les champs selon le type de mouvement
+            let formFields = '';
+            let titleIcon = '';
+            let titleColor = '';
+            
+            if (source === 'sales') {
+                titleIcon = '📤';
+                titleColor = '#dc3545';
+                formFields = `
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_date">Date</label>
+                            <input type="date" id="edit_date" value="${movement.date || ''}" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_client">Client</label>
+                            <input type="text" id="edit_client" value="${movement.client || ''}" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_product">Produit</label>
+                        <input type="text" id="edit_product" value="${movement.product || ''}" class="form-control">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_quantity">Quantité</label>
+                            <input type="number" id="edit_quantity" value="${Math.abs(movement.quantity || 0)}" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_unit">Unité</label>
+                            <select id="edit_unit" class="form-control">
+                                <option value="Cartons" ${(movement.unit === 'Cartons') ? 'selected' : ''}>Cartons</option>
+                                <option value="Pièces" ${(movement.unit === 'Pièces') ? 'selected' : ''}>Pièces</option>
+                                <option value="Kg" ${(movement.unit === 'Kg') ? 'selected' : ''}>Kg</option>
+                                <option value="Litres" ${(movement.unit === 'Litres') ? 'selected' : ''}>Litres</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_unitPrice">Prix unitaire (CFA)</label>
+                            <input type="number" id="edit_unitPrice" value="${movement.unitPrice || 0}" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_valeur">Valeur totale (CFA)</label>
+                            <input type="number" id="edit_valeur" value="${movement.valeur || 0}" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_invoice">Référence facture</label>
+                        <input type="text" id="edit_invoice" value="${movement.invoice || ''}" class="form-control">
+                    </div>
+                `;
+            } else if (source === 'entries') {
+                titleIcon = '📥';
+                titleColor = '#28a745';
+                formFields = `
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_date">Date</label>
+                            <input type="date" id="edit_date" value="${movement.date || ''}" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_supplier">Fournisseur</label>
+                            <input type="text" id="edit_supplier" value="${movement.supplier || movement.fournisseur || ''}" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_product">Produit</label>
+                        <input type="text" id="edit_product" value="${movement.product || ''}" class="form-control">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_quantity">Quantité</label>
+                            <input type="number" id="edit_quantity" value="${movement.quantity || 0}" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_unit">Unité</label>
+                            <select id="edit_unit" class="form-control">
+                                <option value="Cartons" ${(movement.unit === 'Cartons') ? 'selected' : ''}>Cartons</option>
+                                <option value="Pièces" ${(movement.unit === 'Pièces') ? 'selected' : ''}>Pièces</option>
+                                <option value="Kg" ${(movement.unit === 'Kg') ? 'selected' : ''}>Kg</option>
+                                <option value="Litres" ${(movement.unit === 'Litres') ? 'selected' : ''}>Litres</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_unitCost">Coût unitaire (CFA)</label>
+                            <input type="number" id="edit_unitCost" value="${movement.unitCost || 0}" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_totalCost">Coût total (CFA)</label>
+                            <input type="number" id="edit_totalCost" value="${movement.totalCost || 0}" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_type">Type d'entrée</label>
+                            <select id="edit_type" class="form-control">
+                                <option value="Achat" ${(movement.type === 'Achat') ? 'selected' : ''}>Achat</option>
+                                <option value="Production" ${(movement.type === 'Production') ? 'selected' : ''}>Production</option>
+                                <option value="Retour client" ${(movement.type === 'Retour client' || movement.type === 'Retour') ? 'selected' : ''}>Retour client</option>
+                                <option value="Ajustement inventaire" ${(movement.type === 'Ajustement inventaire' || movement.type === 'Ajustement') ? 'selected' : ''}>Ajustement inventaire</option>
+                                <option value="Autre" ${(movement.type === 'Autre' || movement.type === 'Entrée standard') ? 'selected' : ''}>Autre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_reference">Référence</label>
+                            <input type="text" id="edit_reference" value="${movement.reference || ''}" class="form-control">
+                        </div>
+                    </div>
+                `;
+            } else if (source === 'exits') {
+                titleIcon = '📤';
+                titleColor = '#ffc107';
+                formFields = `
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_date">Date</label>
+                            <input type="date" id="edit_date" value="${movement.date || ''}" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_destination">Destination</label>
+                            <input type="text" id="edit_destination" value="${movement.destination || ''}" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_product">Produit</label>
+                        <input type="text" id="edit_product" value="${movement.product || ''}" class="form-control">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_quantity">Quantité</label>
+                            <input type="number" id="edit_quantity" value="${Math.abs(movement.quantity || 0)}" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_unit">Unité</label>
+                            <select id="edit_unit" class="form-control">
+                                <option value="Cartons" ${(movement.unit === 'Cartons') ? 'selected' : ''}>Cartons</option>
+                                <option value="Pièces" ${(movement.unit === 'Pièces') ? 'selected' : ''}>Pièces</option>
+                                <option value="Kg" ${(movement.unit === 'Kg') ? 'selected' : ''}>Kg</option>
+                                <option value="Litres" ${(movement.unit === 'Litres') ? 'selected' : ''}>Litres</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_unitCost">Coût unitaire (CFA)</label>
+                            <input type="number" id="edit_unitCost" value="${movement.unitCost || 0}" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_totalCost">Coût total (CFA)</label>
+                            <input type="number" id="edit_totalCost" value="${movement.totalCost || 0}" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_type">Type de sortie</label>
+                            <select id="edit_type" class="form-control">
+                                <option value="Consommation production" ${(movement.type === 'Consommation production' || movement.type === 'Production') ? 'selected' : ''}>Consommation production</option>
+                                <option value="Perte/Casse" ${(movement.type === 'Perte/Casse' || movement.type === 'Perte') ? 'selected' : ''}>Perte/Casse</option>
+                                <option value="Prélèvement" ${(movement.type === 'Prélèvement' || movement.type === 'Prelevement') ? 'selected' : ''}>Prélèvement</option>
+                                <option value="Ajustement inventaire" ${(movement.type === 'Ajustement inventaire' || movement.type === 'Ajustement') ? 'selected' : ''}>Ajustement inventaire</option>
+                                <option value="Autre" ${(movement.type === 'Autre' || movement.type === 'Autre sortie') ? 'selected' : ''}>Autre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_reference">Référence</label>
+                            <input type="text" id="edit_reference" value="${movement.reference || ''}" class="form-control">
+                        </div>
+                    </div>
+                `;
+            }
+            
+            modalContent.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
+                    <h2 style="margin: 0; color: ${titleColor};">${titleIcon} Modifier le mouvement</h2>
+                    <button onclick="this.closest('.modal-overlay').remove()" 
+                            style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+                </div>
+                
+                <form id="editMovementForm">
+                    ${formFields}
+                    
+                    <div style="display: flex; gap: 15px; margin-top: 25px; justify-content: flex-end;">
+                        <button type="button" onclick="this.closest('.modal-overlay').remove()" 
+                                class="btn btn-secondary">Annuler</button>
+                        <button type="button" onclick="saveMovementEdit('${source}', '${movement.id}')" 
+                                class="btn btn-primary">💾 Sauvegarder</button>
+                    </div>
+                </form>
+                
+                <style>
+                    .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+                    .form-group { flex: 1; }
+                    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+                    .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+                    .form-control:focus { outline: none; border-color: #667eea; box-shadow: 0 0 5px rgba(102, 126, 234, 0.3); }
+                    .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: 500; }
+                    .btn-primary { background: #667eea; color: white; }
+                    .btn-secondary { background: #6c757d; color: white; }
+                    .btn:hover { opacity: 0.9; }
+                </style>
+            `;
+            
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+            
+            // Focus sur le premier champ
+            setTimeout(() => {
+                const firstInput = modal.querySelector('input, select');
+                if (firstInput) firstInput.focus();
+            }, 100);
+        }
+        
+        function saveMovementEdit(source, id) {
+            const modal = document.querySelector('.modal-overlay');
+            if (!modal) return;
+            
+            // Récupérer les valeurs du formulaire
+            const formData = {
+                date: document.getElementById('edit_date')?.value || '',
+                product: document.getElementById('edit_product')?.value || '',
+                quantity: parseFloat(document.getElementById('edit_quantity')?.value || 0),
+                unit: document.getElementById('edit_unit')?.value || 'Cartons'
+            };
+            
+            // Champs spécifiques selon le type
+            if (source === 'sales') {
+                formData.client = document.getElementById('edit_client')?.value || '';
+                formData.unitPrice = parseFloat(document.getElementById('edit_unitPrice')?.value || 0);
+                formData.valeur = parseFloat(document.getElementById('edit_valeur')?.value || 0);
+                formData.invoice = document.getElementById('edit_invoice')?.value || '';
+            } else if (source === 'entries') {
+                formData.supplier = document.getElementById('edit_supplier')?.value || '';
+                formData.unitCost = parseFloat(document.getElementById('edit_unitCost')?.value || 0);
+                formData.totalCost = parseFloat(document.getElementById('edit_totalCost')?.value || 0);
+                formData.type = document.getElementById('edit_type')?.value || 'Entrée standard';
+                formData.reference = document.getElementById('edit_reference')?.value || '';
+                formData.fournisseur = formData.supplier; // Alias pour compatibilité
+            } else if (source === 'exits') {
+                formData.destination = document.getElementById('edit_destination')?.value || '';
+                formData.unitCost = parseFloat(document.getElementById('edit_unitCost')?.value || 0);
+                formData.totalCost = parseFloat(document.getElementById('edit_totalCost')?.value || 0);
+                formData.type = document.getElementById('edit_type')?.value || 'Autre sortie';
+                formData.reference = document.getElementById('edit_reference')?.value || '';
+            }
+            
+            // Trouver et mettre à jour l'objet
+            let movement = null;
+            if (source === 'sales') {
+                movement = salesData.find(s => s.id == id);
+                if (movement) {
+                    Object.assign(movement, formData);
+                    // Assurer que la quantité est positive pour les ventes
+                    movement.quantity = Math.abs(formData.quantity);
+                }
+            } else if (source === 'entries') {
+                movement = stockEntriesData.find(e => e.id == id);
+                if (movement) {
+                    Object.assign(movement, formData);
+                }
+            } else if (source === 'exits') {
+                movement = stockExitsData.find(e => e.id == id);
+                if (movement) {
+                    Object.assign(movement, formData);
+                    // Assurer que la quantité est positive pour les sorties (sera négativée lors de l'affichage)
+                    movement.quantity = Math.abs(formData.quantity);
+                }
+            }
+            
+            if (!movement) {
+                alert('❌ Erreur: mouvement introuvable');
+                return;
+            }
+            
+            // Sauvegarder les changements
+            saveToLocalStorage();
+            
+            // Fermer le modal
+            modal.remove();
+            
+            // Mettre à jour l'affichage
+            if (document.getElementById('movementDirectionFilter')?.value || document.getElementById('movementTypeFilter')?.value) {
+                applyMovementFilters();
+            } else {
+                updateAllMovementsTable();
+            }
+            
+            // Mettre à jour aussi les onglets spécifiques
+            updateEntriesMovementsTable();
+            updateExitsMovementsTable();
+            
+            // Mettre à jour les stocks
+            forceUpdateStockKPIs();
+            
+            alert('✅ Mouvement modifié avec succès !');
+        }
+        
+        function deleteMovement(source, id) {
+            const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce mouvement ?');
+            if (!confirmed) return;
+            
+            console.log(`🗑️ Suppression du mouvement ${source}:${id}`);
+            
+            if (source === 'sales') {
+                const index = salesData.findIndex(s => s.id == id);
+                if (index > -1) {
+                    salesData.splice(index, 1);
+                }
+            } else if (source === 'entries') {
+                const index = stockEntriesData.findIndex(e => e.id == id);
+                if (index > -1) {
+                    stockEntriesData.splice(index, 1);
+                }
+            } else if (source === 'exits') {
+                const index = stockExitsData.findIndex(e => e.id == id);
+                if (index > -1) {
+                    stockExitsData.splice(index, 1);
+                }
+            }
+            
+            // Sauvegarder les changements
+            saveToLocalStorage();
+            
+            // Mettre à jour l'affichage
+            if (document.getElementById('movementTypeFilter').value) {
+                applyMovementFilters();
+            } else {
+                updateAllMovementsTable();
+            }
+            
+            // Mettre à jour les stocks
+            forceUpdateStockKPIs();
+            
+            alert('✅ Mouvement supprimé');
+        }
+        
+        // FONCTIONS SPÉCIFIQUES POUR ENTRÉES ET SORTIES
+        function editStockEntry(id) {
+            const entry = stockEntriesData.find(e => e.id == id);
+            if (!entry) {
+                alert('❌ Entrée introuvable');
+                return;
+            }
+            editMovement('entries', id);
+        }
+        
+        function deleteStockEntry(id) {
+            const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette entrée ?');
+            if (!confirmed) return;
+            
+            const index = stockEntriesData.findIndex(e => e.id == id);
+            if (index > -1) {
+                stockEntriesData.splice(index, 1);
+                saveToLocalStorage();
+                updateEntriesMovementsTable();
+                updateAllMovementsTable();
+                forceUpdateStockKPIs();
+                alert('✅ Entrée supprimée');
+            }
+        }
+        
+        function editStockExit(id, source) {
+            if (source === 'sales') {
+                const sale = salesData.find(s => s.id == id);
+                if (!sale) {
+                    alert('❌ Vente introuvable');
+                    return;
+                }
+                editMovement('sales', id);
+            } else {
+                const exit = stockExitsData.find(e => e.id == id);
+                if (!exit) {
+                    alert('❌ Sortie introuvable');
+                    return;
+                }
+                editMovement('exits', id);
+            }
+        }
+        
+        function deleteStockExit(id, source) {
+            const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette sortie ?');
+            if (!confirmed) return;
+            
+            if (source === 'sales') {
+                const index = salesData.findIndex(s => s.id == id);
+                if (index > -1) {
+                    salesData.splice(index, 1);
+                    saveToLocalStorage();
+                    alert('✅ Vente supprimée');
+                }
+            } else {
+                const index = stockExitsData.findIndex(e => e.id == id);
+                if (index > -1) {
+                    stockExitsData.splice(index, 1);
+                    saveToLocalStorage();
+                    alert('✅ Sortie supprimée');
+                }
+            }
+            
+            updateExitsMovementsTable();
+            updateAllMovementsTable();
+            forceUpdateStockKPIs();
+        }
+        
+        // FONCTION POUR AFFICHER LA FICHE PRODUIT
+        function showProductSheet(productName) {
+            console.log(`📋 Affichage de la fiche produit: ${productName}`);
+            
+            // Récupérer les informations du produit
+            const stockInfo = currentStockLevels[productName] || { quantity: 0, value: 0, unit: 'Cartons' };
+            
+            // Trouver les données du produit dans les différentes sources
+            const productSales = salesData.filter(sale => sale.product === productName);
+            const productEntries = stockEntriesData.filter(entry => entry.product === productName);
+            const productExits = stockExitsData.filter(exit => exit.product === productName);
+            
+            // Calculer les statistiques
+            const totalSales = productSales.reduce((sum, sale) => sum + (parseFloat(sale.quantity) || 0), 0);
+            const totalRevenue = productSales.reduce((sum, sale) => sum + (parseFloat(sale.valeur) || 0), 0);
+            const totalEntries = productEntries.reduce((sum, entry) => sum + (parseFloat(entry.quantity) || 0), 0);
+            const totalExits = productExits.reduce((sum, exit) => sum + (parseFloat(exit.quantity) || 0), 0);
+            
+            // Prix d'achat moyen
+            const avgPurchasePrice = productEntries.length > 0 ? 
+                productEntries.reduce((sum, entry) => sum + (parseFloat(entry.unitCost) || 0), 0) / productEntries.length : 0;
+            
+            // Fournisseurs
+            const suppliers = [...new Set(productEntries.map(entry => entry.supplier || entry.fournisseur).filter(s => s))];
+            
+            // Clients principaux
+            const clientStats = {};
+            productSales.forEach(sale => {
+                if (sale.client) {
+                    clientStats[sale.client] = (clientStats[sale.client] || 0) + (parseFloat(sale.quantity) || 0);
+                }
+            });
+            const topClients = Object.entries(clientStats)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 3);
+            
+            // Créer le modal de fiche produit
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            `;
+            
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                max-width: 800px;
+                width: 95%;
+                max-height: 90vh;
+                overflow-y: auto;
+            `;
+            
+            // Déterminer la couleur de statut
+            let statusColor = '#28a745';
+            let statusText = 'OK';
+            if (stockInfo.quantity < 0) {
+                statusColor = '#dc3545';
+                statusText = 'NÉGATIF';
+            } else if (stockInfo.quantity === 0) {
+                statusColor = '#ffc107';
+                statusText = 'ZÉRO';
+            } else if (stockInfo.quantity <= 10) {
+                statusColor = '#fd7e14';
+                statusText = 'FAIBLE';
+            }
+            
+            modalContent.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
+                    <h2 style="margin: 0; color: #667eea;">📋 Fiche Produit</h2>
+                    <button onclick="this.closest('.modal-overlay').remove()" 
+                            style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px;">
+                    <div>
+                        <h3 style="color: #667eea; margin-bottom: 15px;">🏷️ Informations générales</h3>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                            <div style="margin-bottom: 10px;"><strong>Nom:</strong> ${productName}</div>
+                            <div style="margin-bottom: 10px;"><strong>Stock actuel:</strong> 
+                                <span style="color: ${statusColor}; font-weight: bold;">${stockInfo.quantity.toLocaleString()} ${stockInfo.unit}</span>
+                            </div>
+                            <div style="margin-bottom: 10px;"><strong>Statut:</strong> 
+                                <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span>
+                            </div>
+                            <div style="margin-bottom: 10px;"><strong>Valeur stock:</strong> ${(stockInfo.value || 0).toLocaleString()} CFA</div>
+                            <div><strong>Prix d'achat moyen:</strong> <span id="editablePurchasePrice" style="color: #667eea; cursor: pointer; text-decoration: underline;">${avgPurchasePrice.toLocaleString()} CFA</span></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 style="color: #667eea; margin-bottom: 15px;">📊 Statistiques</h3>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                            <div style="margin-bottom: 10px;"><strong>Total vendu:</strong> ${totalSales.toLocaleString()} ${stockInfo.unit}</div>
+                            <div style="margin-bottom: 10px;"><strong>CA généré:</strong> ${totalRevenue.toLocaleString()} CFA</div>
+                            <div style="margin-bottom: 10px;"><strong>Total entrées:</strong> ${totalEntries.toLocaleString()} ${stockInfo.unit}</div>
+                            <div style="margin-bottom: 10px;"><strong>Total sorties (autres):</strong> ${totalExits.toLocaleString()} ${stockInfo.unit}</div>
+                            <div><strong>Nombre de ventes:</strong> ${productSales.length}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px;">
+                    <div>
+                        <h3 style="color: #667eea; margin-bottom: 15px;">🏭 Fournisseurs</h3>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; min-height: 80px;">
+                            ${suppliers.length > 0 ? 
+                                suppliers.map(supplier => `<div style="margin-bottom: 5px;">• <span id="editableSupplier_${suppliers.indexOf(supplier)}" style="color: #667eea; cursor: pointer; text-decoration: underline;">${supplier}</span></div>`).join('') :
+                                '<div style="color: #999;">Aucun fournisseur renseigné</div>'
+                            }
+                            <button onclick="addSupplier('${productName.replace(/'/g, "\\'")}', this)" 
+                                    style="margin-top: 10px; background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">
+                                + Ajouter fournisseur
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 style="color: #667eea; margin-bottom: 15px;">👥 Top clients</h3>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; min-height: 80px;">
+                            ${topClients.length > 0 ? 
+                                topClients.map(([client, qty], index) => `<div style="margin-bottom: 5px;">${index + 1}. ${client} (${qty.toLocaleString()} ${stockInfo.unit})</div>`).join('') :
+                                '<div style="color: #999;">Aucune vente enregistrée</div>'
+                            }
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">⚙️ Actions</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button onclick="editProductPurchasePrice('${productName.replace(/'/g, "\\'")}', ${avgPurchasePrice})" 
+                                class="btn btn-primary">💰 Modifier prix d'achat</button>
+                        <button onclick="showProductMovements('${productName.replace(/'/g, "\\'")}', this.closest('.modal-overlay'))" 
+                                class="btn btn-info">📊 Voir mouvements</button>
+                        <button onclick="exportProductData('${productName.replace(/'/g, "\\'")}', this.closest('.modal-overlay'))" 
+                                class="btn btn-success">📄 Exporter données</button>
+                    </div>
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end;">
+                    <button onclick="this.closest('.modal-overlay').remove()" 
+                            class="btn btn-secondary">Fermer</button>
+                </div>
+                
+                <style>
+                    .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: 500; margin: 2px; }
+                    .btn-primary { background: #667eea; color: white; }
+                    .btn-info { background: #17a2b8; color: white; }
+                    .btn-success { background: #28a745; color: white; }
+                    .btn-secondary { background: #6c757d; color: white; }
+                    .btn:hover { opacity: 0.9; }
+                </style>
+            `;
+            
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+        }
+        
+        function editProductPurchasePrice(productName, currentPrice) {
+            const newPrice = prompt(`Modifier le prix d'achat pour ${productName}:`, currentPrice || 0);
+            if (newPrice !== null && !isNaN(newPrice)) {
+                // Ici, vous pourriez sauvegarder dans une base de données de produits
+                // Pour l'instant, on affiche juste un message
+                alert(`✅ Prix d'achat mis à jour: ${parseFloat(newPrice).toLocaleString()} CFA`);
+                
+                // Actualiser la fiche si elle est ouverte
+                const modal = document.querySelector('.modal-overlay');
+                if (modal) {
+                    modal.remove();
+                    showProductSheet(productName);
+                }
+            }
+        }
+        
+        function addSupplier(productName, button) {
+            const supplier = prompt(`Ajouter un fournisseur pour ${productName}:`);
+            if (supplier && supplier.trim()) {
+                // Créer une nouvelle entrée fictive pour enregistrer le fournisseur
+                const newEntry = {
+                    id: Date.now().toString(),
+                    date: new Date().toISOString().split('T')[0],
+                    product: productName,
+                    supplier: supplier.trim(),
+                    fournisseur: supplier.trim(),
+                    quantity: 0,
+                    unitCost: 0,
+                    totalCost: 0,
+                    type: 'Référence fournisseur',
+                    reference: `Fournisseur ajouté le ${new Date().toLocaleDateString()}`
+                };
+                
+                stockEntriesData.push(newEntry);
+                saveToLocalStorage();
+                
+                alert(`✅ Fournisseur "${supplier}" ajouté`);
+                
+                // Actualiser la fiche
+                const modal = document.querySelector('.modal-overlay');
+                if (modal) {
+                    modal.remove();
+                    showProductSheet(productName);
+                }
+            }
+        }
+        
+        function showProductMovements(productName, modal) {
+            // Fermer le modal actuel
+            modal.remove();
+            
+            // Aller à l'onglet mouvements et appliquer un filtre sur ce produit
+            showModule('stocks');
+            showStockSubSection('movements-all');
+            
+            // Attendre que l'onglet soit chargé puis appliquer les filtres
+            setTimeout(() => {
+                const productFilter = document.getElementById('movementProductFilter');
+                if (productFilter) {
+                    // Chercher l'option exacte
+                    for (let option of productFilter.options) {
+                        if (option.value === productName) {
+                            productFilter.value = productName;
+                            break;
+                        }
+                    }
+                    applyMovementFilters();
+                }
+            }, 500);
+        }
+        
+        function exportProductData(productName, modal) {
+            // Récupérer toutes les données du produit
+            const productSales = salesData.filter(sale => sale.product === productName);
+            const productEntries = stockEntriesData.filter(entry => entry.product === productName);
+            const productExits = stockExitsData.filter(exit => exit.product === productName);
+            
+            // Préparer les données pour export
+            const exportData = {
+                'Informations générales': {
+                    'Nom du produit': productName,
+                    'Stock actuel': currentStockLevels[productName]?.quantity || 0,
+                    'Unité': currentStockLevels[productName]?.unit || 'Cartons',
+                    'Valeur du stock': currentStockLevels[productName]?.value || 0
+                },
+                'Ventes': productSales.map(sale => ({
+                    Date: sale.date,
+                    Client: sale.client,
+                    Quantité: sale.quantity,
+                    'Prix unitaire': sale.unitPrice,
+                    'Valeur totale': sale.valeur,
+                    Facture: sale.invoice
+                })),
+                'Entrées': productEntries.map(entry => ({
+                    Date: entry.date,
+                    Fournisseur: entry.supplier || entry.fournisseur,
+                    Quantité: entry.quantity,
+                    'Coût unitaire': entry.unitCost,
+                    'Coût total': entry.totalCost,
+                    Type: entry.type,
+                    Référence: entry.reference
+                })),
+                'Autres sorties': productExits.map(exit => ({
+                    Date: exit.date,
+                    Destination: exit.destination,
+                    Quantité: exit.quantity,
+                    'Coût unitaire': exit.unitCost,
+                    'Coût total': exit.totalCost,
+                    Type: exit.type,
+                    Référence: exit.reference
+                }))
+            };
+            
+            // Créer un fichier JSON simple pour le moment
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+            const downloadLink = document.createElement('a');
+            downloadLink.href = dataStr;
+            downloadLink.download = `fiche_produit_${productName.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+            downloadLink.click();
+            
+            alert(`📄 Export terminé pour ${productName}`);
+        }
+        
+        // NOUVELLE FONCTION : Mettre à jour le tableau des entrées seulement
+        function updateEntriesMovementsTable() {
+            console.log('📥 Mise à jour du tableau des entrées...');
+            
+            const tableBody = document.getElementById('entriesMovementsTableBody');
+            if (!tableBody) {
+                console.log('❌ Tableau entriesMovementsTableBody non trouvé');
+                return;
+            }
+            
+            // Vider le tableau
+            tableBody.innerHTML = '';
+            
+            // Statistiques
+            const totalEntries = stockEntriesData.length;
+            const totalQuantity = stockEntriesData.reduce((sum, entry) => sum + (parseFloat(entry.quantity) || 0), 0);
+            const totalCost = stockEntriesData.reduce((sum, entry) => sum + (parseFloat(entry.totalCost) || 0), 0);
+            
+            // Mettre à jour les statistiques
+            const entriesMovementsCount = document.getElementById('entriesMovementsCount');
+            const totalEntriesQuantity = document.getElementById('totalEntriesQuantity');
+            const totalEntriesCost = document.getElementById('totalEntriesCost');
+            
+            if (entriesMovementsCount) entriesMovementsCount.textContent = totalEntries.toLocaleString();
+            if (totalEntriesQuantity) totalEntriesQuantity.textContent = totalQuantity.toLocaleString();
+            if (totalEntriesCost) totalEntriesCost.textContent = totalCost.toLocaleString() + ' CFA';
+            
+            // Remplir le tableau
+            stockEntriesData
+                .sort((a, b) => {
+                    const dateA = parseDate(a.date) || new Date(0);
+                    const dateB = parseDate(b.date) || new Date(0);
+                    return dateB - dateA;
+                })
+                .forEach(entry => {
+                    const row = document.createElement('tr');
+                    
+                    // Normaliser le type selon nos catégories définies
+                    let specificType = entry.type || 'Autre';
+                    if (specificType === 'Retour') specificType = 'Retour client';
+                    if (specificType === 'Ajustement') specificType = 'Ajustement inventaire';
+                    
+                    row.innerHTML = `
+                        <td>${entry.date}</td>
+                        <td style="font-weight: 500;">${entry.product}</td>
+                        <td style="font-weight: bold; color: #28a745;">${(parseFloat(entry.quantity) || 0).toLocaleString()}</td>
+                        <td>${entry.unit || 'Cartons'}</td>
+                        <td>${(parseFloat(entry.unitCost) || 0).toLocaleString()} CFA</td>
+                        <td style="font-weight: 500;">${(parseFloat(entry.totalCost) || 0).toLocaleString()} CFA</td>
+                        <td style="color: #666; font-weight: 500;">${specificType}</td>
+                        <td style="color: #666;">${entry.supplier || entry.fournisseur || 'Non spécifié'}</td>
+                        <td style="color: #666;">${entry.reference || 'Non spécifiée'}</td>
+                        <td>
+                            <button onclick="editStockEntry('${entry.id}')" class="btn-icon" title="Modifier" style="margin-right: 5px;">✏️</button>
+                            <button onclick="deleteStockEntry('${entry.id}')" class="btn-icon" title="Supprimer">🗑️</button>
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+            
+            console.log(`✅ ${totalEntries} entrées affichées`);
+        }
+        
+        // NOUVELLE FONCTION : Mettre à jour le tableau des sorties seulement
+        function updateExitsMovementsTable() {
+            console.log('📤 Mise à jour du tableau des sorties...');
+            
+            const tableBody = document.getElementById('exitsMovementsTableBody');
+            if (!tableBody) {
+                console.log('❌ Tableau exitsMovementsTableBody non trouvé');
+                return;
+            }
+            
+            // Vider le tableau
+            tableBody.innerHTML = '';
+            
+            // Combiner ventes + autres sorties
+            const allExits = [];
+            
+            // Ajouter les ventes
+            salesData.forEach(sale => {
+                allExits.push({
+                    date: sale.date,
+                    product: sale.product || 'Produit non spécifié',
+                    quantity: parseFloat(sale.quantity) || 0,
+                    unit: sale.unit || 'Cartons',
+                    unitCost: parseFloat(sale.unitPrice) || 0,
+                    totalCost: parseFloat(sale.valeur) || 0,
+                    reference: sale.invoice || `Vente #${sale.id}`,
+                    type: 'Vente',
+                    id: sale.id,
+                    source: 'sales'
+                });
+            });
+            
+            // Ajouter les autres sorties
+            stockExitsData.forEach(exit => {
+                // Normaliser le type selon nos catégories définies
+                let specificType = exit.type || 'Autre';
+                if (specificType === 'Production') specificType = 'Consommation production';
+                if (specificType === 'Perte') specificType = 'Perte/Casse';
+                if (specificType === 'Prelevement') specificType = 'Prélèvement';
+                if (specificType === 'Ajustement') specificType = 'Ajustement inventaire';
+                
+                allExits.push({
+                    date: exit.date,
+                    product: exit.product,
+                    quantity: parseFloat(exit.quantity) || 0,
+                    unit: exit.unit || 'Cartons',
+                    unitCost: parseFloat(exit.unitCost) || 0,
+                    totalCost: parseFloat(exit.totalCost) || 0,
+                    reference: exit.reference || `Sortie #${exit.id}`,
+                    type: specificType,
+                    destination: exit.destination,
+                    id: exit.id,
+                    source: 'exits'
+                });
+            });
+            
+            // Statistiques
+            const totalExits = allExits.length;
+            const totalQuantity = allExits.reduce((sum, exit) => sum + exit.quantity, 0);
+            const totalCost = allExits.reduce((sum, exit) => sum + exit.totalCost, 0);
+            
+            // Mettre à jour les statistiques
+            const exitsMovementsCount = document.getElementById('exitsMovementsCount');
+            const totalExitsQuantity = document.getElementById('totalExitsQuantity');
+            const totalExitsCost = document.getElementById('totalExitsCost');
+            
+            if (exitsMovementsCount) exitsMovementsCount.textContent = totalExits.toLocaleString();
+            if (totalExitsQuantity) totalExitsQuantity.textContent = totalQuantity.toLocaleString();
+            if (totalExitsCost) totalExitsCost.textContent = totalCost.toLocaleString() + ' CFA';
+            
+            // Remplir le tableau
+            allExits
+                .sort((a, b) => {
+                    const dateA = parseDate(a.date) || new Date(0);
+                    const dateB = parseDate(b.date) || new Date(0);
+                    return dateB - dateA;
+                })
+                .slice(0, 100) // Limiter à 100 lignes
+                .forEach(exit => {
+                    const row = document.createElement('tr');
+                    
+                    const typeClass = exit.source === 'sales' ? 'text-primary' : 'text-warning';
+                    
+                    row.innerHTML = `
+                        <td>${exit.date}</td>
+                        <td style="font-weight: 500;">${exit.product}</td>
+                        <td style="font-weight: bold; color: #dc3545;">${exit.quantity.toLocaleString()}</td>
+                        <td>${exit.unit}</td>
+                        <td>${exit.unitCost.toLocaleString()} CFA</td>
+                        <td style="font-weight: 500;">${exit.totalCost.toLocaleString()} CFA</td>
+                        <td><span class="${typeClass}" style="font-weight: 500;">${exit.type}</span></td>
+                        <td style="color: #666;">${exit.destination || exit.client || 'Non spécifié'}</td>
+                        <td>
+                            <button onclick="editStockExit('${exit.id}', '${exit.source}')" 
+                                    class="btn-icon" title="Modifier" style="margin-right: 5px;">
+                                ✏️
+                            </button>
+                            <button onclick="deleteStockExit('${exit.id}', '${exit.source}')" 
+                                    class="btn-icon" title="Supprimer">
+                                �️
+                            </button>
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+            
+            console.log(`✅ ${Math.min(totalExits, 100)} sorties affichées sur ${totalExits} total`);
+        }
+        
+        // Fonction utilitaire pour voir les détails d'un mouvement
+        function viewMovementDetails(source, id) {
+            let item;
+            if (source === 'sales') {
+                item = salesData.find(s => s.id == id);
+                if (item) {
+                    showAlert(`📄 Vente: ${item.client} - ${item.product} - ${formatCurrency(item.valeur)}`, 'info');
+                }
+            } else if (source === 'entries') {
+                item = stockEntriesData.find(e => e.id == id);
+                if (item) {
+                    showAlert(`📥 Entrée: ${item.product} - ${item.quantity} ${item.unit} - ${formatCurrency(item.totalCost)}`, 'info');
+                }
+            } else if (source === 'exits') {
+                item = stockExitsData.find(e => e.id == id);
+                if (item) {
+                    showAlert(`📤 Sortie: ${item.product} - ${item.quantity} ${item.unit} - ${formatCurrency(item.totalCost)}`, 'info');
+                }
+            }
+        }
+        
+        // Fonction pour mettre à jour les statistiques stocks
+        function updateStockStatistics() {
+            console.log('📊 Mise à jour des statistiques stocks...');
+            
+            try {
+                const stats = calculateStockStatistics();
+                
+                // Mettre à jour l'affichage des statistiques
+                const statsContainer = document.getElementById('stock-stats');
+                if (statsContainer) {
+                    statsContainer.innerHTML = `
+                        <div class="stat-item">
+                            <span class="stat-label">Produits suivis:</span>
+                            <span class="stat-value">${stats.totalProducts}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Stocks négatifs:</span>
+                            <span class="stat-value text-danger">${stats.negativeStocks}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Stocks bas:</span>
+                            <span class="stat-value text-warning">${stats.lowStocks}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Valeur totale:</span>
+                            <span class="stat-value">${formatCurrency(stats.totalValue)}</span>
+                        </div>
+                    `;
+                }
+                
+                console.log('✅ Statistiques stocks mises à jour');
+            } catch (error) {
+                console.error('❌ Erreur lors de la mise à jour des statistiques:', error);
+            }
+        }
+        
+        // Fonction pour mettre à jour les alertes stocks
+        function updateStockAlerts() {
+            console.log('⚠️ Mise à jour des alertes stocks...');
+            
+            try {
+                // Mettre à jour le tableau des alertes
+                updateAlertsTable();
+                
+                // Calculer et afficher les alertes critiques
+                const criticalAlerts = Object.entries(currentStockLevels || {})
+                    .filter(([product, data]) => data.quantity < 0 || data.quantity < (data.minThreshold || 10))
+                    .length;
+                
+                // Mettre à jour le badge d'alertes
+                const alertBadge = document.querySelector('.alert-badge');
+                if (alertBadge) {
+                    alertBadge.textContent = criticalAlerts;
+                    alertBadge.style.display = criticalAlerts > 0 ? 'inline' : 'none';
+                }
+                
+                console.log(`✅ ${criticalAlerts} alertes stocks détectées`);
+            } catch (error) {
+                console.error('❌ Erreur lors de la mise à jour des alertes:', error);
+            }
+        }
+        
+        // Fonction pour calculer les statistiques stocks
+        function calculateStockStatistics() {
+            const stats = {
+                totalProducts: 0,
+                negativeStocks: 0,
+                lowStocks: 0,
+                totalValue: 0
+            };
+            
+            if (currentStockLevels) {
+                stats.totalProducts = Object.keys(currentStockLevels).length;
+                
+                Object.entries(currentStockLevels).forEach(([product, data]) => {
+                    if (data.quantity < 0) {
+                        stats.negativeStocks++;
+                    } else if (data.quantity < (data.minThreshold || 10)) {
+                        stats.lowStocks++;
+                    }
+                    
+                    stats.totalValue += data.value || 0;
+                });
+            }
+            
+            return stats;
         }
         
                 // ========================================
@@ -4100,9 +5677,6 @@
             
             // Mettre à jour les graphiques
             updateStockCharts();
-            
-            // Mettre à jour le tableau des alertes avec les stocks négatifs
-            updateLowStockTable();
             
             // Mettre à jour les filtres de produits
             updateStockProductFilters();
@@ -4394,16 +5968,27 @@
                 const totalEntriesEl = document.getElementById('totalEntries');
                 const totalExitsEl = document.getElementById('totalExits');
                 const currentStockEl = document.getElementById('currentStock');
+                const stockValueEl = document.getElementById('stockValue');
+                const lowStockAlertsEl = document.getElementById('lowStockAlerts');
+                const inventoryTableBodyEl = document.getElementById('inventoryTableBody');
                 
                 console.log('🔍 Éléments HTML trouvés:', {
                     totalEntries: !!totalEntriesEl,
                     totalExits: !!totalExitsEl,
-                    currentStock: !!currentStockEl
+                    currentStock: !!currentStockEl,
+                    stockValue: !!stockValueEl,
+                    lowStockAlerts: !!lowStockAlertsEl,
+                    inventoryTableBody: !!inventoryTableBodyEl
                 });
                 
+                // Si les éléments principaux manquent, afficher une alerte
+                if (!totalEntriesEl || !totalExitsEl || !currentStockEl) {
+                    console.error('❌ Éléments HTML principaux manquants pour le module stocks!');
+                    showAlert('⚠️ Erreur: Éléments du dashboard stocks introuvables. Vérifiez que vous êtes bien dans le module stocks.', 'error');
+                    return;
+                }
+                
                 updateStockDashboard();
-                loadStockMovementsTable();
-                updateLowStockTable();
                 updateInventoryTable();
                 updateStockProductFilters();
                 updateStockAnalysisInfo();
@@ -4492,6 +6077,12 @@
                     <td style="color: #666;">${totalRevenue.toLocaleString()} CFA</td>
                     <td style="font-size: 0.8rem; color: #888;">
                         ${stock.lastMovement ? new Date(stock.lastMovement).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td>
+                        <button onclick="showProductSheet('${product.replace(/'/g, "\\'")}')" 
+                                class="btn-icon" title="Fiche produit" style="background: #667eea; color: white; padding: 5px 10px; border-radius: 5px;">
+                            📋 Fiche
+                        </button>
                     </td>
                 `;
                 
@@ -4628,6 +6219,967 @@
             
             // Remettre la date du jour
             setExitDefaultValues();
+        }
+        
+        // ========================================
+        // FONCTIONS MANQUANTES POUR LE MODULE STOCKS
+        // ========================================
+        
+        function updateStockCharts() {
+            console.log('📊 Mise à jour des graphiques stocks...');
+            
+            try {
+                // 1. Graphique d'évolution des stocks (élément existant)
+                updateStockEvolutionChart();
+                
+                // 2. Graphique par produit (utiliser stockByProductChart existant)
+                updateStockByProductChart();
+                
+                // 3. Graphique entrées/sorties (utiliser entriesExitsChart existant)
+                updateEntriesExitsChart();
+                
+                // 4. Graphique rotation des stocks (utiliser stockRotationChart existant)
+                updateStockRotationChart();
+                
+                console.log('✅ Graphiques stocks mis à jour');
+            } catch (error) {
+                console.error('❌ Erreur lors de la mise à jour des graphiques stocks:', error);
+            }
+        }
+        
+        // Graphique d'évolution des stocks par produit
+        function updateStockEvolutionChart() {
+            const ctx = document.getElementById('stockEvolutionChart');
+            if (!ctx) return;
+            
+            // Détruire le graphique existant
+            if (stockCharts.evolution) {
+                stockCharts.evolution.destroy();
+            }
+            
+            // Préparer les données - Top 10 des produits par volume de vente
+            const productSales = {};
+            salesData.forEach(sale => {
+                const product = sale.product || 'Produit non spécifié';
+                if (!productSales[product]) {
+                    productSales[product] = 0;
+                }
+                productSales[product] += parseFloat(sale.quantity) || 0;
+            });
+            
+            const topProducts = Object.entries(productSales)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            
+            const labels = topProducts.map(([product]) => product.length > 20 ? product.substring(0, 20) + '...' : product);
+            const currentStocks = topProducts.map(([product]) => {
+                const level = currentStockLevels[product];
+                return level ? level.quantity : 0;
+            });
+            const totalSales = topProducts.map(([, sales]) => sales);
+            
+            stockCharts.evolution = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Stock Actuel',
+                        data: currentStocks,
+                        backgroundColor: currentStocks.map(stock => 
+                            stock < 0 ? '#dc3545' : stock === 0 ? '#ffc107' : '#28a745'
+                        ),
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }, {
+                        label: 'Total Vendus',
+                        data: totalSales,
+                        backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                        borderColor: '#667eea',
+                        borderWidth: 2,
+                        type: 'line',
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Quantité'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Stocks Actuels vs Ventes - Top 10 Produits'
+                        },
+                        legend: {
+                            display: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Graphique par produit (répartition des stocks)
+        function updateStockByProductChart() {
+            const ctx = document.getElementById('stockByProductChart');
+            if (!ctx) return;
+            
+            // Détruire le graphique existant
+            if (stockCharts.byProduct) {
+                stockCharts.byProduct.destroy();
+            }
+            
+            // Calculer les statistiques par statut
+            let negativeCount = 0;
+            let zeroCount = 0;
+            let lowCount = 0;
+            let okCount = 0;
+            
+            Object.values(currentStockLevels).forEach(level => {
+                if (level.quantity < 0) {
+                    negativeCount++;
+                } else if (level.quantity === 0) {
+                    zeroCount++;
+                } else if (level.quantity <= 10) {
+                    lowCount++;
+                } else {
+                    okCount++;
+                }
+            });
+            
+            stockCharts.byProduct = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Stocks Négatifs', 'Stocks Vides', 'Stocks Faibles', 'Stocks OK'],
+                    datasets: [{
+                        data: [negativeCount, zeroCount, lowCount, okCount],
+                        backgroundColor: ['#dc3545', '#6c757d', '#ffc107', '#28a745'],
+                        borderColor: '#ffffff',
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Répartition des Statuts de Stock'
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Graphique entrées vs sorties
+        function updateEntriesExitsChart() {
+            const ctx = document.getElementById('entriesExitsChart');
+            if (!ctx) return;
+            
+            // Détruire le graphique existant
+            if (stockCharts.entriesExits) {
+                stockCharts.entriesExits.destroy();
+            }
+            
+            // Préparer les données des 30 derniers jours
+            const today = new Date();
+            const dates = [];
+            const entriesData = [];
+            const exitsData = [];
+            
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toLocaleDateString('fr-FR');
+                dates.push(dateStr);
+                
+                // Calculer les entrées pour cette date
+                const dailyEntries = stockEntriesData
+                    .filter(entry => entry.date === date.toISOString().split('T')[0] || 
+                                   entry.date === dateStr)
+                    .reduce((sum, entry) => sum + (parseFloat(entry.quantity) || 0), 0);
+                entriesData.push(dailyEntries);
+                
+                // Calculer les sorties pour cette date
+                const dailyExits = salesData
+                    .filter(sale => sale.date === dateStr)
+                    .reduce((sum, sale) => sum + (parseFloat(sale.quantity) || 0), 0);
+                exitsData.push(dailyExits);
+            }
+            
+            stockCharts.entriesExits = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Entrées',
+                        data: entriesData,
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Sorties',
+                        data: exitsData,
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Quantité'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Mouvements de Stock - 30 Derniers Jours'
+                        },
+                        legend: {
+                            display: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Graphique de rotation des stocks
+        function updateStockRotationChart() {
+            const ctx = document.getElementById('stockRotationChart');
+            if (!ctx) return;
+            
+            // Détruire le graphique existant
+            if (stockCharts.rotation) {
+                stockCharts.rotation.destroy();
+            }
+            
+            // Calculer la rotation pour les top 10 produits vendus
+            const productSales = {};
+            salesData.forEach(sale => {
+                const product = sale.product || 'Produit non spécifié';
+                if (!productSales[product]) {
+                    productSales[product] = 0;
+                }
+                productSales[product] += parseFloat(sale.quantity) || 0;
+            });
+            
+            const topProducts = Object.entries(productSales)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            
+            const labels = topProducts.map(([product]) => product.length > 15 ? product.substring(0, 15) + '...' : product);
+            const rotationData = topProducts.map(([product, sales]) => {
+                const currentStock = currentStockLevels[product];
+                const avgStock = currentStock ? Math.abs(currentStock.quantity) + sales / 2 : sales / 2;
+                return avgStock > 0 ? Math.round((sales / avgStock) * 10) / 10 : 0;
+            });
+            
+            stockCharts.rotation = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Taux de Rotation',
+                        data: rotationData,
+                        backgroundColor: rotationData.map(rate => 
+                            rate > 5 ? '#28a745' : rate > 2 ? '#ffc107' : '#dc3545'
+                        ),
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Taux de Rotation'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Rotation des Stocks par Produit'
+                        },
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Supprimer l'ancienne fonction
+        function updateStockStatusChart() {
+            // Cette fonction est remplacée par updateStockByProductChart
+            updateStockByProductChart();
+        }
+        
+        function updateStockMovementsChart() {
+            // Cette fonction est remplacée par updateEntriesExitsChart
+            updateEntriesExitsChart();
+        }
+        
+        function updateStockProductFilters() {
+            console.log('🔍 Mise à jour des filtres produits stocks...');
+            
+            // Obtenir la liste unique des produits depuis les ventes et les stocks
+            const allProducts = new Set();
+            
+            // Ajouter les produits des ventes
+            salesData.forEach(sale => {
+                if (sale.product && sale.product.trim()) {
+                    allProducts.add(sale.product.trim());
+                }
+            });
+            
+            // Ajouter les produits des entrées de stock
+            stockEntriesData.forEach(entry => {
+                if (entry.product && entry.product.trim()) {
+                    allProducts.add(entry.product.trim());
+                }
+            });
+            
+            // Ajouter les produits des sorties de stock
+            stockExitsData.forEach(exit => {
+                if (exit.product && exit.product.trim()) {
+                    allProducts.add(exit.product.trim());
+                }
+            });
+            
+            // Convertir en tableau trié
+            const sortedProducts = Array.from(allProducts).sort();
+            
+            console.log(`📦 ${sortedProducts.length} produits uniques trouvés`);
+            
+            // Mettre à jour la liste déroulante des produits pour les entrées
+            const entryProductSelect = document.getElementById('entryProduct');
+            if (entryProductSelect) {
+                const currentValue = entryProductSelect.value;
+                entryProductSelect.innerHTML = '<option value="">Sélectionner un produit</option>';
+                
+                sortedProducts.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product;
+                    option.textContent = product.length > 50 ? product.substring(0, 50) + '...' : product;
+                    if (product === currentValue) {
+                        option.selected = true;
+                    }
+                    entryProductSelect.appendChild(option);
+                });
+                
+                console.log('✅ Liste des produits mise à jour pour les entrées');
+            }
+            
+            // Mettre à jour la liste déroulante des produits pour les sorties
+            const exitProductSelect = document.getElementById('exitProduct');
+            if (exitProductSelect) {
+                const currentValue = exitProductSelect.value;
+                exitProductSelect.innerHTML = '<option value="">Sélectionner un produit</option>';
+                
+                sortedProducts.forEach(product => {
+                    // Afficher le stock actuel à côté du nom du produit
+                    const stockLevel = currentStockLevels[product];
+                    const stockInfo = stockLevel ? ` (Stock: ${stockLevel.quantity})` : ' (Stock: 0)';
+                    
+                    const option = document.createElement('option');
+                    option.value = product;
+                    option.textContent = (product.length > 40 ? product.substring(0, 40) + '...' : product) + stockInfo;
+                    option.setAttribute('data-stock', stockLevel ? stockLevel.quantity : 0);
+                    
+                    if (stockLevel && stockLevel.quantity <= 0) {
+                        option.style.color = '#dc3545';
+                        option.style.fontWeight = 'bold';
+                    }
+                    
+                    if (product === currentValue) {
+                        option.selected = true;
+                    }
+                    exitProductSelect.appendChild(option);
+                });
+                
+                console.log('✅ Liste des produits mise à jour pour les sorties avec stocks');
+            }
+            
+            // Mettre à jour les datalists pour les filtres généraux
+            const productFilterDatalist = document.getElementById('productFilterDatalist');
+            if (productFilterDatalist) {
+                productFilterDatalist.innerHTML = '';
+                
+                sortedProducts.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product;
+                    productFilterDatalist.appendChild(option);
+                });
+                
+                console.log('✅ Datalist des produits mise à jour');
+            }
+            
+            // Mettre à jour le filtre de produits dans les mouvements si il existe
+            const movementProductFilter = document.getElementById('movementProductFilter');
+            if (movementProductFilter) {
+                const currentValue = movementProductFilter.value;
+                movementProductFilter.innerHTML = '<option value="">Tous les produits</option>';
+                
+                sortedProducts.forEach(product => {
+                    const stockLevel = currentStockLevels[product];
+                    const stockInfo = stockLevel ? ` (${stockLevel.quantity})` : ' (0)';
+                    
+                    const option = document.createElement('option');
+                    option.value = product;
+                    option.textContent = (product.length > 50 ? product.substring(0, 50) + '...' : product) + stockInfo;
+                    
+                    // Colorier selon le niveau de stock
+                    if (stockLevel) {
+                        if (stockLevel.quantity <= 0) {
+                            option.style.color = '#dc3545'; // Rouge pour stocks vides/négatifs
+                        } else if (stockLevel.quantity <= 10) {
+                            option.style.color = '#ffc107'; // Orange pour stocks faibles
+                        } else {
+                            option.style.color = '#28a745'; // Vert pour stocks corrects
+                        }
+                    }
+                    
+                    if (product === currentValue) {
+                        option.selected = true;
+                    }
+                    movementProductFilter.appendChild(option);
+                });
+                
+                console.log('✅ Filtre des mouvements par produit mise à jour avec indicateurs de stock');
+            }
+            
+            // Mettre à jour d'autres filtres de produits dans l'application
+            const allProductSelects = document.querySelectorAll('select[id*="product"], select[id*="Product"]');
+            allProductSelects.forEach(select => {
+                if (select.id === 'movementProductFilter' || select.id === 'entryProduct' || select.id === 'exitProduct') {
+                    return; // Déjà traités ci-dessus
+                }
+                
+                const currentValue = select.value;
+                const isFilterSelect = select.id.toLowerCase().includes('filter');
+                
+                select.innerHTML = isFilterSelect ? 
+                    '<option value="">Tous les produits</option>' : 
+                    '<option value="">Sélectionner un produit</option>';
+                
+                sortedProducts.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product;
+                    option.textContent = product.length > 50 ? product.substring(0, 50) + '...' : product;
+                    if (product === currentValue) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            });
+            
+            console.log('✅ Toutes les listes déroulantes de produits mises à jour');
+        }
+        
+        function updateStockAnalysisInfo() {
+            console.log('📈 Mise à jour des informations d\'analyse stocks...');
+            // Cette fonction peut être développée plus tard pour afficher des analyses avancées
+        }
+        
+        function updateFirebaseInfo() {
+            console.log('☁️ Mise à jour des informations Firebase...');
+            // Cette fonction peut afficher le statut de synchronisation Firebase
+        }
+        
+        // ========================================
+        // FONCTIONS MANQUANTES POUR LES SECTIONS STOCKS
+        // ========================================
+        
+        function updateStockSettings() {
+            console.log('⚙️ Mise à jour de la section Configuration stocks...');
+            // Mettre à jour les seuils d'alerte configurés
+            updateAlertsTable();
+            // Autres initialisations de la section paramètres si nécessaire
+        }
+        
+        function updateStockRecap() {
+            console.log('📋 Mise à jour de la section Mouvements stocks...');
+            // TODO: Implémenter l'affichage des mouvements de stock
+            // Cette fonction peut être développée pour afficher l'historique des mouvements
+        }
+        
+        function updateInventory() {
+            console.log('📦 Mise à jour de la section Inventaire...');
+            // Rediriger vers la fonction existante
+            updateInventoryTable();
+        }
+        
+        function updateAlertsTable() {
+            console.log('⚠️ Mise à jour du tableau des seuils d\'alerte...');
+            
+            const alertsTableBody = document.getElementById('alertsTableBody');
+            if (!alertsTableBody) {
+                console.log('❌ Tableau des alertes non trouvé');
+                return;
+            }
+            
+            // Vider le tableau
+            alertsTableBody.innerHTML = '';
+            
+            // Si aucune alerte configurée, afficher un message
+            if (!stockAlertsData || stockAlertsData.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="6" style="text-align: center; color: #666; padding: 20px;">
+                        Aucun seuil d'alerte configuré
+                    </td>
+                `;
+                alertsTableBody.appendChild(row);
+                return;
+            }
+            
+            // Afficher les alertes configurées
+            stockAlertsData.forEach(alert => {
+                const currentLevel = currentStockLevels[alert.product];
+                const currentStock = currentLevel ? currentLevel.quantity : 0;
+                const isLow = currentStock <= alert.threshold;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-weight: 500;">${alert.product}</td>
+                    <td>${alert.threshold}</td>
+                    <td>${alert.unit}</td>
+                    <td style="color: ${isLow ? '#dc3545' : '#28a745'};">${currentStock}</td>
+                    <td>
+                        <span style="color: ${isLow ? '#dc3545' : '#28a745'};">
+                            ${isLow ? '⚠️ Bas' : '✅ OK'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteStockAlert('${alert.id}')" title="Supprimer">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                alertsTableBody.appendChild(row);
+            });
+        }
+        
+        function saveStockAlert() {
+            const product = document.getElementById('alertProduct').value.trim();
+            const threshold = parseFloat(document.getElementById('alertThreshold').value) || 0;
+            const unit = document.getElementById('alertUnit').value;
+            
+            if (!product || threshold < 0) {
+                showAlert('Veuillez saisir un produit et un seuil valide', 'error');
+                return;
+            }
+            
+            // Vérifier si une alerte existe déjà pour ce produit
+            const existingAlertIndex = stockAlertsData.findIndex(alert => alert.product === product);
+            
+            const alertData = {
+                id: existingAlertIndex >= 0 ? stockAlertsData[existingAlertIndex].id : Date.now().toString(),
+                product: product,
+                threshold: threshold,
+                unit: unit,
+                dateCreated: existingAlertIndex >= 0 ? stockAlertsData[existingAlertIndex].dateCreated : new Date().toISOString()
+            };
+            
+            if (existingAlertIndex >= 0) {
+                // Mettre à jour l'alerte existante
+                stockAlertsData[existingAlertIndex] = alertData;
+                showAlert(`Seuil d'alerte mis à jour pour ${product}`, 'success');
+            } else {
+                // Ajouter nouvelle alerte
+                stockAlertsData.push(alertData);
+                showAlert(`Seuil d'alerte créé pour ${product}`, 'success');
+            }
+            
+            // Sauvegarder
+            saveStockData();
+            
+            // Vider le formulaire
+            document.getElementById('alertProduct').value = '';
+            document.getElementById('alertThreshold').value = '';
+            document.getElementById('alertUnit').value = 'Cartons';
+            
+            // Mettre à jour l'affichage
+            updateAlertsTable();
+        }
+        
+        function deleteStockAlert(alertId) {
+            if (confirm('Supprimer ce seuil d\'alerte ?')) {
+                stockAlertsData = stockAlertsData.filter(alert => alert.id !== alertId);
+                saveStockData();
+                updateAlertsTable();
+                showAlert('Seuil d\'alerte supprimé', 'success');
+            }
+        }
+        
+        function addDebugButton() {
+            console.log('🔧 Bouton de debug disponible dans l\'onglet Configuration du module stocks');
+            // Le bouton debug est maintenant intégré dans l'onglet "⚙️ Config" du module stocks
+            // Plus besoin de créer un bouton flottant
+        }
+        
+        // NOUVELLE FONCTION : Forcer la mise à jour de tous les tableaux stocks
+        function forceUpdateAllStockTables() {
+            console.log('🔄 FORÇAGE MANUEL DE TOUS LES TABLEAUX STOCKS...');
+            
+            try {
+                // Afficher un message utilisateur
+                showAlert('🔄 Mise à jour forcée des tableaux en cours...', 'info');
+                
+                // Forcer le recalcul des stocks
+                calculateStockLevels();
+                
+                // Mettre à jour tous les tableaux
+                updateAllMovementsTable();
+                updateEntriesMovementsTable();
+                updateExitsMovementsTable();
+                updateInventoryTable();
+                
+                // Mettre à jour aussi les KPIs
+                forceUpdateStockKPIs();
+                
+                console.log('✅ FORÇAGE TERMINÉ - Tous les tableaux ont été mis à jour');
+                showAlert('✅ Tableaux stocks mis à jour avec succès !', 'success');
+                
+                // Afficher un récapitulatif
+                setTimeout(() => {
+                    const recap = `📊 RÉCAPITULATIF:
+• ${salesData.length} ventes analysées
+• ${stockEntriesData.length} entrées de stock
+• ${stockExitsData.length} autres sorties
+• ${Object.keys(currentStockLevels || {}).length} produits suivis`;
+                    showAlert(recap, 'info');
+                }, 1500);
+                
+            } catch (error) {
+                console.error('❌ Erreur lors du forçage des tableaux:', error);
+                showAlert('❌ Erreur lors de la mise à jour des tableaux', 'error');
+            }
+        }
+        
+        // FONCTION DE TEST DIRECT : Injecter des données directement dans les tableaux
+        function testStockTablesDirectly() {
+            console.log('🧪 TEST DIRECT DES TABLEAUX STOCKS...');
+            
+            try {
+                showAlert('🧪 Test direct des tableaux en cours...', 'info');
+                
+                // Test 1: Tableau "Tous Mouvements"
+                const allMovementsTable = document.getElementById('allMovementsTableBody');
+                if (allMovementsTable) {
+                    allMovementsTable.innerHTML = `
+                        <tr>
+                            <td>26/08/2025</td>
+                            <td><span class="text-danger" style="font-weight: 500;">Sortie (Vente)</span></td>
+                            <td style="font-weight: 500;">TEST PRODUIT</td>
+                            <td class="text-danger" style="font-weight: bold;">100</td>
+                            <td>Cartons</td>
+                            <td>1 000 CFA</td>
+                            <td>100 000 CFA</td>
+                            <td style="color: #666; font-size: 0.9rem;">Vente test</td>
+                            <td>📄</td>
+                        </tr>
+                        <tr>
+                            <td>25/08/2025</td>
+                            <td><span class="text-success" style="font-weight: 500;">Entrée</span></td>
+                            <td style="font-weight: 500;">TEST PRODUIT</td>
+                            <td class="text-success" style="font-weight: bold;">500</td>
+                            <td>Cartons</td>
+                            <td>800 CFA</td>
+                            <td>400 000 CFA</td>
+                            <td style="color: #666; font-size: 0.9rem;">Entrée test</td>
+                            <td>📄</td>
+                        </tr>
+                    `;
+                    console.log('✅ Test tableau "Tous Mouvements" injecté');
+                }
+                
+                // Test 2: Tableau Inventaire
+                const inventoryTable = document.getElementById('inventoryTableBody');
+                if (inventoryTable) {
+                    inventoryTable.innerHTML = `
+                        <tr>
+                            <td style="font-weight: 500;">PRODUIT TEST 1</td>
+                            <td class="text-danger" style="font-weight: bold;">-50</td>
+                            <td>
+                                <span style="display: inline-flex; align-items: center; gap: 5px;">
+                                    🔴 <span class="text-danger">NÉGATIF</span>
+                                </span>
+                            </td>
+                            <td style="color: #666;">150</td>
+                            <td style="color: #666;">150 000 CFA</td>
+                            <td style="font-size: 0.8rem; color: #888;">26/08/2025</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;">PRODUIT TEST 2</td>
+                            <td class="text-success" style="font-weight: bold;">200</td>
+                            <td>
+                                <span style="display: inline-flex; align-items: center; gap: 5px;">
+                                    🟢 <span class="text-success">OK</span>
+                                </span>
+                            </td>
+                            <td style="color: #666;">300</td>
+                            <td style="color: #666;">900 000 CFA</td>
+                            <td style="font-size: 0.8rem; color: #888;">25/08/2025</td>
+                        </tr>
+                    `;
+                    console.log('✅ Test tableau "Inventaire" injecté');
+                }
+                
+                // Test 3: Mettre à jour les statistiques
+                const statsElements = {
+                    'allMovementsCount': '2',
+                    'allEntriesCount': '1',
+                    'allExitsCount': '1',
+                    'netMovement': '+400',
+                    'totalEntries': '10 000',
+                    'totalExits': '450 000',
+                    'currentStock': '-440 000',
+                    'stockValue': '500 000 CFA'
+                };
+                
+                Object.entries(statsElements).forEach(([id, value]) => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.textContent = value;
+                        console.log(`✅ Statistique ${id} mise à jour: ${value}`);
+                    }
+                });
+                
+                console.log('✅ TEST DIRECT TERMINÉ - Données de test injectées');
+                showAlert('✅ Test direct terminé ! Vérifiez les tableaux.', 'success');
+                
+                // Message explicatif
+                setTimeout(() => {
+                    showAlert('📋 Les tableaux affichent maintenant des données de test. Cliquez sur "🔄 Force Tableaux" pour revenir aux vraies données.', 'info');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('❌ Erreur lors du test direct:', error);
+                showAlert('❌ Erreur lors du test direct', 'error');
+            }
+        }
+        
+        // FONCTION DE DIAGNOSTIC : Vérifier le mapping des colonnes
+        function diagnoseMappingIssues() {
+            console.log('🔍 DIAGNOSTIC DU MAPPING DES COLONNES...');
+            
+            // Examiner les premières ventes
+            if (salesData.length > 0) {
+                console.log('📊 Échantillon de ventes:');
+                salesData.slice(0, 3).forEach((sale, index) => {
+                    console.log(`Vente ${index + 1}:`, {
+                        date: sale.date,
+                        client: sale.client,
+                        product: sale.product,
+                        quantity: sale.quantity,
+                        unitPrice: sale.unitPrice,
+                        valeur: sale.valeur,
+                        invoice: sale.invoice
+                    });
+                });
+                
+                // Vérifier comment nous mappons ces données
+                console.log('🔄 Comment nous mappons vers le tableau:');
+                const sampleSale = salesData[0];
+                const mappedData = {
+                    Date: sampleSale.date,
+                    Type: 'Sortie (Vente)',
+                    Produit: sampleSale.product || 'Produit non spécifié',
+                    Quantité: Math.abs(parseFloat(sampleSale.quantity) || 0),
+                    Unité: sampleSale.unit || 'Cartons',
+                    'Coût Unit.': parseFloat(sampleSale.unitPrice) || 0,
+                    'Coût Total': parseFloat(sampleSale.valeur) || 0,
+                    Référence: sampleSale.invoice || `Vente #${sampleSale.id}`
+                };
+                console.log('Données mappées:', mappedData);
+            }
+            
+            // Vérifier l'ordre des colonnes dans le HTML
+            const table = document.querySelector('#allMovementsTableBody').closest('table');
+            if (table) {
+                const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
+                console.log('🏷️ En-têtes de colonnes dans le HTML:', headers);
+            }
+            
+            showAlert('🔍 Diagnostic terminé - Consultez la console pour les détails', 'info');
+        }
+        
+        // FONCTION CORRECTIVE : Forcer un affichage correct du tableau
+        function fixTableMapping() {
+            console.log('🔧 CORRECTION DU MAPPING DES TABLEAUX...');
+            
+            const tableBody = document.getElementById('allMovementsTableBody');
+            if (!tableBody) {
+                console.log('❌ Tableau non trouvé');
+                return;
+            }
+            
+            // Vider le tableau
+            tableBody.innerHTML = '';
+            
+            // Créer des lignes de test avec le bon mapping
+            const testData = [
+                {
+                    date: '26/08/2025',
+                    type: 'Sortie (Vente)',
+                    product: 'CAFE STICK REFRAISH 1.5gx150x9',
+                    quantity: 100,
+                    unit: 'Cartons',
+                    unitCost: 26000,
+                    totalCost: 2600000,
+                    reference: 'Facture #1671'
+                },
+                {
+                    date: '25/08/2025',
+                    type: 'Entrée',
+                    product: 'CAFE POT REFRAISHH 200g x 12',
+                    quantity: 500,
+                    unit: 'Cartons',
+                    unitCost: 15000,
+                    totalCost: 7500000,
+                    reference: 'Entrée #001'
+                }
+            ];
+            
+            testData.forEach(movement => {
+                const row = document.createElement('tr');
+                
+                const typeClass = movement.type.includes('Entrée') ? 'text-success' : 'text-danger';
+                
+                // ORDRE EXACT: Date, Type, Produit, Quantité, Unité, Coût Unit., Coût Total, Référence, Actions
+                row.innerHTML = `
+                    <td>${movement.date}</td>
+                    <td><span class="${typeClass}" style="font-weight: 500;">${movement.type}</span></td>
+                    <td style="font-weight: 500;">${movement.product}</td>
+                    <td class="${typeClass}" style="font-weight: bold;">${movement.quantity.toLocaleString()}</td>
+                    <td>${movement.unit}</td>
+                    <td>${movement.unitCost.toLocaleString()} CFA</td>
+                    <td>${movement.totalCost.toLocaleString()} CFA</td>
+                    <td style="color: #666; font-size: 0.9rem;">${movement.reference}</td>
+                    <td>
+                        <button class="btn-icon" title="Test">📄</button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            console.log('✅ Tableau corrigé avec données de test');
+            showAlert('✅ Tableau corrigé ! Vérifiez que les colonnes sont maintenant correctes.', 'success');
+        }
+        
+        function debugStocksModule() {
+            console.log('🔧 DEBUG MODULE STOCKS');
+            console.log('='.repeat(50));
+            
+            // Informations générales
+            console.log('📍 Accès: Module Stocks > Onglet Configuration > Bouton "🔧 Debug Stocks"');
+            console.log('📅 Date debug:', new Date().toLocaleString('fr-FR'));
+            
+            // Vérifier les données
+            console.log('📊 Données:');
+            console.log(`- salesData.length: ${salesData.length}`);
+            console.log(`- stockEntriesData.length: ${stockEntriesData.length}`);
+            console.log(`- stockExitsData.length: ${stockExitsData.length}`);
+            console.log(`- currentStockLevels keys: ${Object.keys(currentStockLevels).length}`);
+            
+            // Vérifier les éléments HTML
+            console.log('🔍 Éléments HTML du Dashboard:');
+            const elements = [
+                'totalEntries',
+                'totalExits', 
+                'currentStock',
+                'stockValue',
+                'lowStockAlerts',
+                'inventoryTableBody',
+                'inventoryStats'
+            ];
+            
+            let missingElements = [];
+            elements.forEach(id => {
+                const element = document.getElementById(id);
+                const exists = !!element;
+                console.log(`- ${id}: ${exists ? '✅ Trouvé' : '❌ Manquant'}`);
+                if (!exists) {
+                    missingElements.push(id);
+                }
+                if (element && element.textContent) {
+                    console.log(`  Contenu: "${element.textContent.trim()}"`);
+                }
+            });
+            
+            // Vérifier l'état du module
+            const stocksModule = document.getElementById('stocksModule');
+            const isActive = stocksModule && stocksModule.classList.contains('active');
+            console.log(`📦 Module stocks actif: ${isActive ? '✅ Oui' : '❌ Non'}`);
+            
+            // Afficher un échantillon des stocks
+            console.log('📦 Échantillon des stocks calculés:');
+            const stockKeys = Object.keys(currentStockLevels).slice(0, 5);
+            if (stockKeys.length > 0) {
+                stockKeys.forEach(product => {
+                    const stock = currentStockLevels[product];
+                    console.log(`- ${product}: ${stock.quantity} ${stock.unit || 'unités'} (Valeur: ${stock.value || 0} CFA)`);
+                });
+            } else {
+                console.log('- Aucun stock calculé');
+            }
+            
+            // Firebase status
+            console.log('☁️ Firebase:');
+            console.log(`- Initialisé: ${isFirebaseInitialized ? '✅ Oui' : '❌ Non'}`);
+            
+            // Forcer une mise à jour
+            console.log('🔄 Déclenchement mise à jour forcée...');
+            forceUpdateStockKPIs();
+            
+            // Message final
+            let alertMessage = `🔧 DEBUG MODULE STOCKS TERMINÉ\n\n`;
+            alertMessage += `📊 Données trouvées:\n`;
+            alertMessage += `• ${salesData.length} ventes\n`;
+            alertMessage += `• ${stockEntriesData.length} entrées de stock\n`;
+            alertMessage += `• ${stockExitsData.length} sorties de stock\n`;
+            alertMessage += `• ${Object.keys(currentStockLevels).length} produits suivis\n\n`;
+            
+            if (missingElements.length > 0) {
+                alertMessage += `⚠️ Éléments HTML manquants: ${missingElements.join(', ')}\n\n`;
+            }
+            
+            alertMessage += `📦 Module actif: ${isActive ? 'Oui' : 'Non'}\n`;
+            alertMessage += `☁️ Firebase: ${isFirebaseInitialized ? 'Connecté' : 'Déconnecté'}\n\n`;
+            alertMessage += `📋 Consultez la console (F12) pour plus de détails`;
+            
+            alert(alertMessage);
         }
         
         // Fonction d'alerte simple (version restaurée)
@@ -4830,6 +7382,9 @@
             setTodayForNewInvoice();
             updateClientsSummaryTable();
             
+            // Initialiser Chart.js
+            initializeChartJS();
+            
             // Afficher le module commercial par défaut
             showModule('commercial');
             
@@ -4994,6 +7549,12 @@
                 updateProductsDisplay();
                 updatePaymentsDisplay();
                 updateClientsSummaryTable();
+                
+                // NOUVEAU : Mettre à jour le module stocks si les données ont changé
+                if (typeof forceUpdateStockKPIs === 'function') {
+                    console.log('🔄 Mise à jour du module stocks après sync Firebase...');
+                    forceUpdateStockKPIs();
+                }
                 
                 showAlert(`✅ Synchronisation automatique réussie !\n📊 ${salesData.length} ventes, 💰 ${paymentsData.length} encaissements`, 'success');
                 
@@ -6243,8 +8804,24 @@
                 tab.classList.remove('active');
             });
             
-            document.getElementById(sectionName).classList.add('active');
-            event.target.classList.add('active');
+            const sectionElement = document.getElementById(sectionName);
+            if (sectionElement) {
+                sectionElement.classList.add('active');
+            } else {
+                console.error(`Section '${sectionName}' non trouvée`);
+                return;
+            }
+            
+            // Activer l'onglet correspondant seulement si event.target existe
+            if (typeof event !== 'undefined' && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // Chercher et activer l'onglet correspondant par onclick
+                const correspondingTab = document.querySelector(`[onclick="showSection('${sectionName}')"]`);
+                if (correspondingTab) {
+                    correspondingTab.classList.add('active');
+                }
+            }
             
             if (sectionName === 'dashboard') {
                 applyFilters();
@@ -6650,7 +9227,6 @@
                 let include = true;
                 
                 if (clientFilter && payment.client !== clientFilter) include = false;
-                // Le filtre référence ne s'applique plus aux encaissements
                 
                 if (dateStart || dateEnd) {
                     const paymentDate = parseDate(payment.date);
@@ -9572,6 +12148,194 @@ Date [ESPACES] Client [ESPACES] Montant
             • "Résumé de mon activité"<br><br>
             
             Posez-moi vos questions en langage naturel ! 😊`;
+        }
+        
+        // Initialisation de Chart.js et test de compatibilité
+        function initializeChartJS() {
+            console.log('🔧 Initialisation de Chart.js...');
+            
+            if (typeof Chart === 'undefined') {
+                console.error('❌ Chart.js n\'est pas chargé !');
+                return false;
+            }
+            
+            console.log('✅ Chart.js version:', Chart.version);
+            
+            // Configuration globale pour tous les graphiques
+            Chart.defaults.font.family = "'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif";
+            Chart.defaults.font.size = 12;
+            Chart.defaults.responsive = true;
+            Chart.defaults.maintainAspectRatio = false;
+            
+            console.log('✅ Configuration Chart.js appliquée');
+            return true;
+        }
+        
+        // Vérifier que les éléments canvas existent dans le HTML
+        function checkCanvasElements() {
+            const requiredCanvas = [
+                'stockEvolutionChart',
+                'stockByProductChart', 
+                'entriesExitsChart',
+                'stockRotationChart'
+            ];
+            
+            console.log('🔍 Vérification des éléments canvas:');
+            const missing = [];
+            
+            requiredCanvas.forEach(canvasId => {
+                const element = document.getElementById(canvasId);
+                if (element) {
+                    console.log(`  ✅ ${canvasId} trouvé`);
+                } else {
+                    console.log(`  ❌ ${canvasId} MANQUANT`);
+                    missing.push(canvasId);
+                }
+            });
+            
+            if (missing.length > 0) {
+                console.error('❌ Canvas manquants:', missing);
+                return false;
+            }
+            
+            console.log('✅ Tous les éléments canvas sont présents');
+            return true;
+        }
+            console.log('🧪 === TEST COMPLET DES GRAPHIQUES STOCKS ===');
+            
+            // 1. Vérifier les éléments canvas
+            const canvasElements = {
+                'stockEvolutionChart': document.getElementById('stockEvolutionChart'),
+                'stockByProductChart': document.getElementById('stockByProductChart'),
+                'entriesExitsChart': document.getElementById('entriesExitsChart'),
+                'stockRotationChart': document.getElementById('stockRotationChart')
+            };
+            
+            console.log('📊 Éléments canvas trouvés:');
+            Object.entries(canvasElements).forEach(([name, element]) => {
+                console.log(`  ${element ? '✅' : '❌'} ${name}`);
+            });
+            
+            // 2. Vérifier les données nécessaires
+            console.log('📦 Données disponibles:');
+            console.log(`  Stock Entries: ${stockEntriesData.length} entrées`);
+            console.log(`  Sales Data: ${salesData.length} ventes`);
+            console.log(`  Stock Exits: ${stockExitsData.length} sorties`);
+            console.log(`  Current Stock: ${Object.keys(currentStockLevels).length} produits`);
+            
+            // 3. Tester chaque graphique individuellement
+            console.log('🎯 Test des fonctions de graphiques:');
+            
+            try {
+                console.log('  📈 Test évolution des stocks...');
+                updateStockEvolutionChart();
+                console.log('  ✅ Évolution OK');
+            } catch (e) {
+                console.error('  ❌ Erreur évolution:', e.message);
+            }
+            
+            try {
+                console.log('  🥧 Test répartition par produit...');
+                updateStockByProductChart();
+                console.log('  ✅ Répartition OK');
+            } catch (e) {
+                console.error('  ❌ Erreur répartition:', e.message);
+            }
+            
+            try {
+                console.log('  ↕️ Test entrées/sorties...');
+                updateEntriesExitsChart();
+                console.log('  ✅ Entrées/Sorties OK');
+            } catch (e) {
+                console.error('  ❌ Erreur entrées/sorties:', e.message);
+            }
+            
+            try {
+                console.log('  🔄 Test rotation des stocks...');
+                updateStockRotationChart();
+                console.log('  ✅ Rotation OK');
+            } catch (e) {
+                console.error('  ❌ Erreur rotation:', e.message);
+            }
+            
+            // 4. Test global
+            try {
+                console.log('🌍 Test mise à jour globale...');
+                updateStockCharts();
+                console.log('✅ Mise à jour globale réussie');
+            } catch (e) {
+                console.error('❌ Erreur mise à jour globale:', e.message);
+            }
+            
+            console.log('🏁 === FIN DU TEST DES GRAPHIQUES ===');
+        // Test complet des graphiques
+        function testAllStockGraphics() {
+            console.log('🧪 === TEST COMPLET DES GRAPHIQUES STOCKS ===');
+            
+            // 0. Vérifier Chart.js
+            if (!initializeChartJS()) {
+                console.error('❌ Impossible d\'initialiser Chart.js');
+                return;
+            }
+            
+            // 1. Vérifier les éléments canvas
+            if (!checkCanvasElements()) {
+                console.error('❌ Éléments canvas manquants');
+                return;
+            }
+            
+            // 2. Vérifier les données nécessaires
+            console.log('📦 Données disponibles:');
+            console.log(`  Stock Entries: ${stockEntriesData.length} entrées`);
+            console.log(`  Sales Data: ${salesData.length} ventes`);
+            console.log(`  Stock Exits: ${stockExitsData.length} sorties`);
+            console.log(`  Current Stock: ${Object.keys(currentStockLevels).length} produits`);
+            
+            // 3. Tester chaque graphique individuellement
+            console.log('🎯 Test des fonctions de graphiques:');
+            
+            try {
+                console.log('  📈 Test évolution des stocks...');
+                updateStockEvolutionChart();
+                console.log('  ✅ Évolution OK');
+            } catch (e) {
+                console.error('  ❌ Erreur évolution:', e.message);
+            }
+            
+            try {
+                console.log('  🥧 Test répartition par produit...');
+                updateStockByProductChart();
+                console.log('  ✅ Répartition OK');
+            } catch (e) {
+                console.error('  ❌ Erreur répartition:', e.message);
+            }
+            
+            try {
+                console.log('  ↕️ Test entrées/sorties...');
+                updateEntriesExitsChart();
+                console.log('  ✅ Entrées/Sorties OK');
+            } catch (e) {
+                console.error('  ❌ Erreur entrées/sorties:', e.message);
+            }
+            
+            try {
+                console.log('  🔄 Test rotation des stocks...');
+                updateStockRotationChart();
+                console.log('  ✅ Rotation OK');
+            } catch (e) {
+                console.error('  ❌ Erreur rotation:', e.message);
+            }
+            
+            // 4. Test global
+            try {
+                console.log('🌍 Test mise à jour globale...');
+                updateStockCharts();
+                console.log('✅ Mise à jour globale réussie');
+            } catch (e) {
+                console.error('❌ Erreur mise à jour globale:', e.message);
+            }
+            
+            console.log('🏁 === FIN DU TEST DES GRAPHIQUES ===');
         }
     </script>
 </body>
