@@ -2187,7 +2187,6 @@
             <div class="last-update" id="lastUpdate">Dernière mise à jour: --</div>
             <div style="margin-top: 8px; font-size: clamp(0.7rem, 1.8vw, 0.8rem); color: var(--text-secondary);">
                 <span>Version: <strong id="appVersion">2.1.0</strong></span>
-                <span style="margin-left: 15px;">Sync auto: <span id="autoSyncStatus">🟢 Actif</span></span>
             </div>
             <span class="cloud-status" id="cloudStatus">🔄 Initialisation...</span>
         </div>
@@ -2804,13 +2803,7 @@
                                     💼 En-cours par client
                                 </small>
                             </div>
-                            <div class="form-group">
-                                <label>Synchronisation</label>
-                                <button class="btn btn-info" onclick="forceSyncFromFirebase()">🔄 Forcer Sync</button>
-                                <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    💡 Résout les problèmes de sync
-                                </small>
-                            </div>
+
                             <div class="form-group">
                                 <label>Réinitialiser</label>
                                 <button class="btn btn-danger" onclick="clearAllData()">🗑️ Effacer Tout</button>
@@ -3475,13 +3468,25 @@
                                     💡 Analyse basée sur les ventes existantes
                                 </small>
                             </div>
+
                             <div class="form-group">
-                                <label>Synchronisation Stocks</label>
-                                <button class="btn btn-info" onclick="syncStockData()">🔄 Sync Stocks</button>
-                                <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    💡 Synchroniser avec le cloud
+                                <label>Import en Masse - Corrections de Stock</label>
+                                <textarea id="stockImportData" placeholder="Coller ici les données de correction de stock au format:
+Produit | Quantité | Type
+Ex: LEP JANUS 18g x 100 | 1500 | correction_positive" 
+                                    style="width: 100%; height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 12px; resize: vertical;"></textarea>
+                                <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+                                    <button class="btn btn-success" onclick="validateStockImport()">✅ Valider Import</button>
+                                    <button class="btn btn-primary" onclick="executeStockImport()">💾 Importer Données</button>
+                                    <button class="btn btn-secondary" onclick="clearStockImport()">🧹 Vider</button>
+                                    <button class="btn btn-info" onclick="showStockImportHelp()">❓ Aide</button>
+                                </div>
+                                <div id="stockImportPreview" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; font-family: monospace; font-size: 12px; display: none;"></div>
+                                <small style="color: #28a745; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    📦 Import en masse des corrections de stock
                                 </small>
                             </div>
+
                             <div class="form-group">
                                 <label>Réinitialiser Stocks</label>
                                 <button class="btn btn-danger" onclick="clearStockData()">🗑️ Effacer Stocks</button>
@@ -3489,24 +3494,7 @@
                                     ⚠️ Supprime toutes les données stocks
                                 </small>
                             </div>
-                            <div class="form-group">
-                                <label>Diagnostic Module Stocks</label>
-                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                    <button class="btn btn-warning" onclick="debugStocksModule()">🔧 Debug Stocks</button>
-                                    <button class="btn btn-primary" onclick="forceUpdateAllStockTables()">🔄 Force Tableaux</button>
-                                    <button class="btn btn-success" onclick="testStockTablesDirectly()">🧪 Test Direct</button>
-                                </div>
-                                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                                    <button class="btn btn-info" onclick="diagnoseMappingIssues()">🔍 Diagnostic Colonnes</button>
-                                    <button class="btn btn-danger" onclick="fixTableMapping()">🔧 Corriger Tableau</button>
-                                    <button class="btn btn-secondary" onclick="testAllStockGraphics()">📊 Test Graphiques</button>
-                                    <button class="btn btn-success" onclick="updateStockProductFilters()">🔄 MAJ Filtres</button>
-                                </div>
-                                <small style="color: #666; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    🔍 Debug complet • 🔄 Forcer tableaux • 🧪 Test direct<br>
-                                    🔍 Diagnostic colonnes • 🔧 Corriger tableau
-                                </small>
-                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -7889,88 +7877,347 @@
             showAlert('✅ Tableau corrigé ! Vérifiez que les colonnes sont maintenant correctes.', 'success');
         }
         
-        function debugStocksModule() {
-            console.log('🔧 DEBUG MODULE STOCKS');
-            console.log('='.repeat(50));
+        // === IMPORT DE STOCK EN MASSE ===
+        function validateStockImport() {
+            const data = document.getElementById('stockImportData').value.trim();
+            const previewDiv = document.getElementById('stockImportPreview');
             
-            // Informations générales
-            console.log('📍 Accès: Module Stocks > Onglet Configuration > Bouton "🔧 Debug Stocks"');
-            console.log('📅 Date debug:', new Date().toLocaleString('fr-FR'));
+            if (!data) {
+                showAlert('Veuillez coller les données à importer', 'error');
+                return;
+            }
             
-            // Vérifier les données
-            console.log('📊 Données:');
-            console.log(`- salesData.length: ${salesData.length}`);
-            console.log(`- stockEntriesData.length: ${stockEntriesData.length}`);
-            console.log(`- stockExitsData.length: ${stockExitsData.length}`);
-            console.log(`- currentStockLevels keys: ${Object.keys(currentStockLevels).length}`);
+            console.log('🔍 Validation de l\'import de stock...');
             
-            // Vérifier les éléments HTML
-            console.log('🔍 Éléments HTML du Dashboard:');
-            const elements = [
-                'totalEntries',
-                'totalExits', 
-                'currentStock',
-                'stockValue',
-                'lowStockAlerts',
-                'inventoryTableBody',
-                'inventoryStats'
-            ];
+            const lines = data.split('\n').filter(line => line.trim() && !line.startsWith('#'));
+            const importItems = [];
+            const errors = [];
             
-            let missingElements = [];
-            elements.forEach(id => {
-                const element = document.getElementById(id);
-                const exists = !!element;
-                console.log(`- ${id}: ${exists ? '✅ Trouvé' : '❌ Manquant'}`);
-                if (!exists) {
-                    missingElements.push(id);
+            lines.forEach((line, index) => {
+                const parts = line.split('|').map(part => part.trim());
+                
+                if (parts.length !== 3) {
+                    errors.push(`Ligne ${index + 1}: Format incorrect (attendu: Produit | Quantité | Type)`);
+                    return;
                 }
-                if (element && element.textContent) {
-                    console.log(`  Contenu: "${element.textContent.trim()}"`);
+                
+                const [product, quantityStr, type] = parts;
+                const quantity = parseInt(quantityStr);
+                
+                if (!product) {
+                    errors.push(`Ligne ${index + 1}: Nom de produit manquant`);
+                    return;
                 }
+                
+                if (isNaN(quantity) || quantity <= 0) {
+                    errors.push(`Ligne ${index + 1}: Quantité invalide (${quantityStr})`);
+                    return;
+                }
+                
+                if (!['correction_positive', 'correction_negative', 'entree', 'sortie'].includes(type)) {
+                    errors.push(`Ligne ${index + 1}: Type invalide (${type})`);
+                    return;
+                }
+                
+                importItems.push({ product, quantity, type, line: index + 1 });
             });
             
-            // Vérifier l'état du module
-            const stocksModule = document.getElementById('stocksModule');
-            const isActive = stocksModule && stocksModule.classList.contains('active');
-            console.log(`📦 Module stocks actif: ${isActive ? '✅ Oui' : '❌ Non'}`);
+            let previewHtml = `<h4>📋 Aperçu de l'import</h4>`;
             
-            // Afficher un échantillon des stocks
-            console.log('📦 Échantillon des stocks calculés:');
-            const stockKeys = Object.keys(currentStockLevels).slice(0, 5);
-            if (stockKeys.length > 0) {
-                stockKeys.forEach(product => {
-                    const stock = currentStockLevels[product];
-                    console.log(`- ${product}: ${stock.quantity} ${stock.unit || 'unités'} (Valeur: ${stock.value || 0} CFA)`);
-                });
-            } else {
-                console.log('- Aucun stock calculé');
+            if (errors.length > 0) {
+                previewHtml += `<div style="color: #dc3545; margin-bottom: 10px;">
+                    <strong>❌ Erreurs détectées (${errors.length}):</strong><br>
+                    ${errors.map(error => `• ${error}`).join('<br>')}
+                </div>`;
             }
             
-            // Firebase status
-            console.log('☁️ Firebase:');
-            console.log(`- Initialisé: ${isFirebaseInitialized ? '✅ Oui' : '❌ Non'}`);
+            if (importItems.length > 0) {
+                previewHtml += `<div style="color: #28a745; margin-bottom: 10px;">
+                    <strong>✅ Articles valides (${importItems.length}):</strong>
+                </div>`;
+                
+                previewHtml += `<table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="border: 1px solid #ddd; padding: 5px; text-align: left;">Produit</th>
+                            <th style="border: 1px solid #ddd; padding: 5px; text-align: center;">Quantité</th>
+                            <th style="border: 1px solid #ddd; padding: 5px; text-align: center;">Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                
+                importItems.forEach(item => {
+                    const typeIcon = {
+                        'correction_positive': '📈',
+                        'correction_negative': '📉',
+                        'entree': '📦',
+                        'sortie': '📤'
+                    }[item.type] || '❓';
+                    
+                    previewHtml += `<tr>
+                        <td style="border: 1px solid #ddd; padding: 5px;">${item.product}</td>
+                        <td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${item.quantity}</td>
+                        <td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${typeIcon} ${item.type}</td>
+                    </tr>`;
+                });
+                
+                previewHtml += `</tbody></table>`;
+                
+                // Résumé par type
+                const typeSummary = {};
+                importItems.forEach(item => {
+                    typeSummary[item.type] = (typeSummary[item.type] || 0) + 1;
+                });
+                
+                previewHtml += `<div style="margin-top: 10px;">
+                    <strong>📊 Résumé:</strong><br>
+                    ${Object.entries(typeSummary).map(([type, count]) => 
+                        `• ${type}: ${count} produits`
+                    ).join('<br>')}
+                </div>`;
+            }
             
-            // Forcer une mise à jour
-            console.log('🔄 Déclenchement mise à jour forcée...');
-            forceUpdateStockKPIs();
+            previewDiv.innerHTML = previewHtml;
+            previewDiv.style.display = 'block';
+            
+            // Stocker les données validées
+            window.validatedImportData = importItems;
+            
+            if (errors.length === 0 && importItems.length > 0) {
+                showAlert(`✅ ${importItems.length} articles validés pour l'import`, 'success');
+            } else if (errors.length > 0) {
+                showAlert(`❌ ${errors.length} erreurs détectées. Corrigez les données.`, 'error');
+            }
+        }
+        
+        async function executeStockImport() {
+            if (!window.validatedImportData || window.validatedImportData.length === 0) {
+                showAlert('Veuillez d\'abord valider les données', 'error');
+                return;
+            }
+            
+            if (!confirm(`Confirmer l'import de ${window.validatedImportData.length} corrections de stock ?`)) {
+                return;
+            }
+            
+            console.log('💾 Exécution de l\'import de stock...');
+            showAlert('📦 Import en cours...', 'info');
+            
+            // Vérifier la connectivité Firebase avant l'import
+            let firebaseConnected = false;
+            if (isFirebaseInitialized) {
+                try {
+                    await db.collection('test').doc('connectivity').get();
+                    firebaseConnected = true;
+                    console.log('✅ Firebase connecté');
+                } catch (testError) {
+                    console.warn('⚠️ Firebase non accessible:', testError.message);
+                    firebaseConnected = false;
+                }
+            }
+            
+            const importData = window.validatedImportData;
+            let successCount = 0;
+            let errorCount = 0;
+            const errors = [];
+            const newEntries = [];
+            const newExits = [];
+            
+            for (const item of importData) {
+                try {
+                    const today = new Date().toLocaleDateString('fr-FR');
+                    const now = Date.now();
+                    
+                    if (item.type === 'correction_positive') {
+                        // Ajouter une entrée de stock
+                        const entry = {
+                            id: now + Math.random(),
+                            product: item.product,
+                            quantity: item.quantity,
+                            unitPrice: 0, // Prix inconnu pour les corrections
+                            totalValue: 0,
+                            supplier: 'Correction d\'inventaire',
+                            date: today,
+                            notes: `Correction automatique - Ajustement inventaire au 31/08/2025`
+                        };
+                        
+                        stockEntriesData.push(entry);
+                        newEntries.push(entry);
+                        console.log(`📈 Correction positive: ${item.product} +${item.quantity}`);
+                        
+                    } else if (item.type === 'correction_negative') {
+                        // Ajouter une sortie de stock
+                        const exit = {
+                            id: now + Math.random(),
+                            product: item.product,
+                            quantity: item.quantity,
+                            reason: 'Correction d\'inventaire',
+                            date: today,
+                            notes: `Correction automatique - Ajustement inventaire au 31/08/2025`
+                        };
+                        
+                        stockExitsData.push(exit);
+                        newExits.push(exit);
+                        console.log(`📉 Correction négative: ${item.product} -${item.quantity}`);
+                        
+                    } else if (item.type === 'entree') {
+                        // Entrée normale
+                        const entry = {
+                            id: now + Math.random(),
+                            product: item.product,
+                            quantity: item.quantity,
+                            unitPrice: 0,
+                            totalValue: 0,
+                            supplier: 'Import en masse',
+                            date: today,
+                            notes: 'Import automatique'
+                        };
+                        
+                        stockEntriesData.push(entry);
+                        newEntries.push(entry);
+                        console.log(`📦 Entrée: ${item.product} +${item.quantity}`);
+                        
+                    } else if (item.type === 'sortie') {
+                        // Sortie normale
+                        const exit = {
+                            id: now + Math.random(),
+                            product: item.product,
+                            quantity: item.quantity,
+                            reason: 'Sortie import masse',
+                            date: today,
+                            notes: 'Import automatique'
+                        };
+                        
+                        stockExitsData.push(exit);
+                        newExits.push(exit);
+                        console.log(`📤 Sortie: ${item.product} -${item.quantity}`);
+                    }
+                    
+                    successCount++;
+                    
+                } catch (error) {
+                    console.error(`Erreur ligne ${item.line}:`, error);
+                    errors.push(`Ligne ${item.line}: ${error.message}`);
+                    errorCount++;
+                }
+            }
+            
+            // Sauvegarder les données
+            saveToLocalStorage();
+            
+            // Synchroniser avec Firebase
+            if (firebaseConnected) {
+                try {
+                    console.log('☁️ Synchronisation Firebase...');
+                    
+                    // Synchroniser les nouvelles entrées
+                    for (const entry of newEntries) {
+                        await db.collection('stockEntries').doc(entry.id.toString()).set({
+                            ...entry,
+                            lastUpdated: new Date().toISOString()
+                        });
+                    }
+                    
+                    // Synchroniser les nouvelles sorties  
+                    for (const exit of newExits) {
+                        await db.collection('stockExits').doc(exit.id.toString()).set({
+                            ...exit,
+                            lastUpdated: new Date().toISOString()
+                        });
+                    }
+                    
+                    console.log('✅ Synchronisation Firebase terminée');
+                    
+                } catch (firebaseError) {
+                    console.error('❌ Erreur Firebase:', firebaseError);
+                    console.error('Détails erreur:', firebaseError.message);
+                    showAlert('⚠️ Import local réussi, mais erreur de synchronisation cloud: ' + firebaseError.message, 'warning');
+                }
+            } else {
+                console.log('⚠️ Firebase non accessible, synchronisation ignorée');
+                showAlert('⚠️ Import local réussi, synchronisation cloud différée', 'warning');
+            }
+            
+            // Recalculer les stocks
+            calculateCurrentStockLevels();
+            
+            // Mettre à jour l'affichage
+            updateStockDashboard();
+            updateInventoryTable();
+            updateStockCharts();
+            
+            // Vider le formulaire
+            clearStockImport();
             
             // Message final
-            let alertMessage = `🔧 DEBUG MODULE STOCKS TERMINÉ\n\n`;
-            alertMessage += `📊 Données trouvées:\n`;
-            alertMessage += `• ${salesData.length} ventes\n`;
-            alertMessage += `• ${stockEntriesData.length} entrées de stock\n`;
-            alertMessage += `• ${stockExitsData.length} sorties de stock\n`;
-            alertMessage += `• ${Object.keys(currentStockLevels).length} produits suivis\n\n`;
-            
-            if (missingElements.length > 0) {
-                alertMessage += `⚠️ Éléments HTML manquants: ${missingElements.join(', ')}\n\n`;
+            let message = `✅ Import terminé: ${successCount} succès`;
+            if (errorCount > 0) {
+                message += `, ${errorCount} erreurs`;
             }
             
-            alertMessage += `📦 Module actif: ${isActive ? 'Oui' : 'Non'}\n`;
-            alertMessage += `☁️ Firebase: ${isFirebaseInitialized ? 'Connecté' : 'Déconnecté'}\n\n`;
-            alertMessage += `📋 Consultez la console (F12) pour plus de détails`;
+            // Ajouter info sur la synchronisation
+            if (firebaseConnected && successCount > 0) {
+                message += ` (☁️ Synchronisé)`;
+            } else if (!firebaseConnected && successCount > 0) {
+                message += ` (🔄 Sync différée)`;
+            }
             
-            alert(alertMessage);
+            showAlert(message, successCount > 0 ? 'success' : 'error');
+            
+            if (errors.length > 0) {
+                console.error('❌ Erreurs d\'import:', errors);
+                setTimeout(() => {
+                    showAlert(`Erreurs détectées: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? '...' : ''}`, 'warning');
+                }, 2000);
+            }
+            
+            // Nettoyer les données validées
+            window.validatedImportData = null;
+        }
+        
+        function clearStockImport() {
+            document.getElementById('stockImportData').value = '';
+            document.getElementById('stockImportPreview').style.display = 'none';
+            window.validatedImportData = null;
+        }
+        
+        function showStockImportHelp() {
+            const helpMessage = `
+📦 AIDE - Import Corrections de Stock
+
+📋 FORMATS ACCEPTÉS :
+Produit | Quantité | Type
+
+🔹 TYPES DISPONIBLES :
+• correction_positive : Augmente le stock (ajustement inventaire)
+• correction_negative : Diminue le stock (ajustement inventaire) 
+• entree : Entrée normale de stock
+• sortie : Sortie normale de stock
+
+📝 EXEMPLES :
+LEP JANUS 18g x 100 | 1500 | correction_positive
+CAFE POT REFRAISH 200g x 12 | 250 | entree
+LEP MEADOW CUP 28/24 25kg | 100 | sortie
+
+💡 RÈGLES :
+• Format: Produit | Quantité | Type
+• Quantité doit être un nombre positif
+• Nom du produit exact (respecter la casse)
+• Lignes commençant par # sont ignorées (commentaires)
+
+🎯 CORRECTIONS D'INVENTAIRE :
+• Utilisez correction_positive pour ajuster les stocks à la hausse
+• Utilisez correction_negative pour ajuster les stocks à la baisse
+• Ces corrections sont automatiquement marquées comme "Correction d'inventaire"
+
+⚠️ ATTENTION :
+• Vérifiez les noms de produits (doivent correspondre exactement)
+• L'import modifie définitivement vos stocks
+• Une sauvegarde automatique est effectuée
+• Les données sont synchronisées avec le cloud
+            `;
+            
+            showAlert(helpMessage, 'info');
         }
         
         // Fonction d'alerte simple (version restaurée)
@@ -8292,7 +8539,6 @@
             // Initialiser le thème
             // Afficher la version
             document.getElementById('appVersion').textContent = APP_VERSION;
-            document.getElementById('autoSyncStatus').innerHTML = '🟢 Actif';
             
             setDefaultDates();
             updateLastUpdateTime();
@@ -11724,75 +11970,6 @@ Date [ESPACES] Client [ESPACES] Montant
             showAlert('📊 Données actualisées avec succès', 'success');
         }
 
-        // Forcer la synchronisation depuis Firebase (résout les problèmes de cache mobile)
-        async function forceSyncFromFirebase() {
-            if (!isFirebaseInitialized) {
-                showAlert('Firebase non initialisé. Impossible de synchroniser.', 'error');
-                return;
-            }
-            
-            if (confirm('🔄 Forcer la synchronisation depuis Firebase ?\n\nCela va remplacer les données locales par celles du cloud.')) {
-                updateCloudStatus('syncing', '🔄 Synchronisation forcée...');
-                
-                try {
-                    // Vider le localStorage
-                    localStorage.removeItem('kamlacSalesData');
-                    localStorage.removeItem('kamlacPaymentsData');
-                    localStorage.removeItem('kamlacProductsData');
-                    
-                    // Vider les variables
-                    salesData = [];
-                    paymentsData = [];
-                    productsData = [];
-                    
-                    // Charger depuis Firebase
-                    const salesSnapshot = await db.collection('sales').get();
-                    salesSnapshot.forEach(doc => {
-                        const data = doc.data();
-                        delete data.lastUpdated;
-                        salesData.push(data);
-                    });
-                    
-                    const paymentsSnapshot = await db.collection('payments').get();
-                    paymentsSnapshot.forEach(doc => {
-                        const data = doc.data();
-                        delete data.lastUpdated;
-                        paymentsData.push(data);
-                    });
-                    
-                    const productsSnapshot = await db.collection('products').get();
-                    productsSnapshot.forEach(doc => {
-                        const data = doc.data();
-                        delete data.lastUpdated;
-                        productsData.push(data);
-                    });
-                    
-                    // Sauvegarder dans localStorage
-                    saveToLocalStorage();
-                    
-                    // Mettre à jour l'interface
-                    populateFilters();
-                    populateRecapFilters();
-                    updateClientsList();
-                    updateProductsList();
-                    applyFilters();
-                    applyRecapFilters();
-                    updateClientsOverview();
-                    updateProductsDisplay();
-                    updatePaymentsDisplay();
-                    updateClientsSummaryTable();
-                    
-                    updateCloudStatus('online', '☁️ Sync');
-                    showAlert(`✅ Synchronisation réussie !\n📊 ${salesData.length} ventes\n💰 ${paymentsData.length} encaissements\n📦 ${productsData.length} produits`, 'success');
-                    
-                } catch (error) {
-                    console.error('Erreur lors de la synchronisation forcée:', error);
-                    updateCloudStatus('offline', '❌ Erreur');
-                    showAlert(`Erreur de synchronisation: ${error.message}`, 'error');
-                }
-            }
-        }
-
         // Export
         function exportToCSV() {
             try {
@@ -12598,14 +12775,6 @@ Date [ESPACES] Client [ESPACES] Montant
         window.addEventListener('beforeunload', function() {
             stopAutoSync();
         });
-
-        // Mise à jour du statut de synchronisation automatique
-        function updateAutoSyncStatus(active) {
-            const statusElement = document.getElementById('autoSyncStatus');
-            if (statusElement) {
-                statusElement.innerHTML = active ? '🟢 Actif' : '🔴 Arrêté';
-            }
-        }
 
         // === GESTION DES NOTES ===
         function showNotesModal() {
