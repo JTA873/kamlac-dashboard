@@ -3518,6 +3518,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
                                     <button class="btn btn-sm btn-danger" onclick="emergencyDisableSync()">🚨 Désactiver Sync</button>
                                     <button class="btn btn-sm btn-success" onclick="resetFirebaseCounter()">🔄 Reset Compteur</button>
+                                    <button class="btn btn-sm btn-info" onclick="showDeletionHistory()">🗑️ Historique Suppressions</button>
+                                    <button class="btn btn-sm btn-warning" onclick="exportDeletionHistory()">📊 Export CSV</button>
                                 </div>
                             </div>
 
@@ -3811,6 +3813,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         let isSyncDisabled = false; // Pour désactiver temporairement la sync
         let syncCallCount = 0; // Compteur d'appels Firebase
         let syncCallResetInterval = null;
+        
+        // 📝 NOUVEAU : SYSTÈME DE LOGGING DES SUPPRESSIONS
+        let deletionLogs = []; // Historique des suppressions
+        const MAX_DELETION_LOGS = 100; // Garder les 100 dernières suppressions
         let salesLines = [];
         let editingProductId = null;
         let editingSaleId = null;
@@ -8702,6 +8708,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             updateLastUpdateTime();
             
             loadFromLocalStorage();
+            loadDeletionHistory(); // ✅ CHARGER L'HISTORIQUE DES SUPPRESSIONS
             extractCategoriesFromNotes(); // Extraire les catégories des notes existantes
             updateCategoriesList(); // Charger les catégories des notes
             
@@ -8751,7 +8758,84 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             noteCategories = JSON.parse(localStorage.getItem('kamlacNoteCategories') || '[]');
         }
 
-        // ✅ FONCTIONS DE SURVEILLANCE FIREBASE
+        // 📝 FONCTION DE LOGGING DES SUPPRESSIONS FIREBASE
+        function logDeletion(collection, documentId, data, reason = 'Manuel') {
+            const deletionLog = {
+                timestamp: new Date().toISOString(),
+                date: new Date().toLocaleString('fr-FR'),
+                collection: collection,
+                documentId: documentId,
+                data: JSON.parse(JSON.stringify(data)), // Copie profonde
+                reason: reason,
+                userAgent: navigator.userAgent.substring(0, 50) + '...',
+                url: window.location.href
+            };
+            
+            deletionLogs.unshift(deletionLog); // Ajouter au début
+            
+            // Limiter la taille de l'historique
+            if (deletionLogs.length > MAX_DELETION_LOGS) {
+                deletionLogs = deletionLogs.slice(0, MAX_DELETION_LOGS);
+            }
+            
+            // Sauvegarder en localStorage
+            localStorage.setItem('kamlacDeletionLogs', JSON.stringify(deletionLogs));
+            
+            // Log détaillé dans la console
+            console.log(`🗑️ SUPPRESSION FIREBASE:`, {
+                collection,
+                documentId,
+                data,
+                reason,
+                timestamp: deletionLog.timestamp
+            });
+            
+            // Incrémenter le compteur Firebase
+            incrementSyncCall(`DELETE ${collection}/${documentId}`);
+        }
+        
+        // 📊 FONCTION POUR AFFICHER L'HISTORIQUE DES SUPPRESSIONS
+        function showDeletionHistory() {
+            if (deletionLogs.length === 0) {
+                showAlert('📝 Aucune suppression enregistrée dans l\'historique local', 'info');
+                return;
+            }
+            
+            let historyHtml = `🗑️ HISTORIQUE DES SUPPRESSIONS (${deletionLogs.length})\n\n`;
+            
+            deletionLogs.forEach((log, index) => {
+                historyHtml += `${index + 1}. 📅 ${log.date}
+   📦 Collection: ${log.collection}
+   🆔 ID: ${log.documentId}
+   💡 Raison: ${log.reason}
+   📄 Données: ${JSON.stringify(log.data, null, 2)}
+   
+`;
+            });
+            
+            historyHtml += `\n💡 Cet historique est sauvegardé localement.
+Pour voir les suppressions sur Firebase Console:
+1. Allez sur console.firebase.google.com
+2. Sélectionnez votre projet
+3. Firestore Database → Usage
+4. Filtrez par "Delete" operations`;
+            
+            showAlert(historyHtml, 'info');
+        }
+        
+        // 🔄 CHARGER L'HISTORIQUE AU DÉMARRAGE
+        function loadDeletionHistory() {
+            const saved = localStorage.getItem('kamlacDeletionLogs');
+            if (saved) {
+                try {
+                    deletionLogs = JSON.parse(saved);
+                    console.log(`📝 Historique suppressions chargé: ${deletionLogs.length} entrées`);
+                } catch (error) {
+                    console.error('Erreur chargement historique suppressions:', error);
+                    deletionLogs = [];
+                }
+            }
+        }
         function incrementSyncCall(operation) {
             syncCallCount++;
             const now = new Date().toLocaleTimeString();
@@ -8815,7 +8899,78 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             console.log('🔄 Compteur Firebase reset');
         }
         
-        function showFirebaseStats() {
+        // 📊 FONCTIONS D'EXPORT POUR ANALYSE DÉTAILLÉE
+        function exportDeletionHistory() {
+            if (deletionLogs.length === 0) {
+                showAlert('📝 Aucune suppression à exporter', 'warning');
+                return;
+            }
+            
+            let csvContent = "Timestamp,Date,Collection,Document ID,Raison,Client,Produit,Montant,Détails\n";
+            
+            deletionLogs.forEach(log => {
+                const data = log.data;
+                const client = data.client || '';
+                const produit = data.name || data.product || '';
+                const montant = data.amount || data.valeur || data.price || '';
+                const details = JSON.stringify(data).replace(/"/g, '""'); // Échapper les guillemets
+                
+                csvContent += `"${log.timestamp}","${log.date}","${log.collection}","${log.documentId}","${log.reason}","${client}","${produit}","${montant}","${details}"\n`;
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `KAMLAC_Suppressions_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showAlert(`📊 Export terminé: ${deletionLogs.length} suppressions exportées`, 'success');
+        }
+        
+        // 🔍 FONCTION DE DIAGNOSTIC FIREBASE AVANCÉ
+        function showAdvancedFirebaseStats() {
+            const stats = {
+                totalCalls: syncCallCount,
+                syncStatus: isSyncDisabled ? 'Désactivée' : 'Activée',
+                deletions: deletionLogs.length,
+                lastDeletion: deletionLogs.length > 0 ? deletionLogs[0].date : 'Aucune',
+                collections: {
+                    sales: deletionLogs.filter(log => log.collection === 'sales').length,
+                    payments: deletionLogs.filter(log => log.collection === 'payments').length,
+                    products: deletionLogs.filter(log => log.collection === 'products').length,
+                    ai_notes: deletionLogs.filter(log => log.collection === 'ai_notes').length
+                }
+            };
+            
+            const message = `
+🔥 DIAGNOSTIC FIREBASE AVANCÉ
+
+📊 APPELS FIREBASE:
+• Total appels: ${stats.totalCalls}
+• Statut sync: ${stats.syncStatus}
+
+🗑️ SUPPRESSIONS (${stats.deletions} total):
+• Ventes: ${stats.collections.sales}
+• Encaissements: ${stats.collections.payments} 
+• Produits: ${stats.collections.products}
+• Notes: ${stats.collections.ai_notes}
+• Dernière suppression: ${stats.lastDeletion}
+
+💡 ACTIONS POSSIBLES:
+• Voir détails: "🗑️ Historique Suppressions"
+• Exporter CSV: Bouton d'export disponible
+• Firebase Console: console.firebase.google.com
+
+⚠️ Si vous avez 33 suppressions dans Google Console,
+elles sont maintenant trackées localement !
+            `;
+            
+            showAlert(message, 'info');
+        }
             const stats = `
 🔥 STATISTIQUES FIREBASE
 
@@ -8834,6 +8989,10 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             `;
             
             showAlert(stats, 'info');
+        }
+        
+        function showFirebaseStats() {
+            showAdvancedFirebaseStats();
         }
         
         // Reset compteur toutes les heures
@@ -11175,12 +11334,19 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
 
         async function deleteProduct(productId) {
             if (confirm('Supprimer ce produit ?')) {
+                // 📝 RÉCUPÉRER LES DONNÉES AVANT SUPPRESSION POUR LE LOG
+                const productToDelete = productsData.find(p => p.id === productId);
+                
                 productsData = productsData.filter(p => p.id !== productId);
                 saveToLocalStorage();
                 
-                if (isFirebaseInitialized) {
+                if (isFirebaseInitialized && productToDelete) {
                     try {
+                        // 📝 LOGGER LA SUPPRESSION AVANT DE L'EXÉCUTER
+                        logDeletion('products', productId.toString(), productToDelete, 'Suppression manuelle produit');
+                        
                         await db.collection('products').doc(productId.toString()).delete();
+                        console.log(`🗑️ Produit supprimé de Firebase: ${productToDelete.name || 'Sans nom'}`);
                     } catch (error) {
                         console.error('Erreur suppression produit:', error);
                     }
@@ -11769,9 +11935,13 @@ Date [ESPACES] Client [ESPACES] Montant
                 paymentsData = paymentsData.filter(p => p.id !== paymentId);
                 saveToLocalStorage();
                 
-                if (isFirebaseInitialized) {
+                if (isFirebaseInitialized && payment) {
                     try {
+                        // 📝 LOGGER LA SUPPRESSION AVANT DE L'EXÉCUTER
+                        logDeletion('payments', paymentId.toString(), payment, 'Suppression manuelle encaissement');
+                        
                         await db.collection('payments').doc(paymentId.toString()).delete();
+                        console.log(`🗑️ Encaissement supprimé de Firebase: ${payment.client} - ${formatCurrency(payment.amount || 0)}`);
                     } catch (error) {
                         console.error('Erreur suppression encaissement:', error);
                     }
@@ -13010,9 +13180,13 @@ Date [ESPACES] Client [ESPACES] Montant
                 salesData = salesData.filter(s => s.id !== saleId);
                 saveToLocalStorage();
                 
-                if (isFirebaseInitialized) {
+                if (isFirebaseInitialized && sale) {
                     try {
+                        // 📝 LOGGER LA SUPPRESSION AVANT DE L'EXÉCUTER
+                        logDeletion('sales', saleId.toString(), sale, 'Suppression manuelle vente');
+                        
                         await db.collection('sales').doc(saleId.toString()).delete();
+                        console.log(`🗑️ Vente supprimée de Firebase: ${sale.client} - ${sale.product} - ${formatCurrency(sale.valeur || 0)}`);
                     } catch (error) {
                         console.error('Erreur suppression vente:', error);
                     }
@@ -13513,6 +13687,9 @@ Date [ESPACES] Client [ESPACES] Montant
 
         function deleteNote(noteId) {
             if (confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) {
+                // 📝 RÉCUPÉRER LA NOTE AVANT SUPPRESSION POUR LE LOG
+                const noteToDelete = aiNotes.find(note => note.id === noteId);
+                
                 // Supprimer de la liste locale
                 aiNotes = aiNotes.filter(note => note.id !== noteId);
                 
@@ -13520,10 +13697,13 @@ Date [ESPACES] Client [ESPACES] Montant
                 saveToLocalStorage();
                 
                 // Supprimer de Firebase
-                if (isFirebaseInitialized) {
+                if (isFirebaseInitialized && noteToDelete) {
+                    // 📝 LOGGER LA SUPPRESSION AVANT DE L'EXÉCUTER
+                    logDeletion('ai_notes', noteId.toString(), noteToDelete, 'Suppression manuelle note');
+                    
                     db.collection('ai_notes').doc(noteId.toString()).delete()
                         .then(() => {
-                            console.log('Note supprimée de Firebase');
+                            console.log(`🗑️ Note supprimée de Firebase: ${noteToDelete.category || 'Sans catégorie'} - ${noteToDelete.content.substring(0, 50)}...`);
                             showAlert('📝 Note supprimée', 'success');
                         })
                         .catch(error => {
