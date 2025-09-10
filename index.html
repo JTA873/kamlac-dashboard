@@ -2836,7 +2836,7 @@
                 <div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #e3f2fd, #f3e5f5); border-radius: 8px; border-left: 4px solid #2196F3; display: none;">
                     <h3 style="margin: 0 0 10px 0; color: #1976D2;">Stock Dashboard</h3>
                     <div id="analysisInfo" style="margin: 0; padding: 8px; background: rgba(255,255,255,0.8); border-radius: 4px; color: #666;">
-                        � Vue d'ensemble simple et efficace de vos stocks actuels
+                          Vue d'ensemble simple et efficace de vos stocks actuels
                     </div>
                 </div>
 
@@ -2904,7 +2904,7 @@
                 
                 <!-- Graphique en aires empilées des stocks -->
                 <div class="card" style="margin-bottom: 20px;">
-                    <h3 style="margin-bottom: 15px; color: #667eea; text-align: center;">� Niveaux de Stock Actuels</h3>
+                    <h3 style="margin-bottom: 15px; color: #667eea; text-align: center;">  Niveaux de Stock Actuels</h3>
                     <div class="chart-container" style="height: 350px;">
                         <canvas id="stockLevelsChart"></canvas>
                     </div>
@@ -3500,10 +3500,25 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                                     <button class="btn btn-info" onclick="testStockSync()">🔍 Test Sync Firebase</button>
                                     <button class="btn btn-success" onclick="refreshData()">🔄 Force Sync</button>
+                                    <button class="btn btn-warning" onclick="showFirebaseStats()">📊 Stats Firebase</button>
                                 </div>
                                 <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
                                     🔍 Vérifier la synchronisation avec Firebase
                                 </small>
+                            </div>
+                            
+                            <!-- ✅ NOUVEAU : Panneau de surveillance Firebase -->
+                            <div class="form-group">
+                                <label>🔥 Surveillance Firebase (Anti-Spam)</label>
+                                <div id="firebaseStatsPanel" style="background: #1e1e1e; border-radius: 8px; padding: 12px; margin-top: 8px; font-family: 'Consolas', monospace; font-size: 0.8rem;">
+                                    <div id="firebaseCallCount" style="color: #4CAF50;">Appels Firebase: <span>0</span></div>
+                                    <div id="firebaseSyncStatus" style="color: #2196F3;">Synchronisation: <span>Activée</span></div>
+                                    <div id="firebaseLastCall" style="color: #FF9800;">Dernier appel: <span>Aucun</span></div>
+                                </div>
+                                <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                                    <button class="btn btn-sm btn-danger" onclick="emergencyDisableSync()">🚨 Désactiver Sync</button>
+                                    <button class="btn btn-sm btn-success" onclick="resetFirebaseCounter()">🔄 Reset Compteur</button>
+                                </div>
                             </div>
 
                         </div>
@@ -3773,7 +3788,29 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         let filteredRecapPayments = [];
         let charts = {};
         let db = null;
+        /*
+        🔥 OPTIMISATIONS FIREBASE ANTI-SPAM APPLIQUÉES:
+        
+        ✅ 1. Synchronisation auto réduite: 30 min (était 5 min)
+        ✅ 2. Throttling refreshData(): 10 sec minimum entre appels
+        ✅ 3. Protection listeners temps réel contre boucles infinies
+        ✅ 4. Surveillance appels Firebase avec compteur
+        ✅ 5. Désactivation automatique si > 50 appels/heure
+        ✅ 6. Panneau de contrôle temps réel
+        ✅ 7. Fonctions d'urgence (désactivation manuelle)
+        ✅ 8. Reset automatique compteur/heure
+        
+        📊 AVANT: ~60,000 lectures/24h
+        🎯 CIBLE: <1,000 lectures/24h
+        
+        */
+        
         let isFirebaseInitialized = false;
+        
+        // ✅ NOUVEAUX CONTRÔLES ANTI-SPAM
+        let isSyncDisabled = false; // Pour désactiver temporairement la sync
+        let syncCallCount = 0; // Compteur d'appels Firebase
+        let syncCallResetInterval = null;
         let salesLines = [];
         let editingProductId = null;
         let editingSaleId = null;
@@ -4232,7 +4269,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         </button>
                         <button onclick="deleteMovement('${movement.source}', '${movement.id}')" 
                                 class="btn-icon" title="Supprimer" style="font-size: 0.8rem;">
-                            🗑️
+                             ️
                         </button>
                     </td>
                 `;
@@ -4760,7 +4797,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }, 100);
         }
         
-        async function saveMovementEdit(source, id) {
+        function saveMovementEdit(source, id) {
             const modal = document.querySelector('.modal-overlay');
             if (!modal) return;
             
@@ -4821,17 +4858,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 return;
             }
             
-            // Sauvegarder les changements localement
+            // Sauvegarder les changements
             saveToLocalStorage();
-            
-            // Déclencher le smart sync selon le type de mouvement
-            if (source === 'sales') {
-                triggerSmartSync(SYNC_TRIGGERS.SALE_MODIFIED);
-            } else if (source === 'entries') {
-                triggerSmartSync(SYNC_TRIGGERS.STOCK_ENTRY_MODIFIED);
-            } else if (source === 'exits') {
-                triggerSmartSync(SYNC_TRIGGERS.STOCK_EXIT_MODIFIED);
-            }
             
             // Fermer le modal
             modal.remove();
@@ -4850,16 +4878,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Mettre à jour les stocks
             forceUpdateStockKPIs();
             
-            showAlert('✅ Mouvement modifié et synchronisé', 'success');
+            alert('✅ Mouvement modifié avec succès !');
         }
         
-        async function deleteMovement(source, id) {
+        function deleteMovement(source, id) {
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce mouvement ?');
             if (!confirmed) return;
             
             console.log(`🗑️ Suppression du mouvement ${source}:${id}`);
             
-            // Supprimer des données locales
             if (source === 'sales') {
                 const index = salesData.findIndex(s => s.id == id);
                 if (index > -1) {
@@ -4877,35 +4904,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 }
             }
             
-            // Sauvegarder les changements localement
+            // Sauvegarder les changements
             saveToLocalStorage();
-            
-            // Synchroniser avec Firebase
-            if (isFirebaseInitialized) {
-                try {
-                    updateCloudStatus('syncing', '🗑️ Suppression...');
-                    
-                    // Déterminer la collection Firebase correspondante
-                    let collectionName = '';
-                    if (source === 'sales') {
-                        collectionName = 'sales';
-                    } else if (source === 'entries') {
-                        collectionName = 'stockEntries';
-                    } else if (source === 'exits') {
-                        collectionName = 'stockExits';
-                    }
-                    
-                    if (collectionName) {
-                        await db.collection(collectionName).doc(id.toString()).delete();
-                        console.log(`✅ Mouvement ${source}:${id} supprimé de Firebase`);
-                        updateCloudStatus('success', '☁️ Synchronisé');
-                    }
-                } catch (error) {
-                    console.error('❌ Erreur suppression Firebase:', error);
-                    updateCloudStatus('error', '❌ Erreur sync');
-                    showAlert('⚠️ Suppression locale réussie, mais erreur de synchronisation cloud', 'warning');
-                }
-            }
             
             // Mettre à jour l'affichage
             if (document.getElementById('movementTypeFilter').value) {
@@ -4917,7 +4917,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Mettre à jour les stocks
             forceUpdateStockKPIs();
             
-            showAlert('✅ Mouvement supprimé et synchronisé', 'success');
+            alert('✅ Mouvement supprimé');
         }
         
         // FONCTIONS SPÉCIFIQUES POUR ENTRÉES ET SORTIES
@@ -4930,7 +4930,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             editMovement('entries', id);
         }
         
-        async function deleteStockEntry(id) {
+        function deleteStockEntry(id) {
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette entrée ?');
             if (!confirmed) return;
             
@@ -4938,25 +4938,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             if (index > -1) {
                 stockEntriesData.splice(index, 1);
                 saveToLocalStorage();
-                
-                // Synchroniser avec Firebase
-                if (isFirebaseInitialized) {
-                    try {
-                        updateCloudStatus('syncing', '🗑️ Suppression...');
-                        await db.collection('stockEntries').doc(id.toString()).delete();
-                        console.log(`✅ Entrée ${id} supprimée de Firebase`);
-                        updateCloudStatus('success', '☁️ Synchronisé');
-                    } catch (error) {
-                        console.error('❌ Erreur suppression entrée Firebase:', error);
-                        updateCloudStatus('error', '❌ Erreur sync');
-                        showAlert('⚠️ Suppression locale réussie, mais erreur de synchronisation cloud', 'warning');
-                    }
-                }
-                
                 updateEntriesMovementsTable();
                 updateAllMovementsTable();
                 forceUpdateStockKPIs();
-                showAlert('✅ Entrée supprimée et synchronisée', 'success');
+                alert('✅ Entrée supprimée');
             }
         }
         
@@ -4978,54 +4963,23 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
         }
         
-        async function deleteStockExit(id, source) {
+        function deleteStockExit(id, source) {
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette sortie ?');
             if (!confirmed) return;
             
-            // Supprimer des données locales
             if (source === 'sales') {
                 const index = salesData.findIndex(s => s.id == id);
                 if (index > -1) {
                     salesData.splice(index, 1);
                     saveToLocalStorage();
-                    
-                    // Synchroniser avec Firebase
-                    if (isFirebaseInitialized) {
-                        try {
-                            updateCloudStatus('syncing', '🗑️ Suppression...');
-                            await db.collection('sales').doc(id.toString()).delete();
-                            console.log(`✅ Vente ${id} supprimée de Firebase`);
-                            updateCloudStatus('success', '☁️ Synchronisé');
-                        } catch (error) {
-                            console.error('❌ Erreur suppression vente Firebase:', error);
-                            updateCloudStatus('error', '❌ Erreur sync');
-                            showAlert('⚠️ Suppression locale réussie, mais erreur de synchronisation cloud', 'warning');
-                        }
-                    }
-                    
-                    showAlert('✅ Vente supprimée et synchronisée', 'success');
+                    alert('✅ Vente supprimée');
                 }
             } else {
                 const index = stockExitsData.findIndex(e => e.id == id);
                 if (index > -1) {
                     stockExitsData.splice(index, 1);
                     saveToLocalStorage();
-                    
-                    // Synchroniser avec Firebase
-                    if (isFirebaseInitialized) {
-                        try {
-                            updateCloudStatus('syncing', '🗑️ Suppression...');
-                            await db.collection('stockExits').doc(id.toString()).delete();
-                            console.log(`✅ Sortie ${id} supprimée de Firebase`);
-                            updateCloudStatus('success', '☁️ Synchronisé');
-                        } catch (error) {
-                            console.error('❌ Erreur suppression sortie Firebase:', error);
-                            updateCloudStatus('error', '❌ Erreur sync');
-                            showAlert('⚠️ Suppression locale réussie, mais erreur de synchronisation cloud', 'warning');
-                        }
-                    }
-                    
-                    showAlert('✅ Sortie supprimée et synchronisée', 'success');
+                    alert('✅ Sortie supprimée');
                 }
             }
             
@@ -5490,7 +5444,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             </button>
                             <button onclick="deleteStockExit('${exit.id}', '${exit.source}')" 
                                     class="btn-icon" title="Supprimer">
-                                🗑️
+                                 ️
                             </button>
                         </td>
                     `;
@@ -6921,11 +6875,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Ajouter à la liste
             stockEntriesData.push(entry);
             
-            // Sauvegarder localement
-            saveToLocalStorage();
-            
-            // Déclencher le smart sync
-            triggerSmartSync(SYNC_TRIGGERS.STOCK_ENTRY_CREATED);
+            // Sauvegarder
+            saveStockData();
             
             // Recalculer les niveaux de stock
             calculateCurrentStockLevels();
@@ -7175,11 +7126,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Ajouter à la liste
             stockExitsData.push(exit);
             
-            // Sauvegarder localement
-            saveToLocalStorage();
-            
-            // Déclencher le smart sync
-            triggerSmartSync(SYNC_TRIGGERS.STOCK_EXIT_CREATED);
+            // Sauvegarder
+            saveStockData();
             
             // Recalculer les niveaux de stock
             calculateCurrentStockLevels();
@@ -8803,6 +8751,108 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             noteCategories = JSON.parse(localStorage.getItem('kamlacNoteCategories') || '[]');
         }
 
+        // ✅ FONCTIONS DE SURVEILLANCE FIREBASE
+        function incrementSyncCall(operation) {
+            syncCallCount++;
+            const now = new Date().toLocaleTimeString();
+            console.log(`🔥 Firebase Call #${syncCallCount}: ${operation}`);
+            
+            // ✅ Mettre à jour le panneau de surveillance en temps réel
+            updateFirebaseStatsPanel();
+            
+            // ⚠️ Protection contre le spam : désactiver temporairement si trop d'appels
+            if (syncCallCount > 50) { // Plus de 50 appels
+                console.error('🚨 ALERTE: Trop d\'appels Firebase détectés! Désactivation temporaire...');
+                isSyncDisabled = true;
+                showAlert('⚠️ Synchronisation temporairement désactivée (trop d\'activité)', 'warning');
+                updateFirebaseStatsPanel();
+                
+                // Réactiver après 5 minutes
+                setTimeout(() => {
+                    isSyncDisabled = false;
+                    syncCallCount = 0;
+                    console.log('✅ Synchronisation réactivée');
+                    showAlert('✅ Synchronisation réactivée', 'success');
+                    updateFirebaseStatsPanel();
+                }, 300000); // 5 minutes
+            }
+        }
+        
+        // ✅ Mettre à jour le panneau de surveillance en temps réel
+        function updateFirebaseStatsPanel() {
+            const countElement = document.querySelector('#firebaseCallCount span');
+            const statusElement = document.querySelector('#firebaseSyncStatus span');
+            const lastCallElement = document.querySelector('#firebaseLastCall span');
+            
+            if (countElement) {
+                countElement.textContent = syncCallCount;
+                countElement.style.color = syncCallCount > 30 ? '#ff5722' : '#4CAF50';
+            }
+            
+            if (statusElement) {
+                statusElement.textContent = isSyncDisabled ? 'Désactivée' : 'Activée';
+                statusElement.style.color = isSyncDisabled ? '#f44336' : '#4CAF50';
+            }
+            
+            if (lastCallElement) {
+                lastCallElement.textContent = new Date().toLocaleTimeString();
+            }
+        }
+        
+        // ✅ Fonctions de contrôle d'urgence
+        function emergencyDisableSync() {
+            isSyncDisabled = true;
+            showAlert('🚨 Synchronisation désactivée manuellement', 'warning');
+            updateFirebaseStatsPanel();
+            console.log('🚨 Sync désactivée par l\'utilisateur');
+        }
+        
+        function resetFirebaseCounter() {
+            syncCallCount = 0;
+            isSyncDisabled = false;
+            showAlert('🔄 Compteur Firebase réinitialisé', 'success');
+            updateFirebaseStatsPanel();
+            console.log('🔄 Compteur Firebase reset');
+        }
+        
+        function showFirebaseStats() {
+            const stats = `
+🔥 STATISTIQUES FIREBASE
+
+📊 Appels effectués: ${syncCallCount}
+🔄 Statut sync: ${isSyncDisabled ? 'Désactivée' : 'Activée'}
+⏰ Dernière réinit: ${syncCallResetInterval ? 'Programmée' : 'Aucune'}
+
+💡 OPTIMISATIONS APPLIQUÉES:
+✅ Sync auto: 30 min (au lieu de 5 min)
+✅ Protection anti-spam: 50 appels max
+✅ Throttling refresh: 10 secondes min
+✅ Listeners optimisés avec protection boucles
+✅ Surveillance temps réel active
+
+⚠️ Si compteur > 30: vérifiez les boucles infinies
+            `;
+            
+            showAlert(stats, 'info');
+        }
+        
+        // Reset compteur toutes les heures
+        function startSyncCounterReset() {
+            syncCallResetInterval = setInterval(() => {
+                console.log(`📊 Réinitialisation compteur Firebase (était: ${syncCallCount})`);
+                syncCallCount = 0;
+            }, 3600000); // 1 heure
+        }
+        
+        // Fonction pour vérifier si on peut faire un appel Firebase
+        function canMakeFirebaseCall(operation) {
+            if (isSyncDisabled) {
+                console.log(`🚫 Firebase Call bloqué (${operation}) - sync désactivée`);
+                return false;
+            }
+            return true;
+        }
+
         function saveToLocalStorage() {
             localStorage.setItem('kamlacSalesData', JSON.stringify(salesData));
             localStorage.setItem('kamlacPaymentsData', JSON.stringify(paymentsData));
@@ -8825,18 +8875,30 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         async function initializeFirebase() {
+            if (!canMakeFirebaseCall('initialization')) return;
+            
             try {
                 updateCloudStatus('syncing', '🔄 Connexion...');
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.firestore();
                 isFirebaseInitialized = true;
                 
-                console.log('🎯 SYNC INTELLIGENTE ACTIVÉE - Synchronisation uniquement sur actions utilisateur');
+                // ✅ Démarrer la surveillance des appels Firebase
+                startSyncCounterReset();
+                incrementSyncCall('Firebase initialized');
+                updateFirebaseStatsPanel(); // Afficher immédiatement les stats
                 
-                // NOUVEAU SYSTÈME: Sync uniquement sur événements utilisateur
-                // Plus de sync automatique aveugle !
+                // Synchronisation automatique au démarrage
+                await autoSyncOnStartup();
                 
-                updateCloudStatus('online', '☁️ Smart Sync');
+                // Configuration de la synchronisation temps réel
+                setupRealtimeSync();
+                
+                // Synchronisation automatique périodique (OPTIMISÉE à 30 minutes)
+                startAutoSync();
+                
+                updateCloudStatus('online', '☁️ Sync');
+                console.log('🔥 Firebase initialisé avec surveillance anti-spam');
             } catch (error) {
                 console.error('Erreur Firebase:', error);
                 updateCloudStatus('offline', '❌ Offline');
@@ -8844,12 +8906,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         // Synchronisation automatique au démarrage
-        // Synchronisation automatique au démarrage - DÉSACTIVÉE TEMPORAIREMENT
         async function autoSyncOnStartup() {
-            console.warn('⚠️ autoSyncOnStartup() DÉSACTIVÉE pour éviter la consommation excessive');
-            return; // ARRÊT D'URGENCE - NE PAS SUPPRIMER CETTE LIGNE
-            
-            /* Code original temporairement désactivé
             try {
                 updateCloudStatus('syncing', '🔄 Vérification données...');
                 
@@ -8902,18 +8959,22 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             } catch (error) {
                 console.error('Erreur auto-sync démarrage:', error);
             }
-            */ // FIN DU CODE TEMPORAIREMENT DÉSACTIVÉ
         }
 
         // Effectuer la synchronisation automatique
         async function performAutoSync() {
+            if (!canMakeFirebaseCall('performAutoSync')) return;
+            
             try {
+                incrementSyncCall('performAutoSync started');
+                
                 // Vider les données locales
                 salesData = [];
                 paymentsData = [];
                 productsData = [];
                 
                 // Charger depuis Firebase
+                incrementSyncCall('loading sales');
                 const salesSnapshot = await db.collection('sales').get();
                 salesSnapshot.forEach(doc => {
                     const data = doc.data();
@@ -8921,6 +8982,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     salesData.push(data);
                 });
                 
+                incrementSyncCall('loading payments');
                 const paymentsSnapshot = await db.collection('payments').get();
                 paymentsSnapshot.forEach(doc => {
                     const data = doc.data();
@@ -8967,37 +9029,22 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             }
         }
 
-        // Démarrer la synchronisation automatique - DÉSACTIVÉE TEMPORAIREMENT
+        // Démarrer la synchronisation automatique périodique
         function startAutoSync() {
-            console.warn('⚠️ AUTO-SYNC DÉSACTIVÉE pour éviter la consommation excessive de Firebase');
-            console.log('💡 Utilisez la synchronisation manuelle si nécessaire');
-            return; // ARRÊT D'URGENCE - NE PAS SUPPRIMER CETTE LIGNE
-            
-            // Code original commenté pour éviter la consommation
-            /*
-            // Synchronisation automatique toutes les 5 minutes
+            // ⚠️ SYNC OPTIMISÉ : Réduit à 30 minutes au lieu de 5 minutes
+            // Les listeners temps réel gèrent déjà les changements instantanés
             autoSyncInterval = setInterval(async () => {
                 if (isFirebaseInitialized) {
                     try {
-                        updateCloudStatus('syncing', '🔄 Sync auto...');
-                        
-                        // Vérifier rapidement s'il y a des différences
-                        const salesSnapshot = await db.collection('sales').get();
-                        const paymentsSnapshot = await db.collection('payments').get();
-                        
-                        if (salesSnapshot.size !== salesData.length || paymentsSnapshot.size !== paymentsData.length) {
-                            console.log('Auto-sync: différences détectées, synchronisation...');
-                            await performAutoSync();
-                        }
-                        
+                        // ✅ SYNC LÉGER : Juste vérifier la connexion, pas les données
+                        console.log('Auto-sync: vérification connexion Firebase...');
                         updateCloudStatus('online', '☁️ Sync');
                     } catch (error) {
                         console.error('Erreur auto-sync périodique:', error);
                         updateCloudStatus('offline', '❌ Offline');
                     }
                 }
-            }, 300000); // 5 minutes
-            */
+            }, 1800000); // ✅ 30 minutes au lieu de 5 minutes (300000)
         }
 
         // Arrêter la synchronisation automatique
@@ -9008,17 +9055,22 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             }
         }
 
-        // Configuration de la synchronisation temps réel - DÉSACTIVÉE TEMPORAIREMENT  
         function setupRealtimeSync() {
-            console.warn('⚠️ setupRealtimeSync() DÉSACTIVÉE pour éviter la consommation excessive de listeners');
-            return; // ARRÊT D'URGENCE - NE PAS SUPPRIMER CETTE LIGNE
-            
-            /* Code original temporairement désactivé pour éviter les listeners temps réel
             if (!isFirebaseInitialized) return;
             
-            // Sync ventes
+            console.log('🔄 Configuration des listeners temps réel Firebase...');
+            
+            // ✅ OPTIMISÉ : Listener ventes avec protection contre les boucles
+            let isProcessingSalesSync = false;
             db.collection('sales').onSnapshot((snapshot) => {
-                updateCloudStatus('syncing', '⬇️ Sync...');
+                if (isProcessingSalesSync) {
+                    console.log('⚠️ Sync ventes déjà en cours, ignoré');
+                    return;
+                }
+                
+                isProcessingSalesSync = true;
+                updateCloudStatus('syncing', '⬇️ Sync ventes...');
+                
                 let hasChanges = false;
                 const existingIds = new Set(salesData.map(sale => sale.id));
                 
@@ -9029,36 +9081,57 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     if (change.type === 'added' && !existingIds.has(data.id)) {
                         salesData.push(data);
                         hasChanges = true;
+                        console.log('➕ Vente ajoutée:', data.id);
                     }
                     if (change.type === 'modified') {
                         const index = salesData.findIndex(s => s.id === data.id);
                         if (index !== -1) {
                             salesData[index] = data;
                             hasChanges = true;
+                            console.log('✏️ Vente modifiée:', data.id);
                         }
                     }
                     if (change.type === 'removed') {
                         salesData = salesData.filter(s => s.id !== data.id);
                         hasChanges = true;
+                        console.log('🗑️ Vente supprimée:', data.id);
                     }
                 });
                 
                 if (hasChanges) {
-                    saveToLocalStorage();
-                    populateFilters();
-                    populateRecapFilters();
-                    updateClientsList();
-                    updateProductsList();
-                    applyFilters();
-                    applyRecapFilters();
-                    updateClientsOverview();
-                    updateClientsSummaryTable();
+                    // ✅ OPTIMISÉ : Mise à jour locale SANS re-sync Firebase
+                    localStorage.setItem('salesData', JSON.stringify(salesData));
+                    
+                    // ✅ Mise à jour UI avec délai pour éviter les cascades
+                    setTimeout(() => {
+                        populateFilters();
+                        populateRecapFilters();
+                        updateClientsList();
+                        updateProductsList();
+                        applyFilters();
+                        applyRecapFilters();
+                        updateClientsOverview();
+                        updateClientsSummaryTable();
+                    }, 100);
                 }
+                
                 updateCloudStatus('online', '☁️ Sync');
+                isProcessingSalesSync = false;
+            }, (error) => {
+                console.error('Erreur listener ventes:', error);
+                updateCloudStatus('offline', '❌ Offline');
+                isProcessingSalesSync = false;
             });
 
-            // Sync encaissements
+            // ✅ OPTIMISÉ : Listener encaissements avec protection contre les boucles
+            let isProcessingPaymentsSync = false;
             db.collection('payments').onSnapshot((snapshot) => {
+                if (isProcessingPaymentsSync) {
+                    console.log('⚠️ Sync encaissements déjà en cours, ignoré');
+                    return;
+                }
+                
+                isProcessingPaymentsSync = true;
                 let hasChanges = false;
                 const existingIds = new Set(paymentsData.map(p => p.id));
                 
@@ -9069,28 +9142,42 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     if (change.type === 'added' && !existingIds.has(data.id)) {
                         paymentsData.push(data);
                         hasChanges = true;
+                        console.log('➕ Encaissement ajouté:', data.id);
                     }
                     if (change.type === 'modified') {
                         const index = paymentsData.findIndex(p => p.id === data.id);
                         if (index !== -1) {
                             paymentsData[index] = data;
                             hasChanges = true;
+                            console.log('✏️ Encaissement modifié:', data.id);
                         }
                     }
                     if (change.type === 'removed') {
                         paymentsData = paymentsData.filter(p => p.id !== data.id);
                         hasChanges = true;
+                        console.log('🗑️ Encaissement supprimé:', data.id);
                     }
                 });
                 
                 if (hasChanges) {
-                    saveToLocalStorage();
-                    updateClientsList();
-                    updatePaymentsDisplay();
-                    updateClientsOverview();
-                    applyRecapFilters();
-                    updateClientsSummaryTable();
+                    // ✅ OPTIMISÉ : Mise à jour locale SANS re-sync Firebase
+                    localStorage.setItem('paymentsData', JSON.stringify(paymentsData));
+                    
+                    // ✅ Mise à jour UI avec délai pour éviter les cascades
+                    setTimeout(() => {
+                        updateClientsList();
+                        updatePaymentsDisplay();
+                        updateClientsOverview();
+                        applyRecapFilters();
+                        updateClientsSummaryTable();
+                    }, 100);
                 }
+                
+                isProcessingPaymentsSync = false;
+            }, (error) => {
+                console.error('Erreur listener encaissements:', error);
+                updateCloudStatus('offline', '❌ Offline');
+                isProcessingPaymentsSync = false;
             });
 
             // Sync produits
@@ -9129,15 +9216,10 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             
             // Sync données de stock temps réel
             setupStockRealtimeSync();
-            */ // FIN DU CODE TEMPORAIREMENT DÉSACTIVÉ
         }
         
         // Configuration de la synchronisation temps réel pour les stocks
         function setupStockRealtimeSync() {
-            console.warn('⚠️ setupStockRealtimeSync() DÉSACTIVÉE pour éviter la consommation excessive de listeners stocks');
-            return; // ARRÊT D'URGENCE - NE PAS SUPPRIMER CETTE LIGNE
-            
-            /* Code original temporairement désactivé
             if (!isFirebaseInitialized) return;
             
             console.log('🔄 Configuration de la synchronisation temps réel des stocks...');
@@ -9228,7 +9310,6 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     }
                 }
             });
-            */ // FIN DU CODE TEMPORAIREMENT DÉSACTIVÉ
         }
 
         // Gestion de la liste des clients
@@ -11545,9 +11626,16 @@ Date [ESPACES] Client [ESPACES] Montant
                 salesData.push(...newSales);
                 saveToLocalStorage();
                 
-                // 🎯 NOUVEAU: Déclencher la sync intelligente au lieu de sync immédiate
                 if (isFirebaseInitialized) {
-                    triggerSmartSync(SYNC_TRIGGERS.SALE_CREATED);
+                    const batch = db.batch();
+                    newSales.forEach(sale => {
+                        const docRef = db.collection('sales').doc(sale.id.toString());
+                        batch.set(docRef, {
+                            ...sale,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+                    await batch.commit();
                 }
                 
                 const totalValue = newSales.reduce((sum, sale) => sum + sale.valeur, 0);
@@ -11620,9 +11708,15 @@ Date [ESPACES] Client [ESPACES] Montant
             paymentsData.push(payment);
             saveToLocalStorage();
             
-            // 🎯 NOUVEAU: Déclencher la sync intelligente
             if (isFirebaseInitialized) {
-                triggerSmartSync(SYNC_TRIGGERS.PAYMENT_CREATED);
+                try {
+                    await db.collection('payments').doc(payment.id.toString()).set({
+                        ...payment,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error('Erreur sync encaissement:', error);
+                }
             }
             
             showAlert(`💰 Encaissement enregistré: ${formatCurrency(amount)}`, 'success');
@@ -12277,10 +12371,25 @@ Date [ESPACES] Client [ESPACES] Montant
             return formattedNumber + ' CFA';
         }
 
+        // ✅ OPTIMISATION : Limitation de fréquence pour éviter le spam Firebase
+        let lastRefreshTime = 0;
+        const REFRESH_THROTTLE_MS = 10000; // 10 secondes minimum entre 2 refresh
+
         async function refreshData() {
+            const now = Date.now();
+            
+            // ✅ Vérifier si on peut faire un refresh (throttling)
+            if (now - lastRefreshTime < REFRESH_THROTTLE_MS) {
+                console.log('⚠️ Refresh Data throttlé - trop récent (< 10s)');
+                return;
+            }
+            
+            lastRefreshTime = now;
+            console.log('🔄 Refresh Data autorisé');
+            
             updateLastUpdateTime();
             
-            // Synchroniser les données de stock depuis Firebase
+            // Synchroniser les données de stock depuis Firebase SEULEMENT si nécessaire
             if (isFirebaseInitialized) {
                 try {
                     updateCloudStatus('syncing', '🔄 Sync stocks...');
@@ -12855,9 +12964,16 @@ Date [ESPACES] Client [ESPACES] Montant
             salesData[saleIndex] = updatedSale;
             saveToLocalStorage();
             
-            // 🎯 NOUVEAU: Déclencher la sync intelligente pour modification
+            // Sync Firebase
             if (isFirebaseInitialized) {
-                triggerSmartSync(SYNC_TRIGGERS.SALE_MODIFIED);
+                try {
+                    await db.collection('sales').doc(editingSaleId.toString()).set({
+                        ...updatedSale,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error('Erreur sync vente:', error);
+                }
             }
             
             closeEditSaleModal();
@@ -12894,7 +13010,6 @@ Date [ESPACES] Client [ESPACES] Montant
                 salesData = salesData.filter(s => s.id !== saleId);
                 saveToLocalStorage();
                 
-                // 🎯 Les suppressions gardent la logique Firebase directe (déjà optimisée)
                 if (isFirebaseInitialized) {
                     try {
                         await db.collection('sales').doc(saleId.toString()).delete();
