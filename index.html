@@ -8846,16 +8846,15 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 db = firebase.firestore();
                 isFirebaseInitialized = true;
                 
-                // Synchronisation automatique au démarrage
-                await autoSyncOnStartup();
+                console.warn('🚨 AUTO-SYNC ET REAL-TIME SYNC DÉSACTIVÉES pour éviter la surconsommation Firebase');
+                console.log('💡 Utilisez la synchronisation manuelle uniquement');
                 
-                // Configuration de la synchronisation temps réel
-                setupRealtimeSync();
+                // TOUTES CES FONCTIONS SONT TEMPORAIREMENT DÉSACTIVÉES :
+                // await autoSyncOnStartup();          // DÉSACTIVÉ - Consomme trop au démarrage
+                // setupRealtimeSync();                // DÉSACTIVÉ - Listeners temps réel = consommation
+                // startAutoSync();                    // DÉSACTIVÉ - Auto-sync toutes les 5min = consommation
                 
-                // Synchronisation automatique périodique (toutes les 5 minutes)
-                startAutoSync();
-                
-                updateCloudStatus('online', '☁️ Sync');
+                updateCloudStatus('online', '☁️ Manuel');
             } catch (error) {
                 console.error('Erreur Firebase:', error);
                 updateCloudStatus('offline', '❌ Offline');
@@ -8863,7 +8862,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         // Synchronisation automatique au démarrage
+        // Synchronisation automatique au démarrage - DÉSACTIVÉE TEMPORAIREMENT
         async function autoSyncOnStartup() {
+            console.warn('⚠️ autoSyncOnStartup() DÉSACTIVÉE pour éviter la consommation excessive');
+            return; // ARRÊT D'URGENCE - NE PAS SUPPRIMER CETTE LIGNE
+            
+            /* Code original temporairement désactivé
             try {
                 updateCloudStatus('syncing', '🔄 Vérification données...');
                 
@@ -8916,6 +8920,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             } catch (error) {
                 console.error('Erreur auto-sync démarrage:', error);
             }
+            */ // FIN DU CODE TEMPORAIREMENT DÉSACTIVÉ
         }
 
         // Effectuer la synchronisation automatique
@@ -9021,7 +9026,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             }
         }
 
+        // Configuration de la synchronisation temps réel - DÉSACTIVÉE TEMPORAIREMENT  
         function setupRealtimeSync() {
+            console.warn('⚠️ setupRealtimeSync() DÉSACTIVÉE pour éviter la consommation excessive de listeners');
+            return; // ARRÊT D'URGENCE - NE PAS SUPPRIMER CETTE LIGNE
+            
+            /* Code original temporairement désactivé pour éviter les listeners temps réel
             if (!isFirebaseInitialized) return;
             
             // Sync ventes
@@ -9137,10 +9147,15 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             
             // Sync données de stock temps réel
             setupStockRealtimeSync();
+            */ // FIN DU CODE TEMPORAIREMENT DÉSACTIVÉ
         }
         
         // Configuration de la synchronisation temps réel pour les stocks
         function setupStockRealtimeSync() {
+            console.warn('⚠️ setupStockRealtimeSync() DÉSACTIVÉE pour éviter la consommation excessive de listeners stocks');
+            return; // ARRÊT D'URGENCE - NE PAS SUPPRIMER CETTE LIGNE
+            
+            /* Code original temporairement désactivé
             if (!isFirebaseInitialized) return;
             
             console.log('🔄 Configuration de la synchronisation temps réel des stocks...');
@@ -9231,6 +9246,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     }
                 }
             });
+            */ // FIN DU CODE TEMPORAIREMENT DÉSACTIVÉ
         }
 
         // Gestion de la liste des clients
