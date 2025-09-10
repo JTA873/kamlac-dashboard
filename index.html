@@ -8844,7 +8844,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         
         function showFirebaseStats() {
             const stats = `
-🔥 STATISTIQUES FIREBASE
+🔥 STATISTIQUES FIREBASE COMPLÈTES
 
 📊 Appels effectués: ${syncCallCount}
 🔄 Statut sync: ${isSyncDisabled ? 'Désactivée' : 'Activée'}
@@ -8853,10 +8853,20 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
 💡 OPTIMISATIONS APPLIQUÉES:
 ✅ Sync auto: 30 min (au lieu de 5 min)
 ✅ Protection anti-spam: 50 appels max
-✅ Throttling refresh: 10 secondes min
+✅ Throttling refreshData: ${REFRESH_THROTTLE_MS/1000}s min
+✅ Throttling loadStockData: ${LOAD_STOCK_THROTTLE_MS/60000} min
+✅ Throttling applyFilters: ${APPLY_FILTER_THROTTLE_MS}ms
+✅ Throttling applyRecapFilters: ${RECAP_FILTER_THROTTLE_MS}ms
 ✅ Listeners optimisés avec protection boucles
 ✅ Surveillance temps réel active
-✅ LoadStockData throttling: 5 minutes min
+
+🚫 DÉSACTIVATIONS TEMPORAIRES:
+❌ loadStockData() dans performAutoSync() 
+❌ loadStockData() dans refreshData()
+
+📈 RÉSULTAT ATTENDU:
+• AVANT: ~60,000 lectures/24h
+• APRÈS: <1,000 lectures/24h (-98%)
 
 ⚠️ Si compteur > 30: vérifiez les boucles infinies
             `;
@@ -8879,6 +8889,44 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     showAlert('❌ Erreur lors du chargement forcé des stocks', 'error');
                 });
             }
+        }
+        
+        // ✅ FONCTION DE TEST pour diagnostiquer la synchronisation
+        function testStockSync() {
+            const stats = `
+🔍 TEST SYNCHRONISATION FIREBASE
+
+📊 État actuel:
+• Sync ${isSyncDisabled ? '❌ DÉSACTIVÉE' : '✅ ACTIVE'}
+• Appels Firebase: ${syncCallCount}
+• Dernière sync stocks: ${new Date(lastLoadStockTime).toLocaleTimeString() || 'Jamais'}
+
+📦 Données locales:
+• Stock Entries: ${stockEntriesData.length}
+• Stock Exits: ${stockExitsData.length}  
+• Stock Alerts: ${stockAlertsData.length}
+• Sales Data: ${salesData.length}
+• Payments Data: ${paymentsData.length}
+
+🔧 Contrôles:
+• Firebase initialisé: ${isFirebaseInitialized ? '✅' : '❌'}
+• Throttling refresh: ${REFRESH_THROTTLE_MS}ms
+• Throttling loadStock: ${LOAD_STOCK_THROTTLE_MS}ms
+
+💡 Pour forcer un test Firebase:
+Utilisez le bouton "📦 Force Load Stock"
+            `;
+            
+            console.log('🔍 Test Stock Sync:', {
+                isSyncDisabled,
+                syncCallCount,
+                lastLoadStockTime,
+                stockEntriesData: stockEntriesData.length,
+                stockExitsData: stockExitsData.length,
+                isFirebaseInitialized
+            });
+            
+            showAlert(stats, 'info');
         }
         
         // Reset compteur toutes les heures
@@ -10847,7 +10895,21 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             populateSelect('recapReferenceFilter', invoiceReferences, 'Toutes les factures');
         }
 
+        // ✅ THROTTLING pour applyRecapFilters (éviter le spam)
+        let lastRecapFilterTime = 0;
+        const RECAP_FILTER_THROTTLE_MS = 300; // 300ms minimum entre les appels
+
         function applyRecapFilters() {
+            const now = Date.now();
+            
+            // ✅ Throttling pour éviter les appels excessifs
+            if (now - lastRecapFilterTime < RECAP_FILTER_THROTTLE_MS) {
+                // console.log('⚠️ applyRecapFilters throttlé');
+                return;
+            }
+            
+            lastRecapFilterTime = now;
+            
             const clientFilter = document.getElementById('recapClientFilter').value;
             const productFilter = document.getElementById('recapProductFilter').value;
             const referenceFilter = document.getElementById('recapReferenceFilter').value;
@@ -12075,7 +12137,21 @@ Date [ESPACES] Client [ESPACES] Montant
             }
         }
 
+        // ✅ THROTTLING pour applyFilters (éviter le spam)
+        let lastApplyFilterTime = 0;
+        const APPLY_FILTER_THROTTLE_MS = 200; // 200ms minimum entre les appels
+
         function applyFilters() {
+            const now = Date.now();
+            
+            // ✅ Throttling pour éviter les appels excessifs
+            if (now - lastApplyFilterTime < APPLY_FILTER_THROTTLE_MS) {
+                // console.log('⚠️ applyFilters throttlé');
+                return;
+            }
+            
+            lastApplyFilterTime = now;
+            
             const dateStart = document.getElementById('dateStart').value;
             const dateEnd = document.getElementById('dateEnd').value;
             const clientFilter = document.getElementById('clientFilter').value;
