@@ -3494,6 +3494,17 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                     ⚠️ Supprime toutes les données stocks
                                 </small>
                             </div>
+                            
+                            <div class="form-group">
+                                <label>Diagnostic Synchronisation</label>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button class="btn btn-info" onclick="testStockSync()">🔍 Test Sync Firebase</button>
+                                    <button class="btn btn-success" onclick="refreshData()">🔄 Force Sync</button>
+                                </div>
+                                <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    🔍 Vérifier la synchronisation avec Firebase
+                                </small>
+                            </div>
 
                         </div>
                     </div>
@@ -6502,8 +6513,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             container.innerHTML = html;
         }
 
-        function loadStockData() {
-            // Charger depuis localStorage
+        async function loadStockData() {
+            // Charger depuis localStorage d'abord
             const savedEntries = localStorage.getItem('stockEntries');
             const savedExits = localStorage.getItem('stockExits');
             const savedAlerts = localStorage.getItem('stockAlerts');
@@ -6520,11 +6531,87 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 stockAlertsData = JSON.parse(savedAlerts);
             }
             
+            // Si Firebase est initialisé, synchroniser avec les données du cloud
+            if (isFirebaseInitialized && db) {
+                try {
+                    console.log('🔄 Synchronisation des données de stock depuis Firebase...');
+                    
+                    // Charger les entrées de stock
+                    const entriesSnapshot = await db.collection('stockEntries').get();
+                    if (!entriesSnapshot.empty) {
+                        const firebaseEntries = [];
+                        entriesSnapshot.forEach(doc => {
+                            const data = doc.data();
+                            if (data.entries && Array.isArray(data.entries)) {
+                                firebaseEntries.push(...data.entries);
+                            } else if (doc.id !== 'data') {
+                                // Nouveau format: un document par entrée
+                                delete data.lastUpdated;
+                                firebaseEntries.push(data);
+                            }
+                        });
+                        
+                        if (firebaseEntries.length > stockEntriesData.length) {
+                            console.log(`📦 Nouvelles entrées détectées: ${firebaseEntries.length} vs ${stockEntriesData.length}`);
+                            stockEntriesData = firebaseEntries;
+                        }
+                    }
+                    
+                    // Charger les sorties de stock
+                    const exitsSnapshot = await db.collection('stockExits').get();
+                    if (!exitsSnapshot.empty) {
+                        const firebaseExits = [];
+                        exitsSnapshot.forEach(doc => {
+                            const data = doc.data();
+                            if (data.exits && Array.isArray(data.exits)) {
+                                firebaseExits.push(...data.exits);
+                            } else if (doc.id !== 'data') {
+                                // Nouveau format: un document par sortie
+                                delete data.lastUpdated;
+                                firebaseExits.push(data);
+                            }
+                        });
+                        
+                        if (firebaseExits.length > stockExitsData.length) {
+                            console.log(`📤 Nouvelles sorties détectées: ${firebaseExits.length} vs ${stockExitsData.length}`);
+                            stockExitsData = firebaseExits;
+                        }
+                    }
+                    
+                    // Charger les alertes
+                    const alertsSnapshot = await db.collection('stockAlerts').get();
+                    if (!alertsSnapshot.empty) {
+                        const firebaseAlerts = [];
+                        alertsSnapshot.forEach(doc => {
+                            const data = doc.data();
+                            if (data.alerts && Array.isArray(data.alerts)) {
+                                firebaseAlerts.push(...data.alerts);
+                            }
+                        });
+                        
+                        if (firebaseAlerts.length > stockAlertsData.length) {
+                            console.log(`⚠️ Nouvelles alertes détectées: ${firebaseAlerts.length} vs ${stockAlertsData.length}`);
+                            stockAlertsData = firebaseAlerts;
+                        }
+                    }
+                    
+                    // Sauvegarder les données mises à jour localement
+                    localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
+                    localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+                    localStorage.setItem('stockAlerts', JSON.stringify(stockAlertsData));
+                    
+                    console.log('✅ Synchronisation des données de stock terminée');
+                    
+                } catch (error) {
+                    console.error('❌ Erreur lors du chargement des données de stock depuis Firebase:', error);
+                }
+            }
+            
             // Calculer les niveaux de stock actuels
             calculateCurrentStockLevels();
         }
         
-        function saveStockData() {
+        async function saveStockData() {
             // Sauvegarder dans localStorage
             localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
             localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
@@ -6533,20 +6620,54 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Sauvegarder dans Firebase si disponible
             if (isFirebaseInitialized && db) {
                 try {
-                    db.collection('stockEntries').doc('data').set({
-                        entries: stockEntriesData,
-                        lastUpdate: new Date()
+                    console.log('🔄 Sauvegarde des données de stock dans Firebase...');
+                    
+                    // Utiliser le nouveau format: un document par entrée/sortie
+                    const batch = db.batch();
+                    
+                    // Sauvegarder toutes les entrées individuellement
+                    stockEntriesData.forEach(entry => {
+                        if (entry.id) {
+                            const docRef = db.collection('stockEntries').doc(entry.id.toString());
+                            batch.set(docRef, {
+                                ...entry,
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
                     });
-                    db.collection('stockExits').doc('data').set({
-                        exits: stockExitsData,
-                        lastUpdate: new Date()
+                    
+                    // Sauvegarder toutes les sorties individuellement
+                    stockExitsData.forEach(exit => {
+                        if (exit.id) {
+                            const docRef = db.collection('stockExits').doc(exit.id.toString());
+                            batch.set(docRef, {
+                                ...exit,
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
                     });
-                    db.collection('stockAlerts').doc('data').set({
-                        alerts: stockAlertsData,
-                        lastUpdate: new Date()
-                    });
+                    
+                    await batch.commit();
+                    console.log('✅ Données de stock sauvegardées dans Firebase');
+                    
+                    // Conserver aussi l'ancien format pour compatibilité
+                    await Promise.all([
+                        db.collection('stockEntries').doc('data').set({
+                            entries: stockEntriesData,
+                            lastUpdate: new Date()
+                        }),
+                        db.collection('stockExits').doc('data').set({
+                            exits: stockExitsData,
+                            lastUpdate: new Date()
+                        }),
+                        db.collection('stockAlerts').doc('data').set({
+                            alerts: stockAlertsData,
+                            lastUpdate: new Date()
+                        })
+                    ]);
+                    
                 } catch (error) {
-                    console.error('Erreur lors de la sauvegarde dans Firebase:', error);
+                    console.error('❌ Erreur lors de la sauvegarde dans Firebase:', error);
                 }
             }
         }
@@ -8533,7 +8654,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             initializeApp();
         });
 
-        function initializeApp() {
+        async function initializeApp() {
             console.log('Initialisation de l\'application...');
             
             // Initialiser le thème
@@ -8544,10 +8665,15 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             updateLastUpdateTime();
             
             loadFromLocalStorage();
-            loadStockData(); // Charger les données de stock
             extractCategoriesFromNotes(); // Extraire les catégories des notes existantes
             updateCategoriesList(); // Charger les catégories des notes
-            initializeFirebase();
+            
+            // Initialiser Firebase d'abord
+            await initializeFirebase();
+            
+            // Puis charger les données de stock (maintenant avec synchronisation Firebase)
+            await loadStockData();
+            
             addSaleLine();
             
             populateFilters();
@@ -8571,7 +8697,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             // Afficher le module commercial par défaut
             showModule('commercial');
             
-        // Message de bienvenue avec fonctionnalités
+            // Message de bienvenue avec fonctionnalités
         setTimeout(() => {
             showToast('Bienvenue dans KAMLAC Dashboard ! 🎉', 'success');
             setTimeout(() => {
@@ -8609,7 +8735,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             }
         }
 
-        function initializeFirebase() {
+        async function initializeFirebase() {
             try {
                 updateCloudStatus('syncing', '🔄 Connexion...');
                 firebase.initializeApp(firebaseConfig);
@@ -8617,7 +8743,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 isFirebaseInitialized = true;
                 
                 // Synchronisation automatique au démarrage
-                autoSyncOnStartup();
+                await autoSyncOnStartup();
                 
                 // Configuration de la synchronisation temps réel
                 setupRealtimeSync();
@@ -8720,6 +8846,9 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 
                 // Sauvegarder localement
                 saveToLocalStorage();
+                
+                // NOUVEAU : Synchroniser les données de stock aussi
+                await loadStockData();
                 
                 // Mettre à jour l'interface
                 populateFilters();
@@ -8892,6 +9021,103 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     updateProductsDisplay();
                     updateProductsList();
                     populateRecapFilters();
+                }
+            });
+            
+            // Sync données de stock temps réel
+            setupStockRealtimeSync();
+        }
+        
+        // Configuration de la synchronisation temps réel pour les stocks
+        function setupStockRealtimeSync() {
+            if (!isFirebaseInitialized) return;
+            
+            console.log('🔄 Configuration de la synchronisation temps réel des stocks...');
+            
+            // Écouter les changements sur les entrées de stock
+            db.collection('stockEntries').onSnapshot((snapshot) => {
+                updateCloudStatus('syncing', '⬇️ Sync stocks...');
+                let hasChanges = false;
+                const existingEntryIds = new Set(stockEntriesData.map(entry => entry.id));
+                
+                snapshot.docChanges().forEach((change) => {
+                    const data = change.doc.data();
+                    
+                    // Ignorer le document 'data' qui contient le format legacy
+                    if (change.doc.id === 'data') return;
+                    
+                    delete data.lastUpdated;
+                    
+                    if (change.type === 'added' && !existingEntryIds.has(data.id)) {
+                        stockEntriesData.push(data);
+                        hasChanges = true;
+                        console.log('📦 Nouvelle entrée de stock détectée:', data.product);
+                    }
+                    if (change.type === 'modified') {
+                        const index = stockEntriesData.findIndex(e => e.id === data.id);
+                        if (index !== -1) {
+                            stockEntriesData[index] = data;
+                            hasChanges = true;
+                            console.log('✏️ Entrée de stock modifiée:', data.product);
+                        }
+                    }
+                    if (change.type === 'removed') {
+                        stockEntriesData = stockEntriesData.filter(e => e.id !== data.id);
+                        hasChanges = true;
+                        console.log('🗑️ Entrée de stock supprimée:', data.product);
+                    }
+                });
+                
+                if (hasChanges) {
+                    localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
+                    calculateCurrentStockLevels();
+                    if (typeof forceUpdateStockKPIs === 'function') {
+                        forceUpdateStockKPIs();
+                    }
+                    showAlert('📦 Données de stock mises à jour en temps réel', 'info');
+                }
+                updateCloudStatus('online', '☁️ Sync');
+            });
+            
+            // Écouter les changements sur les sorties de stock
+            db.collection('stockExits').onSnapshot((snapshot) => {
+                let hasChanges = false;
+                const existingExitIds = new Set(stockExitsData.map(exit => exit.id));
+                
+                snapshot.docChanges().forEach((change) => {
+                    const data = change.doc.data();
+                    
+                    // Ignorer le document 'data' qui contient le format legacy
+                    if (change.doc.id === 'data') return;
+                    
+                    delete data.lastUpdated;
+                    
+                    if (change.type === 'added' && !existingExitIds.has(data.id)) {
+                        stockExitsData.push(data);
+                        hasChanges = true;
+                        console.log('📤 Nouvelle sortie de stock détectée:', data.product);
+                    }
+                    if (change.type === 'modified') {
+                        const index = stockExitsData.findIndex(e => e.id === data.id);
+                        if (index !== -1) {
+                            stockExitsData[index] = data;
+                            hasChanges = true;
+                            console.log('✏️ Sortie de stock modifiée:', data.product);
+                        }
+                    }
+                    if (change.type === 'removed') {
+                        stockExitsData = stockExitsData.filter(e => e.id !== data.id);
+                        hasChanges = true;
+                        console.log('🗑️ Sortie de stock supprimée:', data.product);
+                    }
+                });
+                
+                if (hasChanges) {
+                    localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+                    calculateCurrentStockLevels();
+                    if (typeof forceUpdateStockKPIs === 'function') {
+                        forceUpdateStockKPIs();
+                    }
                 }
             });
         }
@@ -11955,8 +12181,20 @@ Date [ESPACES] Client [ESPACES] Montant
             return formattedNumber + ' CFA';
         }
 
-        function refreshData() {
+        async function refreshData() {
             updateLastUpdateTime();
+            
+            // Synchroniser les données de stock depuis Firebase
+            if (isFirebaseInitialized) {
+                try {
+                    updateCloudStatus('syncing', '🔄 Sync stocks...');
+                    await loadStockData();
+                    console.log('✅ Données de stock synchronisées');
+                } catch (error) {
+                    console.error('❌ Erreur sync stocks:', error);
+                }
+            }
+            
             populateFilters();
             populateRecapFilters();
             updateClientsList();
@@ -11967,6 +12205,12 @@ Date [ESPACES] Client [ESPACES] Montant
             updateProductsDisplay();
             updatePaymentsDisplay();
             updateClientsSummaryTable();
+            
+            // Mettre à jour les KPIs du module stock
+            if (typeof forceUpdateStockKPIs === 'function') {
+                forceUpdateStockKPIs();
+            }
+            
             showAlert('📊 Données actualisées avec succès', 'success');
         }
 
