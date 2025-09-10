@@ -8980,8 +8980,14 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             }
         }
 
-        // Démarrer la synchronisation automatique périodique
+        // Démarrer la synchronisation automatique - DÉSACTIVÉE TEMPORAIREMENT
         function startAutoSync() {
+            console.warn('⚠️ AUTO-SYNC DÉSACTIVÉE pour éviter la consommation excessive de Firebase');
+            console.log('💡 Utilisez la synchronisation manuelle si nécessaire');
+            return; // ARRÊT D'URGENCE - NE PAS SUPPRIMER CETTE LIGNE
+            
+            // Code original commenté pour éviter la consommation
+            /*
             // Synchronisation automatique toutes les 5 minutes
             autoSyncInterval = setInterval(async () => {
                 if (isFirebaseInitialized) {
@@ -9004,6 +9010,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     }
                 }
             }, 300000); // 5 minutes
+            */
         }
 
         // Arrêter la synchronisation automatique
