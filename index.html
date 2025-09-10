@@ -4760,7 +4760,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }, 100);
         }
         
-        function saveMovementEdit(source, id) {
+        async function saveMovementEdit(source, id) {
             const modal = document.querySelector('.modal-overlay');
             if (!modal) return;
             
@@ -4821,8 +4821,38 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 return;
             }
             
-            // Sauvegarder les changements
+            // Sauvegarder les changements localement
             saveToLocalStorage();
+            
+            // Synchroniser avec Firebase
+            if (isFirebaseInitialized) {
+                try {
+                    updateCloudStatus('syncing', '✏️ Modification...');
+                    
+                    // Déterminer la collection Firebase correspondante
+                    let collectionName = '';
+                    if (source === 'sales') {
+                        collectionName = 'sales';
+                    } else if (source === 'entries') {
+                        collectionName = 'stockEntries';
+                    } else if (source === 'exits') {
+                        collectionName = 'stockExits';
+                    }
+                    
+                    if (collectionName && movement) {
+                        await db.collection(collectionName).doc(id.toString()).update({
+                            ...movement,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        console.log(`✅ Mouvement ${source}:${id} modifié dans Firebase`);
+                        updateCloudStatus('success', '☁️ Synchronisé');
+                    }
+                } catch (error) {
+                    console.error('❌ Erreur modification Firebase:', error);
+                    updateCloudStatus('error', '❌ Erreur sync');
+                    showAlert('⚠️ Modification locale réussie, mais erreur de synchronisation cloud', 'warning');
+                }
+            }
             
             // Fermer le modal
             modal.remove();
@@ -4841,15 +4871,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Mettre à jour les stocks
             forceUpdateStockKPIs();
             
-            alert('✅ Mouvement modifié avec succès !');
+            showAlert('✅ Mouvement modifié et synchronisé', 'success');
         }
         
-        function deleteMovement(source, id) {
+        async function deleteMovement(source, id) {
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce mouvement ?');
             if (!confirmed) return;
             
             console.log(`🗑️ Suppression du mouvement ${source}:${id}`);
             
+            // Supprimer des données locales
             if (source === 'sales') {
                 const index = salesData.findIndex(s => s.id == id);
                 if (index > -1) {
@@ -4867,8 +4898,35 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 }
             }
             
-            // Sauvegarder les changements
+            // Sauvegarder les changements localement
             saveToLocalStorage();
+            
+            // Synchroniser avec Firebase
+            if (isFirebaseInitialized) {
+                try {
+                    updateCloudStatus('syncing', '🗑️ Suppression...');
+                    
+                    // Déterminer la collection Firebase correspondante
+                    let collectionName = '';
+                    if (source === 'sales') {
+                        collectionName = 'sales';
+                    } else if (source === 'entries') {
+                        collectionName = 'stockEntries';
+                    } else if (source === 'exits') {
+                        collectionName = 'stockExits';
+                    }
+                    
+                    if (collectionName) {
+                        await db.collection(collectionName).doc(id.toString()).delete();
+                        console.log(`✅ Mouvement ${source}:${id} supprimé de Firebase`);
+                        updateCloudStatus('success', '☁️ Synchronisé');
+                    }
+                } catch (error) {
+                    console.error('❌ Erreur suppression Firebase:', error);
+                    updateCloudStatus('error', '❌ Erreur sync');
+                    showAlert('⚠️ Suppression locale réussie, mais erreur de synchronisation cloud', 'warning');
+                }
+            }
             
             // Mettre à jour l'affichage
             if (document.getElementById('movementTypeFilter').value) {
@@ -4880,7 +4938,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Mettre à jour les stocks
             forceUpdateStockKPIs();
             
-            alert('✅ Mouvement supprimé');
+            showAlert('✅ Mouvement supprimé et synchronisé', 'success');
         }
         
         // FONCTIONS SPÉCIFIQUES POUR ENTRÉES ET SORTIES
@@ -4893,7 +4951,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             editMovement('entries', id);
         }
         
-        function deleteStockEntry(id) {
+        async function deleteStockEntry(id) {
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette entrée ?');
             if (!confirmed) return;
             
@@ -4901,10 +4959,25 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             if (index > -1) {
                 stockEntriesData.splice(index, 1);
                 saveToLocalStorage();
+                
+                // Synchroniser avec Firebase
+                if (isFirebaseInitialized) {
+                    try {
+                        updateCloudStatus('syncing', '🗑️ Suppression...');
+                        await db.collection('stockEntries').doc(id.toString()).delete();
+                        console.log(`✅ Entrée ${id} supprimée de Firebase`);
+                        updateCloudStatus('success', '☁️ Synchronisé');
+                    } catch (error) {
+                        console.error('❌ Erreur suppression entrée Firebase:', error);
+                        updateCloudStatus('error', '❌ Erreur sync');
+                        showAlert('⚠️ Suppression locale réussie, mais erreur de synchronisation cloud', 'warning');
+                    }
+                }
+                
                 updateEntriesMovementsTable();
                 updateAllMovementsTable();
                 forceUpdateStockKPIs();
-                alert('✅ Entrée supprimée');
+                showAlert('✅ Entrée supprimée et synchronisée', 'success');
             }
         }
         
@@ -4926,23 +4999,54 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
         }
         
-        function deleteStockExit(id, source) {
+        async function deleteStockExit(id, source) {
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette sortie ?');
             if (!confirmed) return;
             
+            // Supprimer des données locales
             if (source === 'sales') {
                 const index = salesData.findIndex(s => s.id == id);
                 if (index > -1) {
                     salesData.splice(index, 1);
                     saveToLocalStorage();
-                    alert('✅ Vente supprimée');
+                    
+                    // Synchroniser avec Firebase
+                    if (isFirebaseInitialized) {
+                        try {
+                            updateCloudStatus('syncing', '🗑️ Suppression...');
+                            await db.collection('sales').doc(id.toString()).delete();
+                            console.log(`✅ Vente ${id} supprimée de Firebase`);
+                            updateCloudStatus('success', '☁️ Synchronisé');
+                        } catch (error) {
+                            console.error('❌ Erreur suppression vente Firebase:', error);
+                            updateCloudStatus('error', '❌ Erreur sync');
+                            showAlert('⚠️ Suppression locale réussie, mais erreur de synchronisation cloud', 'warning');
+                        }
+                    }
+                    
+                    showAlert('✅ Vente supprimée et synchronisée', 'success');
                 }
             } else {
                 const index = stockExitsData.findIndex(e => e.id == id);
                 if (index > -1) {
                     stockExitsData.splice(index, 1);
                     saveToLocalStorage();
-                    alert('✅ Sortie supprimée');
+                    
+                    // Synchroniser avec Firebase
+                    if (isFirebaseInitialized) {
+                        try {
+                            updateCloudStatus('syncing', '🗑️ Suppression...');
+                            await db.collection('stockExits').doc(id.toString()).delete();
+                            console.log(`✅ Sortie ${id} supprimée de Firebase`);
+                            updateCloudStatus('success', '☁️ Synchronisé');
+                        } catch (error) {
+                            console.error('❌ Erreur suppression sortie Firebase:', error);
+                            updateCloudStatus('error', '❌ Erreur sync');
+                            showAlert('⚠️ Suppression locale réussie, mais erreur de synchronisation cloud', 'warning');
+                        }
+                    }
+                    
+                    showAlert('✅ Sortie supprimée et synchronisée', 'success');
                 }
             }
             
