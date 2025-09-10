@@ -3518,6 +3518,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
                                     <button class="btn btn-sm btn-danger" onclick="emergencyDisableSync()">🚨 Désactiver Sync</button>
                                     <button class="btn btn-sm btn-success" onclick="resetFirebaseCounter()">🔄 Reset Compteur</button>
+                                    <button class="btn btn-sm btn-warning" onclick="forceLoadStockData()">📦 Force Load Stock</button>
                                 </div>
                             </div>
 
@@ -6550,7 +6551,30 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             container.innerHTML = html;
         }
 
+        // ✅ CONTRÔLE STRICT pour loadStockData (ANTI-SPAM)
+        let lastLoadStockTime = 0;
+        const LOAD_STOCK_THROTTLE_MS = 300000; // 5 minutes minimum !
+
         async function loadStockData() {
+            const now = Date.now();
+            
+            // ⚠️ PROTECTION STRICTE : Max 1 fois par 5 minutes
+            if (now - lastLoadStockTime < LOAD_STOCK_THROTTLE_MS) {
+                console.log(`🚫 loadStockData() BLOQUÉE - Trop récent (< 5 min)`);
+                return;
+            }
+            
+            if (!canMakeFirebaseCall('loadStockData')) {
+                console.log('🚫 loadStockData() BLOQUÉE - Sync désactivée');
+                return;
+            }
+            
+            lastLoadStockTime = now;
+            console.log('🔄 loadStockData() AUTORISÉE');
+            
+            // Incrémenter le compteur pour surveillance
+            incrementSyncCall('loadStockData - START');
+            
             // Charger depuis localStorage d'abord
             const savedEntries = localStorage.getItem('stockEntries');
             const savedExits = localStorage.getItem('stockExits');
@@ -6574,6 +6598,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     console.log('🔄 Synchronisation des données de stock depuis Firebase...');
                     
                     // Charger les entrées de stock
+                    incrementSyncCall('stockEntries.get()');
                     const entriesSnapshot = await db.collection('stockEntries').get();
                     if (!entriesSnapshot.empty) {
                         const firebaseEntries = [];
@@ -6595,6 +6620,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     }
                     
                     // Charger les sorties de stock
+                    incrementSyncCall('stockExits.get()');
                     const exitsSnapshot = await db.collection('stockExits').get();
                     if (!exitsSnapshot.empty) {
                         const firebaseExits = [];
@@ -6616,6 +6642,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     }
                     
                     // Charger les alertes
+                    incrementSyncCall('stockAlerts.get()');
                     const alertsSnapshot = await db.collection('stockAlerts').get();
                     if (!alertsSnapshot.empty) {
                         const firebaseAlerts = [];
@@ -8829,11 +8856,29 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
 ✅ Throttling refresh: 10 secondes min
 ✅ Listeners optimisés avec protection boucles
 ✅ Surveillance temps réel active
+✅ LoadStockData throttling: 5 minutes min
 
 ⚠️ Si compteur > 30: vérifiez les boucles infinies
             `;
             
             showAlert(stats, 'info');
+        }
+        
+        // ✅ FONCTION D'URGENCE pour forcer le chargement des stocks
+        function forceLoadStockData() {
+            if (confirm('⚠️ Forcer le chargement des données de stock ?\n\nCeci va faire 3 gros appels Firebase !')) {
+                // Reset le throttling
+                lastLoadStockTime = 0;
+                console.log('🚨 Force LoadStockData - Throttling reset');
+                
+                // Appel forcé
+                loadStockData().then(() => {
+                    showAlert('✅ Données de stock rechargées depuis Firebase', 'success');
+                }).catch(error => {
+                    console.error('Erreur force load stock:', error);
+                    showAlert('❌ Erreur lors du chargement forcé des stocks', 'error');
+                });
+            }
         }
         
         // Reset compteur toutes les heures
@@ -8910,29 +8955,34 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             try {
                 updateCloudStatus('syncing', '🔄 Vérification données...');
                 
-                // Compter les éléments dans Firebase
-                const salesSnapshot = await db.collection('sales').get();
-                const paymentsSnapshot = await db.collection('payments').get();
-                const productsSnapshot = await db.collection('products').get();
+                // ✅ OPTIMISÉ : Compter seulement, pas charger toutes les données
+                incrementSyncCall('startup count check');
                 
-                // Charger les notes de l'IA
-                try {
-                    const notesSnapshot = await db.collection('ai_notes').get();
-                    aiNotes = [];
-                    notesSnapshot.forEach(doc => {
-                        const noteData = doc.data();
-                        delete noteData.lastUpdated;
-                        aiNotes.push(noteData);
-                    });
-                    console.log(`${aiNotes.length} notes IA chargées`);
-                } catch (error) {
-                    console.error('Erreur chargement notes IA:', error);
+                const salesCount = (await db.collection('sales').get()).size;
+                const paymentsCount = (await db.collection('payments').get()).size;
+                const productsCount = (await db.collection('products').get()).size;
+                
+                // ⚠️ CHARGER LES NOTES IA SEULEMENT SI NÉCESSAIRE
+                if (aiNotes.length === 0) {
+                    try {
+                        incrementSyncCall('loading AI notes');
+                        const notesSnapshot = await db.collection('ai_notes').get();
+                        aiNotes = [];
+                        notesSnapshot.forEach(doc => {
+                            const noteData = doc.data();
+                            delete noteData.lastUpdated;
+                            aiNotes.push(noteData);
+                        });
+                        console.log(`✅ ${aiNotes.length} notes IA chargées`);
+                    } catch (error) {
+                        console.error('Erreur chargement notes IA:', error);
+                    }
                 }
                 
                 const firebaseCounts = {
-                    sales: salesSnapshot.size,
-                    payments: paymentsSnapshot.size,
-                    products: productsSnapshot.size
+                    sales: salesCount,
+                    payments: paymentsCount,
+                    products: productsCount
                 };
                 
                 const localCounts = {
@@ -8948,12 +8998,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     firebaseCounts.products !== localCounts.products;
                 
                 if (needsSync) {
-                    console.log('Différences détectées:', { firebase: firebaseCounts, local: localCounts });
+                    console.log('⚠️ Différences détectées:', { firebase: firebaseCounts, local: localCounts });
                     showAlert(`🔄 Synchronisation automatique en cours...\nFirebase: ${firebaseCounts.sales} ventes, ${firebaseCounts.payments} encaissements\nLocal: ${localCounts.sales} ventes, ${localCounts.payments} encaissements`, 'info');
                     
                     await performAutoSync();
                 } else {
-                    console.log('Données synchronisées:', localCounts);
+                    console.log('✅ Données déjà synchronisées:', localCounts);
                 }
                 
             } catch (error) {
@@ -9001,7 +9051,9 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 saveToLocalStorage();
                 
                 // NOUVEAU : Synchroniser les données de stock aussi
-                await loadStockData();
+                // ❌ TEMPORAIREMENT DÉSACTIVÉ - CAUSE DU SPAM FIREBASE
+                // await loadStockData();
+                console.log('⚠️ loadStockData() désactivée pour éviter le spam Firebase');
                 
                 // Mettre à jour l'interface
                 populateFilters();
@@ -12393,8 +12445,9 @@ Date [ESPACES] Client [ESPACES] Montant
             if (isFirebaseInitialized) {
                 try {
                     updateCloudStatus('syncing', '🔄 Sync stocks...');
-                    await loadStockData();
-                    console.log('✅ Données de stock synchronisées');
+                    // ❌ TEMPORAIREMENT DÉSACTIVÉ - CAUSE DU SPAM FIREBASE  
+                    // await loadStockData();
+                    console.log('⚠️ loadStockData() désactivée dans refreshData() pour éviter le spam Firebase');
                 } catch (error) {
                     console.error('❌ Erreur sync stocks:', error);
                 }
