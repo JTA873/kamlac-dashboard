@@ -4824,34 +4824,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Sauvegarder les changements localement
             saveToLocalStorage();
             
-            // Synchroniser avec Firebase
-            if (isFirebaseInitialized) {
-                try {
-                    updateCloudStatus('syncing', '✏️ Modification...');
-                    
-                    // Déterminer la collection Firebase correspondante
-                    let collectionName = '';
-                    if (source === 'sales') {
-                        collectionName = 'sales';
-                    } else if (source === 'entries') {
-                        collectionName = 'stockEntries';
-                    } else if (source === 'exits') {
-                        collectionName = 'stockExits';
-                    }
-                    
-                    if (collectionName && movement) {
-                        await db.collection(collectionName).doc(id.toString()).update({
-                            ...movement,
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        console.log(`✅ Mouvement ${source}:${id} modifié dans Firebase`);
-                        updateCloudStatus('success', '☁️ Synchronisé');
-                    }
-                } catch (error) {
-                    console.error('❌ Erreur modification Firebase:', error);
-                    updateCloudStatus('error', '❌ Erreur sync');
-                    showAlert('⚠️ Modification locale réussie, mais erreur de synchronisation cloud', 'warning');
-                }
+            // Déclencher le smart sync selon le type de mouvement
+            if (source === 'sales') {
+                triggerSmartSync(SYNC_TRIGGERS.SALE_MODIFIED);
+            } else if (source === 'entries') {
+                triggerSmartSync(SYNC_TRIGGERS.STOCK_ENTRY_MODIFIED);
+            } else if (source === 'exits') {
+                triggerSmartSync(SYNC_TRIGGERS.STOCK_EXIT_MODIFIED);
             }
             
             // Fermer le modal
@@ -6942,8 +6921,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Ajouter à la liste
             stockEntriesData.push(entry);
             
-            // Sauvegarder
-            saveStockData();
+            // Sauvegarder localement
+            saveToLocalStorage();
+            
+            // Déclencher le smart sync
+            triggerSmartSync(SYNC_TRIGGERS.STOCK_ENTRY_CREATED);
             
             // Recalculer les niveaux de stock
             calculateCurrentStockLevels();
@@ -7193,8 +7175,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Ajouter à la liste
             stockExitsData.push(exit);
             
-            // Sauvegarder
-            saveStockData();
+            // Sauvegarder localement
+            saveToLocalStorage();
+            
+            // Déclencher le smart sync
+            triggerSmartSync(SYNC_TRIGGERS.STOCK_EXIT_CREATED);
             
             // Recalculer les niveaux de stock
             calculateCurrentStockLevels();
@@ -8846,15 +8831,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 db = firebase.firestore();
                 isFirebaseInitialized = true;
                 
-                console.warn('🚨 AUTO-SYNC ET REAL-TIME SYNC DÉSACTIVÉES pour éviter la surconsommation Firebase');
-                console.log('💡 Utilisez la synchronisation manuelle uniquement');
+                console.log('🎯 SYNC INTELLIGENTE ACTIVÉE - Synchronisation uniquement sur actions utilisateur');
                 
-                // TOUTES CES FONCTIONS SONT TEMPORAIREMENT DÉSACTIVÉES :
-                // await autoSyncOnStartup();          // DÉSACTIVÉ - Consomme trop au démarrage
-                // setupRealtimeSync();                // DÉSACTIVÉ - Listeners temps réel = consommation
-                // startAutoSync();                    // DÉSACTIVÉ - Auto-sync toutes les 5min = consommation
+                // NOUVEAU SYSTÈME: Sync uniquement sur événements utilisateur
+                // Plus de sync automatique aveugle !
                 
-                updateCloudStatus('online', '☁️ Manuel');
+                updateCloudStatus('online', '☁️ Smart Sync');
             } catch (error) {
                 console.error('Erreur Firebase:', error);
                 updateCloudStatus('offline', '❌ Offline');
@@ -11563,16 +11545,9 @@ Date [ESPACES] Client [ESPACES] Montant
                 salesData.push(...newSales);
                 saveToLocalStorage();
                 
+                // 🎯 NOUVEAU: Déclencher la sync intelligente au lieu de sync immédiate
                 if (isFirebaseInitialized) {
-                    const batch = db.batch();
-                    newSales.forEach(sale => {
-                        const docRef = db.collection('sales').doc(sale.id.toString());
-                        batch.set(docRef, {
-                            ...sale,
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    });
-                    await batch.commit();
+                    triggerSmartSync(SYNC_TRIGGERS.SALE_CREATED);
                 }
                 
                 const totalValue = newSales.reduce((sum, sale) => sum + sale.valeur, 0);
@@ -11645,15 +11620,9 @@ Date [ESPACES] Client [ESPACES] Montant
             paymentsData.push(payment);
             saveToLocalStorage();
             
+            // 🎯 NOUVEAU: Déclencher la sync intelligente
             if (isFirebaseInitialized) {
-                try {
-                    await db.collection('payments').doc(payment.id.toString()).set({
-                        ...payment,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                } catch (error) {
-                    console.error('Erreur sync encaissement:', error);
-                }
+                triggerSmartSync(SYNC_TRIGGERS.PAYMENT_CREATED);
             }
             
             showAlert(`💰 Encaissement enregistré: ${formatCurrency(amount)}`, 'success');
@@ -12886,16 +12855,9 @@ Date [ESPACES] Client [ESPACES] Montant
             salesData[saleIndex] = updatedSale;
             saveToLocalStorage();
             
-            // Sync Firebase
+            // 🎯 NOUVEAU: Déclencher la sync intelligente pour modification
             if (isFirebaseInitialized) {
-                try {
-                    await db.collection('sales').doc(editingSaleId.toString()).set({
-                        ...updatedSale,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                } catch (error) {
-                    console.error('Erreur sync vente:', error);
-                }
+                triggerSmartSync(SYNC_TRIGGERS.SALE_MODIFIED);
             }
             
             closeEditSaleModal();
@@ -12932,6 +12894,7 @@ Date [ESPACES] Client [ESPACES] Montant
                 salesData = salesData.filter(s => s.id !== saleId);
                 saveToLocalStorage();
                 
+                // 🎯 Les suppressions gardent la logique Firebase directe (déjà optimisée)
                 if (isFirebaseInitialized) {
                     try {
                         await db.collection('sales').doc(saleId.toString()).delete();
