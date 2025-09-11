@@ -4862,6 +4862,30 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Sauvegarder les changements
             saveToLocalStorage();
             
+            // Sync Firebase - comme dans saveSaleEdit du Module Commercial
+            if (isFirebaseInitialized) {
+                try {
+                    if (source === 'sales') {
+                        db.collection('sales').doc(id.toString()).set({
+                            ...movement,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    } else if (source === 'entries') {
+                        db.collection('stockEntries').doc(id.toString()).set({
+                            ...movement,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    } else if (source === 'exits') {
+                        db.collection('stockExits').doc(id.toString()).set({
+                            ...movement,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                } catch (error) {
+                    console.error('Erreur sync mouvement:', error);
+                }
+            }
+            
             // Fermer le modal
             modal.remove();
             
@@ -4908,6 +4932,21 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Sauvegarder les changements
             saveToLocalStorage();
             
+            // Sync Firebase - supprimer de Firebase aussi
+            if (isFirebaseInitialized) {
+                try {
+                    if (source === 'sales') {
+                        db.collection('sales').doc(id.toString()).delete();
+                    } else if (source === 'entries') {
+                        db.collection('stockEntries').doc(id.toString()).delete();
+                    } else if (source === 'exits') {
+                        db.collection('stockExits').doc(id.toString()).delete();
+                    }
+                } catch (error) {
+                    console.error('Erreur suppression mouvement Firebase:', error);
+                }
+            }
+            
             // Mettre à jour l'affichage
             if (document.getElementById('movementTypeFilter').value) {
                 applyMovementFilters();
@@ -4939,6 +4978,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             if (index > -1) {
                 stockEntriesData.splice(index, 1);
                 saveToLocalStorage();
+                
+                // Sync Firebase - supprimer de Firebase aussi
+                if (isFirebaseInitialized) {
+                    try {
+                        db.collection('stockEntries').doc(id.toString()).delete();
+                    } catch (error) {
+                        console.error('Erreur suppression entrée Firebase:', error);
+                    }
+                }
+                
                 updateEntriesMovementsTable();
                 updateAllMovementsTable();
                 forceUpdateStockKPIs();
@@ -4973,6 +5022,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 if (index > -1) {
                     salesData.splice(index, 1);
                     saveToLocalStorage();
+                    
+                    // Sync Firebase - supprimer de Firebase aussi
+                    if (isFirebaseInitialized) {
+                        try {
+                            db.collection('sales').doc(id.toString()).delete();
+                        } catch (error) {
+                            console.error('Erreur suppression vente Firebase:', error);
+                        }
+                    }
+                    
                     alert('✅ Vente supprimée');
                 }
             } else {
@@ -4980,6 +5039,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 if (index > -1) {
                     stockExitsData.splice(index, 1);
                     saveToLocalStorage();
+                    
+                    // Sync Firebase - supprimer de Firebase aussi
+                    if (isFirebaseInitialized) {
+                        try {
+                            db.collection('stockExits').doc(id.toString()).delete();
+                        } catch (error) {
+                            console.error('Erreur suppression sortie Firebase:', error);
+                        }
+                    }
+                    
                     alert('✅ Sortie supprimée');
                 }
             }
