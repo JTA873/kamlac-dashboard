@@ -2813,6 +2813,48 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Gestion du Cache -->
+                    <div class="import-section">
+                        <h3 style="margin-bottom: 15px;">🧹 Gestion du Cache</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Vidage automatique au démarrage</label>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" id="autoClearCache" onchange="toggleAutoClearCache()" checked>
+                                    <span>Vider le cache à chaque connexion</span>
+                                </div>
+                                <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    🔄 Garantit les données les plus récentes
+                                </small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Ancienneté maximale du cache</label>
+                                <select id="cacheMaxAge" onchange="setCacheMaxAge()">
+                                    <option value="1">1 heure</option>
+                                    <option value="6">6 heures</option>
+                                    <option value="24" selected>24 heures</option>
+                                    <option value="72">3 jours</option>
+                                    <option value="168">1 semaine</option>
+                                </select>
+                                <small style="color: #6c757d; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    ⏰ Cache automatiquement vidé après cette durée
+                                </small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Actions manuelles</label>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button class="btn btn-warning" onclick="clearUserCacheManual()">🧹 Vider Cache</button>
+                                    <button class="btn btn-info" onclick="showCacheStatus()">📊 Statut Cache</button>
+                                </div>
+                                <small style="color: #ffc107; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    🔧 Outils de maintenance du cache
+                                </small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div id="importStatus"></div>
@@ -3501,9 +3543,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                     <button class="btn btn-info" onclick="testStockSync()">🔍 Test Sync Firebase</button>
                                     <button class="btn btn-success" onclick="refreshData()">🔄 Force Sync</button>
                                     <button class="btn btn-warning" onclick="showFirebaseStats()">📊 Stats Firebase</button>
+                                    <button class="btn btn-danger" onclick="clearUserCacheManual()">🧹 Vider Cache</button>
                                 </div>
                                 <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    🔍 Vérifier la synchronisation avec Firebase
+                                    🔍 Vérifier la synchronisation avec Firebase • 🧹 Vider le cache pour actualiser les données
                                 </small>
                             </div>
                             
@@ -8713,6 +8756,153 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             return null;
         }
 
+        // 🧹 FONCTIONS DE GESTION DU CACHE
+
+        // Basculer le vidage automatique du cache
+        function toggleAutoClearCache() {
+            const isEnabled = document.getElementById('autoClearCache').checked;
+            localStorage.setItem('autoClearCacheEnabled', isEnabled.toString());
+            
+            const message = isEnabled 
+                ? '✅ Vidage automatique du cache activé' 
+                : '❌ Vidage automatique du cache désactivé';
+            showToast(message, isEnabled ? 'success' : 'warning');
+            
+            console.log(`🧹 Auto-clear cache: ${isEnabled ? 'ENABLED' : 'DISABLED'}`);
+        }
+
+        // Définir l'âge maximum du cache
+        function setCacheMaxAge() {
+            const maxAge = document.getElementById('cacheMaxAge').value;
+            localStorage.setItem('cacheMaxAgeHours', maxAge);
+            showToast(`⏰ Âge maximum du cache défini à ${maxAge}h`, 'info');
+            console.log(`🕐 Cache max age set to: ${maxAge} hours`);
+        }
+
+        // Afficher le statut du cache
+        function showCacheStatus() {
+            const cacheTimestamp = localStorage.getItem('kamlacCacheTimestamp');
+            const autoClearEnabled = localStorage.getItem('autoClearCacheEnabled') === 'true';
+            const maxAge = localStorage.getItem('cacheMaxAgeHours') || '24';
+            
+            let status = '📊 STATUT DU CACHE\n\n';
+            
+            if (cacheTimestamp) {
+                const now = new Date().getTime();
+                const cacheAge = (now - parseInt(cacheTimestamp)) / (1000 * 60 * 60); // en heures
+                
+                status += `🕐 Âge du cache: ${cacheAge.toFixed(1)} heures\n`;
+                status += `⏰ Âge maximum: ${maxAge} heures\n`;
+                status += `🧹 Vidage automatique: ${autoClearEnabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}\n`;
+                status += `📅 Dernière mise à jour: ${new Date(parseInt(cacheTimestamp)).toLocaleString()}\n\n`;
+                
+                if (cacheAge > parseFloat(maxAge)) {
+                    status += '⚠️ Le cache est ancien et sera vidé au prochain démarrage';
+                } else {
+                    status += '✅ Le cache est à jour';
+                }
+            } else {
+                status += '❌ Aucun cache trouvé\n';
+                status += `🧹 Vidage automatique: ${autoClearEnabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`;
+            }
+            
+            alert(status);
+        }
+
+        // Charger les préférences de cache au démarrage
+        function loadCachePreferences() {
+            const autoClearEnabled = localStorage.getItem('autoClearCacheEnabled');
+            const maxAge = localStorage.getItem('cacheMaxAgeHours');
+            
+            // Valeurs par défaut
+            if (autoClearEnabled === null) {
+                localStorage.setItem('autoClearCacheEnabled', 'true');
+                document.getElementById('autoClearCache').checked = true;
+            } else {
+                document.getElementById('autoClearCache').checked = autoClearEnabled === 'true';
+            }
+            
+            if (maxAge === null) {
+                localStorage.setItem('cacheMaxAgeHours', '24');
+                document.getElementById('cacheMaxAge').value = '24';
+            } else {
+                document.getElementById('cacheMaxAge').value = maxAge;
+            }
+        }
+
+        // 🧹 FONCTION DE VIDAGE MANUEL DU CACHE
+        async function clearUserCacheManual() {
+            if (confirm('🧹 Voulez-vous vraiment vider le cache ?\n\nCeci va:\n• Supprimer toutes les données en cache\n• Recharger les données depuis Firebase\n• Actualiser l\'affichage\n\nContinuer ?')) {
+                try {
+                    showToast('🧹 Vidage du cache en cours...', 'info');
+                    
+                    // Vider le cache
+                    clearUserCache();
+                    
+                    // Forcer une synchronisation complète
+                    if (isFirebaseInitialized) {
+                        await performAutoSync();
+                        
+                        // Actualiser tous les affichages
+                        updateClientsOverview();
+                        updateProductsDisplay();
+                        updatePaymentsDisplay();
+                        updateClientsSummaryTable();
+                        applyFilters();
+                        applyRecapFilters();
+                        
+                        showToast('✅ Cache vidé et données actualisées !', 'success');
+                    } else {
+                        showToast('⚠️ Firebase non initialisé, seul le cache local a été vidé', 'warning');
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Erreur lors du vidage manuel du cache:', error);
+                    showToast('❌ Erreur lors du vidage du cache', 'error');
+                }
+            }
+        }
+
+        // 🔄 FONCTION DE VIDAGE AUTOMATIQUE DU CACHE
+        function clearUserCache() {
+            // Vérifier si le vidage automatique est activé
+            const autoClearEnabled = localStorage.getItem('autoClearCacheEnabled') === 'true';
+            
+            if (!autoClearEnabled) {
+                console.log('🚫 Vidage automatique du cache désactivé par l\'utilisateur');
+                return;
+            }
+            
+            console.log('🧹 Vidage automatique du cache utilisateur...');
+            
+            try {
+                // Vider le localStorage des données de l'application
+                localStorage.removeItem('kamlacSalesData');
+                localStorage.removeItem('kamlacPaymentsData');
+                localStorage.removeItem('kamlacProductsData');
+                localStorage.removeItem('kamlacAiNotes');
+                localStorage.removeItem('kamlacNoteCategories');
+                localStorage.removeItem('stockEntries');
+                localStorage.removeItem('stockExits');
+                localStorage.removeItem('stockAlerts');
+                localStorage.removeItem('kamlacCacheTimestamp');
+                
+                // Réinitialiser les tableaux de données
+                salesData = [];
+                paymentsData = [];
+                productsData = [];
+                aiNotes = [];
+                noteCategories = [];
+                
+                console.log('✅ Cache utilisateur vidé avec succès');
+                showToast('🧹 Cache vidé - Données actualisées', 'success');
+                
+            } catch (error) {
+                console.error('❌ Erreur lors du vidage du cache:', error);
+                showToast('⚠️ Erreur lors du vidage du cache', 'warning');
+            }
+        }
+
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
@@ -8720,6 +8910,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
 
         async function initializeApp() {
             console.log('Initialisation de l\'application...');
+            
+            // � Charger les préférences de cache
+            loadCachePreferences();
+            
+            // �🔄 VIDAGE AUTOMATIQUE DU CACHE AU DÉMARRAGE
+            clearUserCache();
             
             // Initialiser le thème
             // Afficher la version
@@ -8771,11 +8967,31 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         function loadFromLocalStorage() {
-            salesData = JSON.parse(localStorage.getItem('kamlacSalesData') || '[]');
-            paymentsData = JSON.parse(localStorage.getItem('kamlacPaymentsData') || '[]');
-            productsData = JSON.parse(localStorage.getItem('kamlacProductsData') || '[]');
-            aiNotes = JSON.parse(localStorage.getItem('kamlacAiNotes') || '[]');
-            noteCategories = JSON.parse(localStorage.getItem('kamlacNoteCategories') || '[]');
+            // 🕐 Vérifier l'ancienneté des données en cache
+            const cacheTimestamp = localStorage.getItem('kamlacCacheTimestamp');
+            const maxAgeHours = parseFloat(localStorage.getItem('cacheMaxAgeHours') || '24');
+            const now = new Date().getTime();
+            const cacheAge = cacheTimestamp ? (now - parseInt(cacheTimestamp)) / (1000 * 60 * 60) : Infinity; // en heures
+            
+            // Si le cache dépasse l'âge maximum configuré, le vider automatiquement
+            if (cacheAge > maxAgeHours) {
+                console.log(`🕐 Cache ancien détecté (${cacheAge.toFixed(1)}h > ${maxAgeHours}h), vidage automatique...`);
+                clearUserCache();
+                return;
+            }
+            
+            try {
+                salesData = JSON.parse(localStorage.getItem('kamlacSalesData') || '[]');
+                paymentsData = JSON.parse(localStorage.getItem('kamlacPaymentsData') || '[]');
+                productsData = JSON.parse(localStorage.getItem('kamlacProductsData') || '[]');
+                aiNotes = JSON.parse(localStorage.getItem('kamlacAiNotes') || '[]');
+                noteCategories = JSON.parse(localStorage.getItem('kamlacNoteCategories') || '[]');
+                
+                console.log(`✅ Données chargées depuis le cache (âge: ${cacheAge.toFixed(1)}h/${maxAgeHours}h max)`);
+            } catch (error) {
+                console.error('❌ Erreur lors du chargement du cache, vidage...', error);
+                clearUserCache();
+            }
         }
 
         // ✅ FONCTIONS DE SURVEILLANCE FIREBASE
@@ -8952,6 +9168,9 @@ Utilisez le bouton "📦 Force Load Stock"
             localStorage.setItem('kamlacProductsData', JSON.stringify(productsData));
             localStorage.setItem('kamlacAiNotes', JSON.stringify(aiNotes));
             localStorage.setItem('kamlacNoteCategories', JSON.stringify(noteCategories));
+            
+            // 🕐 Sauvegarder le timestamp pour le contrôle d'ancienneté
+            localStorage.setItem('kamlacCacheTimestamp', new Date().getTime().toString());
         }
 
         function updateCloudStatus(status, message) {
