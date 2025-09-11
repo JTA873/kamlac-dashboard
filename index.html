@@ -2878,27 +2878,44 @@
                     </div>
                 </div>
                 
-                <!-- Cartes KPI Stocks (style commercial) -->
-                <div class="kpi-grid" style="margin-bottom: 20px;">
-                    <div class="kpi-card" style="cursor: pointer;" title="Produits suivis">
-                        <div class="kpi-icon">📦</div>
-                        <div class="kpi-value" id="totalProductsStock">0</div>
-                        <div class="kpi-label">Produits en Stock</div>
+                <!-- 2 Tableaux des Stocks -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <!-- Tableau Stocks Positifs -->
+                    <div class="card">
+                        <h4 style="margin-bottom: 10px; color: #28a745; text-align: center;">✅ Stocks Positifs</h4>
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            <table class="data-table" id="positiveStocksTable">
+                                <thead>
+                                    <tr>
+                                        <th>📦 Produit</th>
+                                        <th>📊 Quantité</th>
+                                        <th>📏 Unité</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Rempli par JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="kpi-card" style="cursor: pointer;" title="Valeur totale du stock">
-                        <div class="kpi-icon">💰</div>
-                        <div class="kpi-value" id="totalStockValue">0 CFA</div>
-                        <div class="kpi-label">Valeur Totale Stock</div>
-                    </div>
-                    <div class="kpi-card" style="cursor: pointer;" title="Stocks nécessitant attention">
-                        <div class="kpi-icon">⚠️</div>
-                        <div class="kpi-value" id="lowStockCount">0</div>
-                        <div class="kpi-label">Stocks Faibles</div>
-                    </div>
-                    <div class="kpi-card" style="cursor: pointer;" title="Stocks en rupture">
-                        <div class="kpi-icon">🔴</div>
-                        <div class="kpi-value" id="negativeStockCount">0</div>
-                        <div class="kpi-label">Stocks Négatifs</div>
+                    
+                    <!-- Tableau Stocks Négatifs -->
+                    <div class="card">
+                        <h4 style="margin-bottom: 10px; color: #dc3545; text-align: center;">⚠️ Stocks Négatifs</h4>
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            <table class="data-table" id="negativeStocksTable">
+                                <thead>
+                                    <tr>
+                                        <th>📦 Produit</th>
+                                        <th>📊 Quantité</th>
+                                        <th>📏 Unité</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Rempli par JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 
@@ -3991,16 +4008,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Ajouter le bouton de debug
             addDebugButton();
             
-            // Message d'information pour l'utilisateur
-            setTimeout(() => {
-                const negativeProducts = Object.keys(currentStockLevels).filter(
-                    product => currentStockLevels[product].quantity < 0
-                ).length;
-                
-                if (negativeProducts > 0) {
-                    showAlert(`📊 Module Stocks initialisé avec ${salesData.length} ventes existantes. ${negativeProducts} produits ont des stocks négatifs - normal au début, ajoutez vos entrées de stock pour rééquilibrer.`, 'info');
-                }
-            }, 1500);
+            // Message d'information pour l'utilisateur - SUPPRIMÉ POUR ÉVITER LE SPAM DE MESSAGES
+            // setTimeout(() => {
+            //     const negativeProducts = Object.keys(currentStockLevels).filter(
+            //         product => currentStockLevels[product].quantity < 0
+            //     ).length;
+            //     
+            //     if (negativeProducts > 0) {
+            //         showAlert(`📊 Module Stocks initialisé avec ${salesData.length} ventes existantes. ${negativeProducts} produits ont des stocks négatifs - normal au début, ajoutez vos entrées de stock pour rééquilibrer.`, 'info');
+            //     }
+            // }, 1500);
         }
         
         // ========================================
@@ -6018,39 +6035,68 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             });
         }
 
-        // Fonction pour mettre à jour les cartes KPI du stock
+        // Fonction pour mettre à jour les tableaux de stocks positifs et négatifs
         function updateStockKPICards() {
             if (!currentStockLevels) return;
             
             const products = Object.keys(currentStockLevels);
-            let totalValue = 0;
-            let lowStockCount = 0;
-            let negativeStockCount = 0;
+            const positiveStocks = [];
+            const negativeStocks = [];
             
+            // Séparer les stocks positifs et négatifs
             products.forEach(product => {
                 const stock = currentStockLevels[product];
                 const quantity = stock.quantity || 0;
-                const value = stock.value || 0;
+                const unit = stock.unit || 'Unités';
                 
-                totalValue += value;
-                
-                if (quantity < 0) {
-                    negativeStockCount++;
-                } else if (quantity <= 10 && quantity > 0) {
-                    lowStockCount++;
+                if (quantity > 0) {
+                    positiveStocks.push({ product, quantity, unit });
+                } else if (quantity < 0) {
+                    negativeStocks.push({ product, quantity: Math.abs(quantity), unit });
                 }
             });
             
-            // Mettre à jour les cartes
-            const totalProductsElement = document.getElementById('totalProductsStock');
-            const totalValueElement = document.getElementById('totalStockValue');
-            const lowStockElement = document.getElementById('lowStockCount');
-            const negativeStockElement = document.getElementById('negativeStockCount');
+            // Trier par quantité décroissante
+            positiveStocks.sort((a, b) => b.quantity - a.quantity);
+            negativeStocks.sort((a, b) => b.quantity - a.quantity);
             
-            if (totalProductsElement) totalProductsElement.textContent = products.length;
-            if (totalValueElement) totalValueElement.textContent = totalValue.toLocaleString() + ' CFA';
-            if (lowStockElement) lowStockElement.textContent = lowStockCount;
-            if (negativeStockElement) negativeStockElement.textContent = negativeStockCount;
+            // Remplir le tableau des stocks positifs
+            const positiveTableBody = document.querySelector('#positiveStocksTable tbody');
+            if (positiveTableBody) {
+                positiveTableBody.innerHTML = '';
+                if (positiveStocks.length === 0) {
+                    positiveTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #666;">Aucun stock positif</td></tr>';
+                } else {
+                    positiveStocks.forEach(stock => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${stock.product}</td>
+                            <td style="text-align: right; font-weight: bold; color: #28a745;">${stock.quantity.toLocaleString()}</td>
+                            <td style="text-align: center;">${stock.unit}</td>
+                        `;
+                        positiveTableBody.appendChild(row);
+                    });
+                }
+            }
+            
+            // Remplir le tableau des stocks négatifs
+            const negativeTableBody = document.querySelector('#negativeStocksTable tbody');
+            if (negativeTableBody) {
+                negativeTableBody.innerHTML = '';
+                if (negativeStocks.length === 0) {
+                    negativeTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #666;">Aucun stock négatif</td></tr>';
+                } else {
+                    negativeStocks.forEach(stock => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${stock.product}</td>
+                            <td style="text-align: right; font-weight: bold; color: #dc3545;">-${stock.quantity.toLocaleString()}</td>
+                            <td style="text-align: center;">${stock.unit}</td>
+                        `;
+                        negativeTableBody.appendChild(row);
+                    });
+                }
+            }
         }
         
         // Fonction pour le graphique de répartition des stocks
@@ -8952,7 +8998,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 
                 // Appel forcé
                 loadStockData().then(() => {
-                    showAlert('✅ Données de stock rechargées depuis Firebase', 'success');
+                    // Message supprimé pour éviter le spam - showAlert('✅ Données de stock rechargées depuis Firebase', 'success');
+                    console.log('✅ Données de stock rechargées depuis Firebase');
                 }).catch(error => {
                     console.error('Erreur force load stock:', error);
                     showAlert('❌ Erreur lors du chargement forcé des stocks', 'error');
@@ -9116,11 +9163,12 @@ Utilisez le bouton "📦 Force Load Stock"
                 
                 if (needsSync) {
                     console.log('⚠️ Différences détectées:', { firebase: firebaseCounts, local: localCounts });
-                    showAlert(`🔄 Synchronisation automatique en cours...\nFirebase: ${firebaseCounts.sales} ventes, ${firebaseCounts.payments} encaissements\nLocal: ${localCounts.sales} ventes, ${localCounts.payments} encaissements`, 'info');
-                    
+                    // Message de synchro supprimé - sera remplacé par un message de synthèse final
                     await performAutoSync();
                 } else {
                     console.log('✅ Données déjà synchronisées:', localCounts);
+                    // Afficher le message de synthèse même si pas de sync nécessaire
+                    showDataSummary();
                 }
                 
             } catch (error) {
@@ -9190,12 +9238,25 @@ Utilisez le bouton "📦 Force Load Stock"
                     forceUpdateStockKPIs();
                 }
                 
-                showAlert(`✅ Synchronisation automatique réussie !\n📊 ${salesData.length} ventes, 💰 ${paymentsData.length} encaissements`, 'success');
+                // Afficher un seul message de synthèse au lieu de plusieurs messages
+                showDataSummary();
                 
             } catch (error) {
                 console.error('Erreur auto-sync:', error);
                 showAlert(`Erreur synchronisation: ${error.message}`, 'error');
             }
+        }
+
+        // Fonction pour afficher un seul message de synthèse des données
+        function showDataSummary() {
+            // Calculer les entrées et sorties de stock (hors ventes)
+            const stockEntries = stockEntriesData.length || 0;
+            const stockExits = stockExitsData.length || 0;
+            
+            // Message simple et efficace
+            const message = `📊 ${salesData.length} ventes • 💰 ${paymentsData.length} encaissements • 📦 ${stockEntries} entrées • 📤 ${stockExits} sorties`;
+            
+            showAlert(message, 'success');
         }
 
         // Démarrer la synchronisation automatique périodique
@@ -9433,7 +9494,8 @@ Utilisez le bouton "📦 Force Load Stock"
                     if (typeof forceUpdateStockKPIs === 'function') {
                         forceUpdateStockKPIs();
                     }
-                    showAlert('📦 Données de stock mises à jour en temps réel', 'info');
+                    // Message supprimé pour éviter le spam - showAlert('📦 Données de stock mises à jour en temps réel', 'info');
+                    console.log('📦 Données de stock mises à jour en temps réel');
                 }
                 updateCloudStatus('online', '☁️ Sync');
             });
