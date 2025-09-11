@@ -14029,32 +14029,43 @@ Date [ESPACES] Client [ESPACES] Montant
 
         function openQuickSale() {
             toggleFloatingMenu(); // Fermer le menu
-            // Aller à l'onglet Ventes et focus sur le premier champ
-            showSection('sales');
+            // S'assurer qu'on est dans le module commercial avant d'aller à l'onglet Ventes
+            showModule('commercial');
             setTimeout(() => {
-                const clientInput = document.getElementById('invoiceClient');
-                if (clientInput) {
-                    clientInput.focus();
-                }
+                showSection('sales');
+                // Focus sur le premier champ
+                setTimeout(() => {
+                    const clientInput = document.getElementById('invoiceClient');
+                    if (clientInput) {
+                        clientInput.focus();
+                    }
+                }, 100);
             }, 100);
         }
 
         function openQuickPayment() {
             toggleFloatingMenu(); // Fermer le menu
-            // Aller à l'onglet Encaissements et focus sur le premier champ
-            showSection('payments');
+            // S'assurer qu'on est dans le module commercial avant d'aller à l'onglet Encaissements
+            showModule('commercial');
             setTimeout(() => {
-                const clientInput = document.getElementById('paymentClient');
-                if (clientInput) {
-                    clientInput.focus();
-                }
+                showSection('payments');
+                // Focus sur le premier champ
+                setTimeout(() => {
+                    const clientInput = document.getElementById('paymentClient');
+                    if (clientInput) {
+                        clientInput.focus();
+                    }
+                }, 100);
             }, 100);
         }
 
         function openQuickRecap() {
             toggleFloatingMenu(); // Fermer le menu
-            // Aller à l'onglet Récapitulatif
-            showSection('recap');
+            // S'assurer qu'on est dans le module commercial avant d'aller à l'onglet Récapitulatif
+            showModule('commercial');
+            setTimeout(() => {
+                showSection('recap');
+            }, 100);
         }
 
         function openQuickStockEntry() {
