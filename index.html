@@ -3747,6 +3747,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     <span class="icon">📈</span>
                     <span>Excel Global</span>
                 </div>
+                <div class="floating-menu-item" onclick="openQuickStockExport()">
+                    <span class="icon">📦</span>
+                    <span>Excel Mouvements</span>
+                </div>
             </div>
         </div>
         
@@ -12887,6 +12891,110 @@ Date [ESPACES] Client [ESPACES] Montant
             }
         }
 
+        // Export Excel des mouvements de stock
+        function exportStockMovementsToExcel() {
+            try {
+                const wb = XLSX.utils.book_new();
+                
+                // 1. Onglet Entrées de stock
+                const entriesData = [
+                    ['Date', 'Type', 'Référence', 'Fournisseur', 'Produit', 'Quantité', 'Unité', 'Coût Unitaire', 'Coût Total', 'Notes']
+                ];
+                
+                if (stockEntriesData && stockEntriesData.length > 0) {
+                    stockEntriesData.forEach(entry => {
+                        entriesData.push([
+                            entry.date || '',
+                            entry.type || '',
+                            entry.reference || '',
+                            entry.supplier || entry.fournisseur || '',
+                            entry.product || '',
+                            entry.quantity || 0,
+                            entry.unit || '',
+                            entry.unitCost || 0,
+                            entry.totalCost || 0,
+                            entry.notes || ''
+                        ]);
+                    });
+                }
+                
+                const ws1 = XLSX.utils.aoa_to_sheet(entriesData);
+                XLSX.utils.book_append_sheet(wb, ws1, 'Entrées');
+                
+                // 2. Onglet Sorties de stock
+                const exitsData = [
+                    ['Date', 'Type', 'Référence', 'Destination', 'Produit', 'Quantité', 'Unité', 'Coût Unitaire', 'Coût Total', 'Notes']
+                ];
+                
+                if (stockExitsData && stockExitsData.length > 0) {
+                    stockExitsData.forEach(exit => {
+                        exitsData.push([
+                            exit.date || '',
+                            exit.type || '',
+                            exit.reference || '',
+                            exit.destination || '',
+                            exit.product || '',
+                            exit.quantity || 0,
+                            exit.unit || '',
+                            exit.unitCost || 0,
+                            exit.totalCost || 0,
+                            exit.notes || ''
+                        ]);
+                    });
+                }
+                
+                const ws2 = XLSX.utils.aoa_to_sheet(exitsData);
+                XLSX.utils.book_append_sheet(wb, ws2, 'Sorties');
+                
+                // 3. Onglet Stocks actuels
+                const stocksData = [
+                    ['Produit', 'Quantité Actuelle', 'Unité', 'Valeur Estimée', 'Statut']
+                ];
+                
+                if (currentStockLevels && Object.keys(currentStockLevels).length > 0) {
+                    Object.entries(currentStockLevels).forEach(([product, stock]) => {
+                        const quantity = stock.quantity || 0;
+                        const unit = stock.unit || 'Unités';
+                        const value = stock.value || 0;
+                        let status = 'Stock Normal';
+                        
+                        if (quantity < 0) {
+                            status = 'Stock Négatif';
+                        } else if (quantity === 0) {
+                            status = 'Rupture';
+                        } else if (quantity <= 10) {
+                            status = 'Stock Faible';
+                        }
+                        
+                        stocksData.push([
+                            product,
+                            quantity,
+                            unit,
+                            value,
+                            status
+                        ]);
+                    });
+                }
+                
+                const ws3 = XLSX.utils.aoa_to_sheet(stocksData);
+                XLSX.utils.book_append_sheet(wb, ws3, 'Stocks Actuels');
+                
+                // Nom du fichier avec date
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('fr-FR').replace(/\//g, '-');
+                const filename = `KAMLAC_Mouvements_Stocks_${dateStr}.xlsx`;
+                
+                // Télécharger le fichier
+                XLSX.writeFile(wb, filename);
+                
+                showAlert('📦 Export mouvements de stock terminé !', 'success');
+                
+            } catch (error) {
+                console.error('Erreur export mouvements stock:', error);
+                showAlert('❌ Erreur lors de l\'export des mouvements de stock.', 'error');
+            }
+        }
+
         // Export PDF des en-cours par client
         function exportOutstandingToPDF() {
             try {
@@ -13954,7 +14062,7 @@ Date [ESPACES] Client [ESPACES] Montant
             // Aller au module Stocks et à l'onglet Entrées
             showModule('stocks');
             setTimeout(() => {
-                showStocksSection('stock-entry');
+                showStocksSection('stock-entries');
                 // Focus sur le premier champ du formulaire d'entrée
                 const productInput = document.getElementById('entryProduct');
                 if (productInput) {
@@ -13968,13 +14076,48 @@ Date [ESPACES] Client [ESPACES] Montant
             // Aller au module Stocks et à l'onglet Sorties
             showModule('stocks');
             setTimeout(() => {
-                showStocksSection('stock-exit');
+                showStocksSection('stock-exits');
                 // Focus sur le premier champ du formulaire de sortie
                 const productInput = document.getElementById('exitProduct');
                 if (productInput) {
                     productInput.focus();
                 }
             }, 200);
+        }
+
+        function openQuickStockExport() {
+            toggleFloatingMenu(); // Fermer le menu
+            
+            // S'assurer que les données de stock sont chargées
+            if (!stockEntriesData || stockEntriesData.length === 0) {
+                const savedEntries = localStorage.getItem('stockEntries');
+                if (savedEntries) {
+                    try {
+                        stockEntriesData = JSON.parse(savedEntries);
+                    } catch (e) {
+                        stockEntriesData = [];
+                    }
+                }
+            }
+            
+            if (!stockExitsData || stockExitsData.length === 0) {
+                const savedExits = localStorage.getItem('stockExits');
+                if (savedExits) {
+                    try {
+                        stockExitsData = JSON.parse(savedExits);
+                    } catch (e) {
+                        stockExitsData = [];
+                    }
+                }
+            }
+            
+            // S'assurer que les niveaux de stock sont calculés
+            if (!currentStockLevels || Object.keys(currentStockLevels).length === 0) {
+                calculateCurrentStockLevels();
+            }
+            
+            // Lancer l'export
+            exportStockMovementsToExcel();
         }
 
         function closeMiniChat() {
