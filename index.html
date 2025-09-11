@@ -6682,11 +6682,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         let lastLoadStockTime = 0;
         const LOAD_STOCK_THROTTLE_MS = 300000; // 5 minutes minimum !
 
-        async function loadStockData() {
+        async function loadStockData(forceLoad = false) {
             const now = Date.now();
             
-            // ⚠️ PROTECTION STRICTE : Max 1 fois par 5 minutes
-            if (now - lastLoadStockTime < LOAD_STOCK_THROTTLE_MS) {
+            // ⚠️ PROTECTION STRICTE : Max 1 fois par 5 minutes (sauf si forceLoad)
+            if (!forceLoad && now - lastLoadStockTime < LOAD_STOCK_THROTTLE_MS) {
                 console.log(`🚫 loadStockData() BLOQUÉE - Trop récent (< 5 min)`);
                 return;
             }
@@ -9016,7 +9016,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             await initializeFirebase();
             
             // Puis charger les données de stock (maintenant avec synchronisation Firebase)
-            await loadStockData();
+            await loadStockData(true); // Force le chargement au démarrage
             
             addSaleLine();
             
@@ -9402,9 +9402,8 @@ Utilisez le bouton "📦 Force Load Stock"
                 saveToLocalStorage();
                 
                 // NOUVEAU : Synchroniser les données de stock aussi
-                // ❌ TEMPORAIREMENT DÉSACTIVÉ - CAUSE DU SPAM FIREBASE
-                // await loadStockData();
-                console.log('⚠️ loadStockData() désactivée pour éviter le spam Firebase');
+                await loadStockData(true); // Force le chargement lors de la sync auto
+                console.log('✅ loadStockData() exécutée dans performAutoSync');
                 
                 // Mettre à jour l'interface
                 populateFilters();
@@ -12824,9 +12823,8 @@ Date [ESPACES] Client [ESPACES] Montant
             if (isFirebaseInitialized) {
                 try {
                     updateCloudStatus('syncing', '🔄 Sync stocks...');
-                    // ❌ TEMPORAIREMENT DÉSACTIVÉ - CAUSE DU SPAM FIREBASE  
-                    // await loadStockData();
-                    console.log('⚠️ loadStockData() désactivée dans refreshData() pour éviter le spam Firebase');
+                    await loadStockData();
+                    console.log('✅ loadStockData() exécutée avec succès');
                 } catch (error) {
                     console.error('❌ Erreur sync stocks:', error);
                 }
