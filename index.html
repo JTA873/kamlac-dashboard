@@ -3523,21 +3523,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                     🔍 Vérifier la synchronisation avec Firebase
                                 </small>
                             </div>
-                            
-                            <!-- ✅ NOUVEAU : Panneau de surveillance Firebase -->
-                            <div class="form-group">
-                                <label>🔥 Surveillance Firebase (Anti-Spam)</label>
-                                <div id="firebaseStatsPanel" style="background: #1e1e1e; border-radius: 8px; padding: 12px; margin-top: 8px; font-family: 'Consolas', monospace; font-size: 0.8rem;">
-                                    <div id="firebaseCallCount" style="color: #4CAF50;">Appels Firebase: <span>0</span></div>
-                                    <div id="firebaseSyncStatus" style="color: #2196F3;">Synchronisation: <span>Activée</span></div>
-                                    <div id="firebaseLastCall" style="color: #FF9800;">Dernier appel: <span>Aucun</span></div>
-                                </div>
-                                <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
-                                    <button class="btn btn-sm btn-danger" onclick="emergencyDisableSync()">🚨 Désactiver Sync</button>
-                                    <button class="btn btn-sm btn-success" onclick="resetFirebaseCounter()">🔄 Reset Compteur</button>
-                                    <button class="btn btn-sm btn-warning" onclick="forceLoadStockData()">📦 Force Load Stock</button>
-                                </div>
-                            </div>
 
                         </div>
                     </div>
@@ -3837,10 +3822,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         let isFirebaseInitialized = false;
         
-        // ✅ NOUVEAUX CONTRÔLES ANTI-SPAM
-        let isSyncDisabled = false; // Pour désactiver temporairement la sync
-        let syncCallCount = 0; // Compteur d'appels Firebase
-        let syncCallResetInterval = null;
         let salesLines = [];
         let editingProductId = null;
         let editingSaleId = null;
@@ -6691,16 +6672,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 return;
             }
             
-            if (!canMakeFirebaseCall('loadStockData')) {
-                console.log('🚫 loadStockData() BLOQUÉE - Sync désactivée');
-                return;
-            }
-            
             lastLoadStockTime = now;
             console.log('🔄 loadStockData() AUTORISÉE');
-            
-            // Incrémenter le compteur pour surveillance
-            incrementSyncCall('loadStockData - START');
             
             // Charger depuis localStorage d'abord
             const savedEntries = localStorage.getItem('stockEntries');
@@ -6725,7 +6698,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     console.log('🔄 Synchronisation des données de stock depuis Firebase...');
                     
                     // Charger les entrées de stock
-                    incrementSyncCall('stockEntries.get()');
                     const entriesSnapshot = await db.collection('stockEntries').get();
                     if (!entriesSnapshot.empty) {
                         const firebaseEntries = [];
@@ -6747,7 +6719,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     }
                     
                     // Charger les sorties de stock
-                    incrementSyncCall('stockExits.get()');
                     const exitsSnapshot = await db.collection('stockExits').get();
                     if (!exitsSnapshot.empty) {
                         const firebaseExits = [];
@@ -6769,7 +6740,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     }
                     
                     // Charger les alertes
-                    incrementSyncCall('stockAlerts.get()');
                     const alertsSnapshot = await db.collection('stockAlerts').get();
                     if (!alertsSnapshot.empty) {
                         const firebaseAlerts = [];
@@ -8905,172 +8875,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             noteCategories = JSON.parse(localStorage.getItem('kamlacNoteCategories') || '[]');
         }
 
-        // ✅ FONCTIONS DE SURVEILLANCE FIREBASE
-        function incrementSyncCall(operation) {
-            syncCallCount++;
-            const now = new Date().toLocaleTimeString();
-            console.log(`🔥 Firebase Call #${syncCallCount}: ${operation}`);
-            
-            // ✅ Mettre à jour le panneau de surveillance en temps réel
-            updateFirebaseStatsPanel();
-            
-            // ⚠️ Protection contre le spam : désactiver temporairement si trop d'appels
-            if (syncCallCount > 50) { // Plus de 50 appels
-                console.error('🚨 ALERTE: Trop d\'appels Firebase détectés! Désactivation temporaire...');
-                isSyncDisabled = true;
-                showAlert('⚠️ Synchronisation temporairement désactivée (trop d\'activité)', 'warning');
-                updateFirebaseStatsPanel();
-                
-                // Réactiver après 5 minutes
-                setTimeout(() => {
-                    isSyncDisabled = false;
-                    syncCallCount = 0;
-                    console.log('✅ Synchronisation réactivée');
-                    showAlert('✅ Synchronisation réactivée', 'success');
-                    updateFirebaseStatsPanel();
-                }, 300000); // 5 minutes
-            }
-        }
-        
-        // ✅ Mettre à jour le panneau de surveillance en temps réel
-        function updateFirebaseStatsPanel() {
-            const countElement = document.querySelector('#firebaseCallCount span');
-            const statusElement = document.querySelector('#firebaseSyncStatus span');
-            const lastCallElement = document.querySelector('#firebaseLastCall span');
-            
-            if (countElement) {
-                countElement.textContent = syncCallCount;
-                countElement.style.color = syncCallCount > 30 ? '#ff5722' : '#4CAF50';
-            }
-            
-            if (statusElement) {
-                statusElement.textContent = isSyncDisabled ? 'Désactivée' : 'Activée';
-                statusElement.style.color = isSyncDisabled ? '#f44336' : '#4CAF50';
-            }
-            
-            if (lastCallElement) {
-                lastCallElement.textContent = new Date().toLocaleTimeString();
-            }
-        }
-        
-        // ✅ Fonctions de contrôle d'urgence
-        function emergencyDisableSync() {
-            isSyncDisabled = true;
-            showAlert('🚨 Synchronisation désactivée manuellement', 'warning');
-            updateFirebaseStatsPanel();
-            console.log('🚨 Sync désactivée par l\'utilisateur');
-        }
-        
-        function resetFirebaseCounter() {
-            syncCallCount = 0;
-            isSyncDisabled = false;
-            showAlert('🔄 Compteur Firebase réinitialisé', 'success');
-            updateFirebaseStatsPanel();
-            console.log('🔄 Compteur Firebase reset');
-        }
-        
-        function showFirebaseStats() {
-            const stats = `
-🔥 STATISTIQUES FIREBASE COMPLÈTES
-
-📊 Appels effectués: ${syncCallCount}
-🔄 Statut sync: ${isSyncDisabled ? 'Désactivée' : 'Activée'}
-⏰ Dernière réinit: ${syncCallResetInterval ? 'Programmée' : 'Aucune'}
-
-💡 OPTIMISATIONS APPLIQUÉES:
-✅ Sync auto: 30 min (au lieu de 5 min)
-✅ Protection anti-spam: 50 appels max
-✅ Throttling refreshData: ${REFRESH_THROTTLE_MS/1000}s min
-✅ Throttling loadStockData: ${LOAD_STOCK_THROTTLE_MS/60000} min
-✅ Throttling applyFilters: ${APPLY_FILTER_THROTTLE_MS}ms
-✅ Throttling applyRecapFilters: ${RECAP_FILTER_THROTTLE_MS}ms
-✅ Listeners optimisés avec protection boucles
-✅ Surveillance temps réel active
-
-🚫 DÉSACTIVATIONS TEMPORAIRES:
-❌ loadStockData() dans performAutoSync() 
-❌ loadStockData() dans refreshData()
-
-📈 RÉSULTAT ATTENDU:
-• AVANT: ~60,000 lectures/24h
-• APRÈS: <1,000 lectures/24h (-98%)
-
-⚠️ Si compteur > 30: vérifiez les boucles infinies
-            `;
-            
-            showAlert(stats, 'info');
-        }
-        
-        // ✅ FONCTION D'URGENCE pour forcer le chargement des stocks
-        function forceLoadStockData() {
-            if (confirm('⚠️ Forcer le chargement des données de stock ?\n\nCeci va faire 3 gros appels Firebase !')) {
-                // Reset le throttling
-                lastLoadStockTime = 0;
-                console.log('🚨 Force LoadStockData - Throttling reset');
-                
-                // Appel forcé
-                loadStockData().then(() => {
-                    // Message supprimé pour éviter le spam - showAlert('✅ Données de stock rechargées depuis Firebase', 'success');
-                    console.log('✅ Données de stock rechargées depuis Firebase');
-                }).catch(error => {
-                    console.error('Erreur force load stock:', error);
-                    showAlert('❌ Erreur lors du chargement forcé des stocks', 'error');
-                });
-            }
-        }
-        
-        // ✅ FONCTION DE TEST pour diagnostiquer la synchronisation
-        function testStockSync() {
-            const stats = `
-🔍 TEST SYNCHRONISATION FIREBASE
-
-📊 État actuel:
-• Sync ${isSyncDisabled ? '❌ DÉSACTIVÉE' : '✅ ACTIVE'}
-• Appels Firebase: ${syncCallCount}
-• Dernière sync stocks: ${new Date(lastLoadStockTime).toLocaleTimeString() || 'Jamais'}
-
-📦 Données locales:
-• Stock Entries: ${stockEntriesData.length}
-• Stock Exits: ${stockExitsData.length}  
-• Stock Alerts: ${stockAlertsData.length}
-• Sales Data: ${salesData.length}
-• Payments Data: ${paymentsData.length}
-
-🔧 Contrôles:
-• Firebase initialisé: ${isFirebaseInitialized ? '✅' : '❌'}
-• Throttling refresh: ${REFRESH_THROTTLE_MS}ms
-• Throttling loadStock: ${LOAD_STOCK_THROTTLE_MS}ms
-
-💡 Pour forcer un test Firebase:
-Utilisez le bouton "📦 Force Load Stock"
-            `;
-            
-            console.log('🔍 Test Stock Sync:', {
-                isSyncDisabled,
-                syncCallCount,
-                lastLoadStockTime,
-                stockEntriesData: stockEntriesData.length,
-                stockExitsData: stockExitsData.length,
-                isFirebaseInitialized
-            });
-            
-            showAlert(stats, 'info');
-        }
-        
-        // Reset compteur toutes les heures
-        function startSyncCounterReset() {
-            syncCallResetInterval = setInterval(() => {
-                console.log(`📊 Réinitialisation compteur Firebase (était: ${syncCallCount})`);
-                syncCallCount = 0;
-            }, 3600000); // 1 heure
-        }
-        
         // Fonction pour vérifier si on peut faire un appel Firebase
         function canMakeFirebaseCall(operation) {
-            if (isSyncDisabled) {
-                console.log(`🚫 Firebase Call bloqué (${operation}) - sync désactivée`);
-                return false;
-            }
             return true;
         }
 
@@ -9096,18 +8902,12 @@ Utilisez le bouton "📦 Force Load Stock"
         }
 
         async function initializeFirebase() {
-            if (!canMakeFirebaseCall('initialization')) return;
             
             try {
                 updateCloudStatus('syncing', '🔄 Connexion...');
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.firestore();
                 isFirebaseInitialized = true;
-                
-                // ✅ Démarrer la surveillance des appels Firebase
-                startSyncCounterReset();
-                incrementSyncCall('Firebase initialized');
-                updateFirebaseStatsPanel(); // Afficher immédiatement les stats
                 
                 // Synchronisation automatique au démarrage
                 await autoSyncOnStartup();
@@ -9132,7 +8932,6 @@ Utilisez le bouton "📦 Force Load Stock"
                 updateCloudStatus('syncing', '🔄 Vérification données...');
                 
                 // ✅ OPTIMISÉ : Compter seulement, pas charger toutes les données
-                incrementSyncCall('startup count check');
                 
                 const salesCount = (await db.collection('sales').get()).size;
                 const paymentsCount = (await db.collection('payments').get()).size;
@@ -9141,7 +8940,6 @@ Utilisez le bouton "📦 Force Load Stock"
                 // ⚠️ CHARGER LES NOTES IA SEULEMENT SI NÉCESSAIRE
                 if (aiNotes.length === 0) {
                     try {
-                        incrementSyncCall('loading AI notes');
                         const notesSnapshot = await db.collection('ai_notes').get();
                         aiNotes = [];
                         notesSnapshot.forEach(doc => {
@@ -9190,10 +8988,8 @@ Utilisez le bouton "📦 Force Load Stock"
 
         // Effectuer la synchronisation automatique
         async function performAutoSync() {
-            if (!canMakeFirebaseCall('performAutoSync')) return;
             
             try {
-                incrementSyncCall('performAutoSync started');
                 
                 // Vider les données locales
                 salesData = [];
@@ -9201,7 +8997,6 @@ Utilisez le bouton "📦 Force Load Stock"
                 productsData = [];
                 
                 // Charger depuis Firebase
-                incrementSyncCall('loading sales');
                 const salesSnapshot = await db.collection('sales').get();
                 salesSnapshot.forEach(doc => {
                     const data = doc.data();
@@ -9209,7 +9004,6 @@ Utilisez le bouton "📦 Force Load Stock"
                     salesData.push(data);
                 });
                 
-                incrementSyncCall('loading payments');
                 const paymentsSnapshot = await db.collection('payments').get();
                 paymentsSnapshot.forEach(doc => {
                     const data = doc.data();
@@ -14029,43 +13823,35 @@ Date [ESPACES] Client [ESPACES] Montant
 
         function openQuickSale() {
             toggleFloatingMenu(); // Fermer le menu
-            // S'assurer qu'on est dans le module commercial avant d'aller à l'onglet Ventes
+            // Basculer vers le module commercial et aller aux ventes
             showModule('commercial');
+            showSection('sales');
             setTimeout(() => {
-                showSection('sales');
-                // Focus sur le premier champ
-                setTimeout(() => {
-                    const clientInput = document.getElementById('invoiceClient');
-                    if (clientInput) {
-                        clientInput.focus();
-                    }
-                }, 100);
-            }, 100);
+                const clientInput = document.getElementById('invoiceClient');
+                if (clientInput) {
+                    clientInput.focus();
+                }
+            }, 200);
         }
 
         function openQuickPayment() {
             toggleFloatingMenu(); // Fermer le menu
-            // S'assurer qu'on est dans le module commercial avant d'aller à l'onglet Encaissements
+            // Basculer vers le module commercial et aller aux encaissements
             showModule('commercial');
+            showSection('payments');
             setTimeout(() => {
-                showSection('payments');
-                // Focus sur le premier champ
-                setTimeout(() => {
-                    const clientInput = document.getElementById('paymentClient');
-                    if (clientInput) {
-                        clientInput.focus();
-                    }
-                }, 100);
-            }, 100);
+                const clientInput = document.getElementById('paymentClient');
+                if (clientInput) {
+                    clientInput.focus();
+                }
+            }, 200);
         }
 
         function openQuickRecap() {
             toggleFloatingMenu(); // Fermer le menu
-            // S'assurer qu'on est dans le module commercial avant d'aller à l'onglet Récapitulatif
+            // Basculer vers le module commercial et aller au récapitulatif
             showModule('commercial');
-            setTimeout(() => {
-                showSection('recap');
-            }, 100);
+            showSection('recap');
         }
 
         function openQuickStockEntry() {
