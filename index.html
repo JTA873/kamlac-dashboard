@@ -3515,9 +3515,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             <div class="form-group">
                                 <label>Diagnostic Synchronisation</label>
                                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                    <button class="btn btn-info" onclick="testStockSync()">🔍 Test Sync Firebase</button>
                                     <button class="btn btn-success" onclick="refreshData()">🔄 Force Sync</button>
-                                    <button class="btn btn-warning" onclick="showFirebaseStats()">📊 Stats Firebase</button>
                                 </div>
                                 <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
                                     🔍 Vérifier la synchronisation avec Firebase
@@ -3803,22 +3801,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         let filteredRecapPayments = [];
         let charts = {};
         let db = null;
-        /*
-        🔥 OPTIMISATIONS FIREBASE ANTI-SPAM APPLIQUÉES:
-        
-        ✅ 1. Synchronisation auto réduite: 30 min (était 5 min)
-        ✅ 2. Throttling refreshData(): 10 sec minimum entre appels
-        ✅ 3. Protection listeners temps réel contre boucles infinies
-        ✅ 4. Surveillance appels Firebase avec compteur
-        ✅ 5. Désactivation automatique si > 50 appels/heure
-        ✅ 6. Panneau de contrôle temps réel
-        ✅ 7. Fonctions d'urgence (désactivation manuelle)
-        ✅ 8. Reset automatique compteur/heure
-        
-        📊 AVANT: ~60,000 lectures/24h
-        🎯 CIBLE: <1,000 lectures/24h
-        
-        */
         
         let isFirebaseInitialized = false;
         
@@ -6659,7 +6641,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             container.innerHTML = html;
         }
 
-        // ✅ CONTRÔLE STRICT pour loadStockData (ANTI-SPAM)
         let lastLoadStockTime = 0;
         const LOAD_STOCK_THROTTLE_MS = 300000; // 5 minutes minimum !
 
@@ -8919,7 +8900,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 startAutoSync();
                 
                 updateCloudStatus('online', '☁️ Sync');
-                console.log('🔥 Firebase initialisé avec surveillance anti-spam');
+                console.log('✅ Firebase initialisé avec succès');
             } catch (error) {
                 console.error('Erreur Firebase:', error);
                 updateCloudStatus('offline', '❌ Offline');
