@@ -2205,11 +2205,11 @@
             <div class="nav-tabs">
                 <button class="nav-tab active" onclick="showSection('dashboard')">📈 Dashboard</button>
                 <button class="nav-tab" onclick="showSection('clients')">👥 Compte client</button>
-                <button class="nav-tab" onclick="showSection('recap')">📋 Récap.</button>
-                <button class="nav-tab" onclick="showSection('sales')">💼 + Vente</button>
-                <button class="nav-tab" onclick="showSection('payments')">💰 + Encaisser</button>
+                <button class="nav-tab" onclick="showSection('recap')">📋 Mouvements</button>
+                <button class="nav-tab" onclick="showSection('sales')">💼 Vente</button>
+                <button class="nav-tab" onclick="showSection('payments')">💰 Encaisser</button>
                 <button class="nav-tab" onclick="showSection('chat')">🤖 Assistant IA</button>
-                <button class="nav-tab" onclick="showSection('settings')">⚙️ Paramètres</button>
+                <button class="nav-tab" onclick="showSection('settings')">⚙️ Param</button>
             </div>
         
         <!-- Dashboard Section -->
@@ -2828,7 +2828,7 @@
                 <button class="nav-tab" onclick="showStocksSection('stock-exits')">📤 Sorties</button>
                 <button class="nav-tab" onclick="showStocksSection('stock-recap')">📋 Mouvements</button>
                 <button class="nav-tab" onclick="showStocksSection('stock-inventory')">📦 Inventaire</button>
-                <button class="nav-tab" onclick="showStocksSection('stock-settings')">⚙️ Config</button>
+                <button class="nav-tab" onclick="showStocksSection('stock-settings')">⚙️ Param</button>
             </div>
 
             <!-- Dashboard Stocks Section -->
@@ -3901,7 +3901,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         function initializeCommercialModule() {
             // Réinitialiser l'affichage du module commercial
             showSection('dashboard');
-            updateDashboard();
         }
         
         function initializeStocksModule() {
@@ -13804,8 +13803,7 @@ Date [ESPACES] Client [ESPACES] Montant
 
         function openQuickSale() {
             toggleFloatingMenu(); // Fermer le menu
-            // Basculer vers le module commercial et aller aux ventes
-            showModule('commercial');
+            // Aller directement à la section ventes
             showSection('sales');
             setTimeout(() => {
                 const clientInput = document.getElementById('invoiceClient');
@@ -13817,8 +13815,7 @@ Date [ESPACES] Client [ESPACES] Montant
 
         function openQuickPayment() {
             toggleFloatingMenu(); // Fermer le menu
-            // Basculer vers le module commercial et aller aux encaissements
-            showModule('commercial');
+            // Aller directement à la section encaissements
             showSection('payments');
             setTimeout(() => {
                 const clientInput = document.getElementById('paymentClient');
