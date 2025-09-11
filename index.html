@@ -3721,6 +3721,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     <span class="icon">💰</span>
                     <span>Nouvel Encaissement</span>
                 </div>
+                <div class="floating-menu-item" onclick="openQuickStockEntry()">
+                    <span class="icon">📥</span>
+                    <span>Saisie Entrée</span>
+                </div>
+                <div class="floating-menu-item" onclick="openQuickStockExit()">
+                    <span class="icon">📤</span>
+                    <span>Saisie Sortie</span>
+                </div>
             </div>
         </div>
         
@@ -9249,9 +9257,46 @@ Utilisez le bouton "📦 Force Load Stock"
 
         // Fonction pour afficher un seul message de synthèse des données
         function showDataSummary() {
+            // S'assurer que les données de stock sont chargées depuis localStorage si nécessaire
+            if (!stockEntriesData || stockEntriesData.length === 0) {
+                const savedEntries = localStorage.getItem('stockEntries');
+                if (savedEntries) {
+                    try {
+                        stockEntriesData = JSON.parse(savedEntries);
+                    } catch (e) {
+                        stockEntriesData = [];
+                    }
+                } else {
+                    stockEntriesData = [];
+                }
+            }
+            
+            if (!stockExitsData || stockExitsData.length === 0) {
+                const savedExits = localStorage.getItem('stockExits');
+                if (savedExits) {
+                    try {
+                        stockExitsData = JSON.parse(savedExits);
+                    } catch (e) {
+                        stockExitsData = [];
+                    }
+                } else {
+                    stockExitsData = [];
+                }
+            }
+            
             // Calculer les entrées et sorties de stock (hors ventes)
-            const stockEntries = stockEntriesData.length || 0;
-            const stockExits = stockExitsData.length || 0;
+            const stockEntries = stockEntriesData ? stockEntriesData.length : 0;
+            const stockExits = stockExitsData ? stockExitsData.length : 0;
+            
+            // Debug pour vérifier les valeurs
+            console.log('📊 Données pour le message de synthèse:', {
+                ventes: salesData.length,
+                encaissements: paymentsData.length,
+                entrees: stockEntries,
+                sorties: stockExits,
+                stockEntriesData: stockEntriesData,
+                stockExitsData: stockExitsData
+            });
             
             // Message simple et efficace
             const message = `📊 ${salesData.length} ventes • 💰 ${paymentsData.length} encaissements • 📦 ${stockEntries} entrées • 📤 ${stockExits} sorties`;
@@ -13902,6 +13947,34 @@ Date [ESPACES] Client [ESPACES] Montant
             toggleFloatingMenu(); // Fermer le menu
             // Aller à l'onglet Récapitulatif
             showSection('recap');
+        }
+
+        function openQuickStockEntry() {
+            toggleFloatingMenu(); // Fermer le menu
+            // Aller au module Stocks et à l'onglet Entrées
+            showModule('stocks');
+            setTimeout(() => {
+                showStocksSection('stock-entry');
+                // Focus sur le premier champ du formulaire d'entrée
+                const productInput = document.getElementById('entryProduct');
+                if (productInput) {
+                    productInput.focus();
+                }
+            }, 200);
+        }
+
+        function openQuickStockExit() {
+            toggleFloatingMenu(); // Fermer le menu
+            // Aller au module Stocks et à l'onglet Sorties
+            showModule('stocks');
+            setTimeout(() => {
+                showStocksSection('stock-exit');
+                // Focus sur le premier champ du formulaire de sortie
+                const productInput = document.getElementById('exitProduct');
+                if (productInput) {
+                    productInput.focus();
+                }
+            }, 200);
         }
 
         function closeMiniChat() {
