@@ -3598,12 +3598,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 </button>
                                 
                                 <!-- Boutons utilitaires -->
-                                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                                    <button onclick="synchroniserStocksFirebase()" style="flex: 1; background: #17a2b8; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
-                                        🔄 Sync Firebase
+                                <div style="display: flex; gap: 5px; margin-top: 10px;">
+                                    <button onclick="synchroniserStocksFirebase()" style="flex: 1; background: #17a2b8; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 10px;">
+                                        🔄 Sync
                                     </button>
-                                    <button onclick="nettoyerDoublonsStock()" style="flex: 1; background: #6c757d; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
-                                        🧹 Nettoyer Doublons
+                                    <button onclick="nettoyerDoublonsStock()" style="flex: 1; background: #6c757d; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 10px;">
+                                        🧹 Nettoyer
+                                    </button>
+                                    <button onclick="synchronisationForcee()" style="flex: 1; background: #dc3545; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 10px;">
+                                        🚀 Sync Forcée
                                     </button>
                                 </div>
                                 
@@ -6741,7 +6744,88 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
 
         let lastLoadStockTime = 0;
-        const LOAD_STOCK_THROTTLE_MS = 300000; // 5 minutes minimum !
+        const LOAD_STOCK_THROTTLE_MS = 60000; // 1 minute au lieu de 5 pour la synchronisation
+        
+        // Fonction de synchronisation bidirectionnelle pour résoudre les désynchronisations
+        async function synchroniserDonneesBidirectionnellement(donneesLocales, donneesFirebase, collection) {
+            try {
+                console.log(`🔄 Synchronisation bidirectionnelle pour ${collection}:`);
+                console.log(`📱 Local: ${donneesLocales.length} éléments`);
+                console.log(`🔥 Firebase: ${donneesFirebase.length} éléments`);
+                
+                // Créer un Map pour une recherche rapide par ID
+                const localMap = new Map();
+                const firebaseMap = new Map();
+                
+                donneesLocales.forEach(item => {
+                    if (item.id) localMap.set(item.id, item);
+                });
+                
+                donneesFirebase.forEach(item => {
+                    if (item.id) firebaseMap.set(item.id, item);
+                });
+                
+                // Identifier les éléments uniques dans chaque source
+                const uniquesLocal = donneesLocales.filter(item => item.id && !firebaseMap.has(item.id));
+                const uniquesFirebase = donneesFirebase.filter(item => item.id && !localMap.has(item.id));
+                
+                console.log(`🆕 Uniques locales: ${uniquesLocal.length}`);
+                console.log(`🆕 Uniques Firebase: ${uniquesFirebase.length}`);
+                
+                // Fusionner toutes les données uniques
+                const donneesComplete = [
+                    ...donneesLocales,
+                    ...uniquesFirebase
+                ];
+                
+                // Supprimer les doublons basés sur l'ID
+                const donneesUniques = [];
+                const idsVus = new Set();
+                
+                donneesComplete.forEach(item => {
+                    if (item.id && !idsVus.has(item.id)) {
+                        donneesUniques.push(item);
+                        idsVus.add(item.id);
+                    }
+                });
+                
+                console.log(`✅ Après fusion: ${donneesUniques.length} éléments uniques`);
+                
+                // Mettre à jour les données locales
+                if (collection === 'stockEntries') {
+                    window.stockEntriesData = donneesUniques;
+                    localStorage.setItem('stockEntries', JSON.stringify(donneesUniques));
+                } else if (collection === 'stockExits') {
+                    window.stockExitsData = donneesUniques;
+                    localStorage.setItem('stockExits', JSON.stringify(donneesUniques));
+                }
+                
+                // Sauvegarder dans Firebase si on a des données locales uniques
+                if (uniquesLocal.length > 0) {
+                    console.log(`📤 Envoi de ${uniquesLocal.length} éléments uniques vers Firebase...`);
+                    const batch = db.batch();
+                    
+                    uniquesLocal.forEach(item => {
+                        if (item.id) {
+                            const docRef = db.collection(collection).doc(item.id.toString());
+                            batch.set(docRef, {
+                                ...item,
+                                syncedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
+                    });
+                    
+                    await batch.commit();
+                    console.log(`✅ ${uniquesLocal.length} éléments envoyés vers Firebase`);
+                }
+                
+                return donneesUniques;
+                
+            } catch (error) {
+                console.error(`❌ Erreur synchronisation bidirectionnelle ${collection}:`, error);
+                return donneesLocales; // Retourner les données locales en cas d'erreur
+            }
+        }
 
         async function loadStockData() {
             const now = Date.now();
@@ -6753,7 +6837,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
             
             lastLoadStockTime = now;
-            console.log('🔄 loadStockData() AUTORISÉE');
+            console.log('🔄 loadStockData() AUTORISÉE - SYNCHRONISATION BIDIRECTIONNELLE');
             
             // Charger depuis localStorage d'abord
             const savedEntries = localStorage.getItem('stockEntries');
@@ -6772,15 +6856,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 stockAlertsData = JSON.parse(savedAlerts);
             }
             
-            // Si Firebase est initialisé, synchroniser avec les données du cloud
+            console.log(`📊 Données locales: ${stockEntriesData.length} entrées, ${stockExitsData.length} sorties`);
+            
+            // Si Firebase est initialisé, synchroniser BIDIRECTIONNELLEMENT avec les données du cloud
             if (isFirebaseInitialized && db) {
                 try {
-                    console.log('🔄 Synchronisation des données de stock depuis Firebase...');
+                    console.log('🔄 Synchronisation BIDIRECTIONNELLE des données de stock avec Firebase...');
                     
-                    // Charger les entrées de stock
+                    // Charger les entrées de stock depuis Firebase
                     const entriesSnapshot = await db.collection('stockEntries').get();
+                    let firebaseEntries = [];
+                    
                     if (!entriesSnapshot.empty) {
-                        const firebaseEntries = [];
                         entriesSnapshot.forEach(doc => {
                             const data = doc.data();
                             if (data.entries && Array.isArray(data.entries)) {
@@ -6791,35 +6878,33 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 firebaseEntries.push(data);
                             }
                         });
-                        
-                        if (firebaseEntries.length > stockEntriesData.length) {
-                            console.log(`📦 Nouvelles entrées détectées: ${firebaseEntries.length} vs ${stockEntriesData.length}`);
-                            stockEntriesData = firebaseEntries;
-                        }
                     }
                     
-                    // Charger les sorties de stock
+                    console.log(`🔥 Données Firebase: ${firebaseEntries.length} entrées`);
+                    
+                    // NOUVEAU: Synchronisation bidirectionnelle intelligente
+                    await synchroniserDonneesBidirectionnellement(stockEntriesData, firebaseEntries, 'stockEntries');
+                    
+                    // Faire de même pour les sorties
                     const exitsSnapshot = await db.collection('stockExits').get();
+                    let firebaseExits = [];
+                    
                     if (!exitsSnapshot.empty) {
-                        const firebaseExits = [];
                         exitsSnapshot.forEach(doc => {
                             const data = doc.data();
                             if (data.exits && Array.isArray(data.exits)) {
                                 firebaseExits.push(...data.exits);
                             } else if (doc.id !== 'data') {
-                                // Nouveau format: un document par sortie
                                 delete data.lastUpdated;
                                 firebaseExits.push(data);
                             }
                         });
-                        
-                        if (firebaseExits.length > stockExitsData.length) {
-                            console.log(`📤 Nouvelles sorties détectées: ${firebaseExits.length} vs ${stockExitsData.length}`);
-                            stockExitsData = firebaseExits;
-                        }
                     }
                     
-                    // Charger les alertes
+                    console.log(`🔥 Données Firebase: ${firebaseExits.length} sorties`);
+                    await synchroniserDonneesBidirectionnellement(stockExitsData, firebaseExits, 'stockExits');
+                    
+                    // Charger les alertes (sans synchronisation bidirectionnelle pour le moment)
                     const alertsSnapshot = await db.collection('stockAlerts').get();
                     if (!alertsSnapshot.empty) {
                         const firebaseAlerts = [];
@@ -6833,18 +6918,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         if (firebaseAlerts.length > stockAlertsData.length) {
                             console.log(`⚠️ Nouvelles alertes détectées: ${firebaseAlerts.length} vs ${stockAlertsData.length}`);
                             stockAlertsData = firebaseAlerts;
+                            localStorage.setItem('stockAlerts', JSON.stringify(stockAlertsData));
                         }
                     }
                     
-                    // Sauvegarder les données mises à jour localement
-                    localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
-                    localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
-                    localStorage.setItem('stockAlerts', JSON.stringify(stockAlertsData));
-                    
-                    console.log('✅ Synchronisation des données de stock terminée');
+                    console.log('✅ Synchronisation bidirectionnelle des données de stock terminée');
+                    console.log(`📊 Résultat final: ${stockEntriesData.length} entrées, ${stockExitsData.length} sorties`);
                     
                 } catch (error) {
-                    console.error('❌ Erreur lors du chargement des données de stock depuis Firebase:', error);
+                    console.error('❌ Erreur lors de la synchronisation bidirectionnelle des données de stock:', error);
                 }
             }
             
@@ -15046,6 +15128,40 @@ Date [ESPACES] Client [ESPACES] Montant
             } catch (error) {
                 console.error('❌ Erreur synchronisation Firebase:', error);
                 showAlert('❌ Erreur lors de la synchronisation', 'error');
+            }
+        }
+        
+        // Nouvelle fonction pour synchronisation forcée bidirectionnelle
+        async function synchronisationForcee() {
+            try {
+                showAlert('🚀 Synchronisation forcée en cours...', 'info');
+                console.log('🚀 SYNCHRONISATION FORCÉE DÉMARRÉE');
+                
+                // Forcer la réinitialisation du throttle
+                lastLoadStockTime = 0;
+                
+                // Exécuter la synchronisation bidirectionnelle
+                await loadStockData();
+                
+                // Mettre à jour tous les affichages
+                updateAllMovementsTable();
+                updateEntriesMovementsTable();
+                updateExitsMovementsTable();
+                
+                if (typeof updateStockRecapData === 'function') {
+                    updateStockRecapData();
+                }
+                
+                // Afficher les résultats
+                const entriesCount = JSON.parse(localStorage.getItem('stockEntries') || '[]').length;
+                const exitsCount = JSON.parse(localStorage.getItem('stockExits') || '[]').length;
+                
+                showAlert(`✅ Sync forcée terminée: ${entriesCount} entrées, ${exitsCount} sorties`, 'success');
+                console.log(`📊 Résultat sync forcée: ${entriesCount} entrées, ${exitsCount} sorties`);
+                
+            } catch (error) {
+                console.error('❌ Erreur synchronisation forcée:', error);
+                showAlert('❌ Erreur lors de la synchronisation forcée', 'error');
             }
         }
         
