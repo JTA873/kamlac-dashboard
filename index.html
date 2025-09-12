@@ -10903,6 +10903,24 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 if (dropdown) {
                     dropdown.style.display = 'none';
                 }
+                
+                // Si c'est un champ produit et qu'un texte a été saisi manuellement
+                if (input.id.startsWith('productLine') && input.value.trim()) {
+                    const lineId = input.dataset.lineId;
+                    if (lineId) {
+                        const line = salesLines.find(l => l.id == lineId);
+                        if (line && !line.productId) {
+                            // L'utilisateur a tapé manuellement, on met à jour le nom du produit
+                            line.product = input.value.trim();
+                            // Si le prix unitaire est à 0 et qu'il n'a pas été modifié manuellement, le mettre à 1 par défaut
+                            if (line.unitPrice === 0 && !line.priceManuallyEdited) {
+                                line.unitPrice = 1;
+                            }
+                            line.totalPrice = line.quantity * line.unitPrice;
+                            updateInvoiceTotals();
+                        }
+                    }
+                }
             }, 200);
         }
 
@@ -13093,7 +13111,7 @@ Date [ESPACES] Client [ESPACES] Montant
             }
             
             const validLines = salesLines.filter(line => 
-                line.productId && line.quantity > 0 && line.unitPrice > 0
+                (line.productId || line.product) && line.quantity > 0 && line.unitPrice > 0
             );
             
             if (validLines.length === 0) {
