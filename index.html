@@ -4049,10 +4049,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         function initializeStocksModule() {
-            console.log('Initialisation du module Stocks avec données Firebase existantes...');
+            console.log('Initialisation du module Stocks avec données locales uniquement...');
             
-            // Charger les données de stock depuis localStorage ou Firebase
-            loadStockData();
+            // Charger SEULEMENT depuis localStorage
+            // loadStockData(); // 🚫 DÉSACTIVÉ pour éviter les conflits
+            const savedEntries = localStorage.getItem('stockEntries');
+            const savedExits = localStorage.getItem('stockExits');
+            const savedAlerts = localStorage.getItem('stockAlerts');
+            
+            if (savedEntries) stockEntriesData = JSON.parse(savedEntries);
+            if (savedExits) stockExitsData = JSON.parse(savedExits);
+            if (savedAlerts) stockAlertsData = JSON.parse(savedAlerts);
+            
+            console.log(`📦 Données chargées: ${stockEntriesData.length} entrées, ${stockExitsData.length} sorties`);
             
             // FORCER TOUJOURS LA MISE À JOUR DÈS L'INITIALISATION
             console.log(`${salesData.length} données de vente trouvées, calcul immédiat des stocks...`);
@@ -7663,7 +7672,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             console.log(`📊 Données locales: ${stockEntriesData.length} entrées, ${stockExitsData.length} sorties`);
             
             // Si Firebase est initialisé, synchroniser BIDIRECTIONNELLEMENT avec les données du cloud
-            if (isFirebaseInitialized && db) {
+            if (false && isFirebaseInitialized && db) { // 🚫 DÉSACTIVÉ pour éviter les conflits
                 try {
                     console.log('🔄 Synchronisation BIDIRECTIONNELLE des données de stock avec Firebase...');
                     
@@ -10004,7 +10013,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             await initializeFirebase();
             
             // Puis charger les données de stock (maintenant avec synchronisation Firebase)
-            await loadStockData();
+            // await loadStockData(); // 🚫 DÉSACTIVÉ pour éviter les conflits
             
             addSaleLine();
             
@@ -10505,6 +10514,10 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         
         // Configuration de la synchronisation temps réel pour les stocks
         function setupStockRealtimeSync() {
+            // 🚫 DÉSACTIVÉ : Synchronisation temps réel qui fait réapparaître les éléments supprimés
+            console.log('🚫 Synchronisation temps réel des stocks DÉSACTIVÉE pour éviter les conflits');
+            return;
+            
             if (!isFirebaseInitialized) return;
             
             console.log('🔄 Configuration de la synchronisation temps réel des stocks...');
@@ -15568,8 +15581,8 @@ Date [ESPACES] Client [ESPACES] Montant
                     
                     try {
                         // S'assurer que les données de stock sont chargées
-                        await loadStockData();
-                        console.log('📦 Données de stock rechargées pour le Module 3');
+                        // await loadStockData(); // 🚫 DÉSACTIVÉ pour éviter les conflits
+                        console.log('📦 Données de stock rechargées pour le Module 3 - DÉSACTIVÉ');
                     } catch (error) {
                         console.log('⚠️ Erreur rechargement stock Module 3:', error);
                     }
@@ -15627,13 +15640,13 @@ Date [ESPACES] Client [ESPACES] Montant
             chargerProductionsDuJour();
             
             // CORRECTION: Charger d'abord les données de stock puis les produits
-            loadStockData().then(() => {
-                console.log('📦 Données de stock chargées pour la liste des produits');
+            // loadStockData().then(() => { // 🚫 DÉSACTIVÉ pour éviter les conflits
+                console.log('📦 Données de stock chargées pour la liste des produits - DÉSACTIVÉ');
                 chargerProduitsDisponibles();
-            }).catch(error => {
-                console.log('⚠️ Erreur chargement stock initial:', error);
-                chargerProduitsDisponibles(); // Essayer quand même avec localStorage
-            });
+            // }).catch(error => {
+            //     console.log('⚠️ Erreur chargement stock initial:', error);
+            //     chargerProduitsDisponibles(); // Essayer quand même avec localStorage
+            // });
             
             // Initialiser le statut de synchronisation
             setTimeout(updateProductionSyncStatus, 1000);
@@ -16370,14 +16383,15 @@ Date [ESPACES] Client [ESPACES] Montant
         // Nouvelle fonction pour synchronisation forcée bidirectionnelle
         async function synchronisationForcee() {
             try {
-                showAlert('🚀 Synchronisation forcée en cours...', 'info');
-                console.log('🚀 SYNCHRONISATION FORCÉE DÉMARRÉE');
+                showAlert('🚀 Synchronisation forcée DÉSACTIVÉE', 'warning');
+                console.log('🚀 SYNCHRONISATION FORCÉE DÉSACTIVÉE pour éviter les conflits');
+                return;
                 
                 // Forcer la réinitialisation du throttle
                 lastLoadStockTime = 0;
                 
                 // Exécuter la synchronisation bidirectionnelle
-                await loadStockData();
+                // await loadStockData(); // 🚫 DÉSACTIVÉ
                 
                 // Mettre à jour tous les affichages
                 updateAllMovementsTable();
