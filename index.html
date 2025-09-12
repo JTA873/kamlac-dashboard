@@ -3562,17 +3562,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             <!-- Formulaire Production -->
                             <div style="margin-bottom: 25px;">
                                 <label style="display: block; margin-bottom: 8px; font-weight: bold;">� Produit :</label>
-                                <select id="prodProduitSelect" onchange="handleProductSelection()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; background: white;">
-                                    <option value="">-- Sélectionner un produit existant --</option>
-                                    <option value="__nouveau__">✏️ Saisir un nouveau produit</option>
+                                <select id="prodProduitSelect" onchange="handleProductSelection()" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 10px; background: white; font-size: 14px;">
+                                    <option value="">🔍 Chargement des produits...</option>
                                 </select>
                                 
-                                <input type="text" id="prodProduit" placeholder="Nom du nouveau produit" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; display: none;">
+                                <input type="text" id="prodProduit" placeholder="✏️ Saisir le nom du nouveau produit" style="width: 100%; padding: 12px; border: 2px solid #28a745; border-radius: 8px; margin-bottom: 10px; display: none; font-size: 14px;">
                                 
-                                <!-- Bouton pour rafraîchir la liste des produits -->
-                                <button onclick="chargerProduitsDisponibles()" style="width: 100%; background: #17a2b8; color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; margin-bottom: 15px; cursor: pointer;">
-                                    🔄 Actualiser liste produits Firebase
-                                </button>
+                                <!-- Informations sur le stock actuel -->
+                                <div id="stockInfoDisplay" style="background: #e8f4f8; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: none; font-size: 13px;">
+                                    <span id="stockInfoText">� Stock actuel: <strong>0 unités</strong></span>
+                                </div>
                                 
                                 <label style="display: block; margin-bottom: 8px; font-weight: bold;">📊 Quantité :</label>
                                 <input type="number" id="prodQuantite" placeholder="0" min="1" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px;">
@@ -3585,7 +3584,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                     <option value="reception_mp"> Réception Matière Première</option>
                                     <option value="reception_pf"> Réception Produit Fini</option>
                                     <option value="sortie_mp"> Sortie Matière Première</option>
-                                    <option value="perte">� Perte/Casse</option>
                                     <option value="sortie_pf">� Sortie Produit Fini</option>
                                 </select>
                                 
@@ -14292,6 +14290,19 @@ Date [ESPACES] Client [ESPACES] Montant
                     adminContent.style.transform = 'translateY(0)';
                 }, 100);
                 
+                // NOUVEAU: Charger automatiquement les produits après déverrouillage
+                setTimeout(() => {
+                    console.log('🔐 Module admin déverrouillé - Chargement des produits...');
+                    chargerProduitsDisponibles();
+                    
+                    // Initialiser la date du jour
+                    const today = new Date().toISOString().split('T')[0];
+                    const dateInput = document.getElementById('prodDate');
+                    if (dateInput && !dateInput.value) {
+                        dateInput.value = today;
+                    }
+                }, 300);
+                
             } else {
                 // PIN incorrect
                 document.getElementById('adminPinError').style.display = 'block';
@@ -14434,6 +14445,11 @@ Date [ESPACES] Client [ESPACES] Montant
                 calculateCurrentStockLevels();
             }
             
+            // NOUVEAU: Mettre à jour immédiatement les tableaux de mouvements
+            updateAllMovementsTable();
+            updateEntriesMovementsTable();
+            updateExitsMovementsTable();
+            
             // Vider le formulaire
             document.getElementById('prodAgent').value = '';
             document.getElementById('prodProduitSelect').value = '';
@@ -14442,8 +14458,17 @@ Date [ESPACES] Client [ESPACES] Montant
             document.getElementById('prodQuantite').value = '';
             document.getElementById('prodCommentaire').value = '';
             
-            // Recharger la liste
+            // Masquer les infos de stock
+            const stockInfo = document.getElementById('stockInfoDisplay');
+            if (stockInfo) stockInfo.style.display = 'none';
+            
+            // Recharger la liste et actualiser les tableaux de récapitulatifs stocks
             chargerProductionsDuJour();
+            
+            // Actualiser l'affichage des stocks récapitulatifs
+            if (typeof updateStockRecapData === 'function') {
+                updateStockRecapData();
+            }
             
             showAlert(`✅ ${detail.label} enregistrée: ${quantite} ${produit} par ${agent}`, 'success');
         }
@@ -14456,10 +14481,18 @@ Date [ESPACES] Client [ESPACES] Montant
                     date: production.date,
                     product: production.produit,
                     quantity: Math.abs(production.quantite),
+                    unit: 'Cartons', // Unité par défaut
+                    unitCost: 0, // Coût à définir
+                    totalCost: 0, // Coût total à calculer
                     supplier: `Agent: ${production.agent}`,
-                    notes: `${production.typeLabel} - ${production.commentaire}`,
+                    reference: `Admin-${production.id}`,
+                    type: mapProductionTypeToStockType(production.type, isEntry),
+                    notes: `${production.typeLabel} - ${production.commentaire || 'Saisie interface admin'}`,
                     timestamp: production.timestamp
                 };
+                
+                // S'assurer que le produit existe dans l'inventaire
+                ajouterProduitSiNouveauDansInventaire(production.produit);
                 
                 if (isEntry) {
                     // Vérifier si l'entrée existe déjà
@@ -14471,10 +14504,8 @@ Date [ESPACES] Client [ESPACES] Montant
                         localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
                         console.log('✅ Mouvement ajouté aux ENTRÉES de stock:', stockEntry);
                         
-                        // Mettre à jour les variables globales
-                        if (typeof window.stockEntriesData !== 'undefined') {
-                            window.stockEntriesData = stockEntriesData;
-                        }
+                        // IMPORTANT: Mettre à jour les variables globales immédiatement
+                        window.stockEntriesData = stockEntriesData;
                     } else {
                         console.log('⚠️ Entrée déjà existante, ignorée:', stockEntry.id);
                     }
@@ -14484,6 +14515,7 @@ Date [ESPACES] Client [ESPACES] Montant
                     const exitEntry = {
                         ...stockEntry,
                         customer: `Agent: ${production.agent}`,
+                        destination: 'Production/Utilisation',
                         reason: production.typeLabel
                     };
                     
@@ -14494,20 +14526,97 @@ Date [ESPACES] Client [ESPACES] Montant
                         localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
                         console.log('✅ Mouvement ajouté aux SORTIES de stock:', exitEntry);
                         
-                        // Mettre à jour les variables globales
-                        if (typeof window.stockExitsData !== 'undefined') {
-                            window.stockExitsData = stockExitsData;
-                        }
+                        // IMPORTANT: Mettre à jour les variables globales immédiatement
+                        window.stockExitsData = stockExitsData;
                     } else {
                         console.log('⚠️ Sortie déjà existante, ignorée:', exitEntry.id);
                     }
                 }
                 
-                // NE PAS appeler saveStockData() automatiquement pour éviter les doublons
-                console.log('📦 Mouvement intégré dans localStorage uniquement');
+                console.log('📦 Mouvement intégré avec succès');
                 
             } catch (error) {
                 console.error('❌ Erreur intégration stock:', error);
+            }
+        }
+        
+        // Nouvelle fonction pour mapper les types de production aux types de stock
+        function mapProductionTypeToStockType(productionType, isEntry) {
+            const typeMap = {
+                'reception_mp': isEntry ? 'Réception' : 'Sortie MP',
+                'reception_pf': isEntry ? 'Réception' : 'Sortie PF', 
+                'sortie_mp': isEntry ? 'Retour' : 'Production',
+                'sortie_pf': isEntry ? 'Retour' : 'Sortie PF'
+            };
+            
+            return typeMap[productionType] || (isEntry ? 'Autre' : 'Autre');
+        }
+        
+        // Nouvelle fonction pour ajouter automatiquement les nouveaux produits
+        function ajouterProduitSiNouveauDansInventaire(nomProduit) {
+            try {
+                if (!nomProduit || !nomProduit.trim()) return;
+                
+                const produit = nomProduit.trim();
+                
+                // Vérifier si le produit existe déjà dans currentStockLevels
+                if (currentStockLevels && currentStockLevels[produit]) {
+                    console.log(`📦 Produit ${produit} déjà dans l'inventaire`);
+                    return;
+                }
+                
+                // Vérifier dans l'inventaire localStorage
+                let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+                const existingInInventory = inventoryData.find(item => 
+                    item.product && item.product.trim() === produit
+                );
+                
+                if (existingInInventory) {
+                    console.log(`📦 Produit ${produit} déjà dans inventoryData`);
+                    return;
+                }
+                
+                // Nouveau produit - l'ajouter à l'inventaire
+                const newInventoryItem = {
+                    id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                    product: produit,
+                    quantity: 0,
+                    unit: 'Cartons',
+                    minLevel: 5,
+                    category: 'Nouveau produit',
+                    supplier: 'À définir',
+                    addedBy: 'Interface Admin',
+                    addedAt: new Date().toISOString()
+                };
+                
+                // Ajouter à inventoryData
+                inventoryData.push(newInventoryItem);
+                localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+                
+                // Ajouter à currentStockLevels
+                if (!currentStockLevels) currentStockLevels = {};
+                currentStockLevels[produit] = {
+                    quantity: 0,
+                    unit: 'Cartons',
+                    minLevel: 5
+                };
+                
+                // Sauvegarder dans Firebase si disponible
+                if (isFirebaseInitialized && db) {
+                    db.collection('inventory').doc(newInventoryItem.id).set(newInventoryItem)
+                        .then(() => console.log(`✅ Nouveau produit ${produit} ajouté à Firebase`))
+                        .catch(error => console.log('⚠️ Erreur Firebase nouveau produit:', error.message));
+                }
+                
+                console.log(`✅ Nouveau produit ajouté à l'inventaire: ${produit}`);
+                
+                // Actualiser la liste des produits après ajout
+                setTimeout(() => {
+                    chargerProduitsDisponibles();
+                }, 100);
+                
+            } catch (error) {
+                console.error('❌ Erreur ajout nouveau produit:', error);
             }
         }
 
@@ -14516,83 +14625,97 @@ Date [ESPACES] Client [ESPACES] Montant
             if (!select) return;
             
             try {
-                console.log('🔄 Chargement des produits depuis l\'inventaire...');
+                console.log('🔄 Chargement des produits depuis les stocks...');
                 
-                // Vider la liste (garder les options par défaut)
-                const defaultOptions = `
-                    <option value="">-- Sélectionner un produit existant --</option>
-                    <option value="__nouveau__">✏️ Saisir un nouveau produit</option>
-                `;
+                // Réinitialiser la liste
+                select.innerHTML = '<option value="">🔍 Chargement...</option>';
                 
-                // Récupérer les produits depuis l'inventaire Firebase/localStorage
+                // Récupérer les produits depuis toutes les sources
                 const produitsUniques = new Set();
                 
-                // 1. Récupérer depuis currentStockLevels (source principale)
-                if (currentStockLevels && Object.keys(currentStockLevels).length > 0) {
-                    Object.keys(currentStockLevels).forEach(produit => {
-                        if (produit && produit.trim()) {
-                            produitsUniques.add(produit.trim());
-                        }
-                    });
-                    console.log(`📊 ${Object.keys(currentStockLevels).length} produits trouvés dans currentStockLevels`);
-                }
+                // 1. Sources principales: inventaire et entrées de stock
+                const sources = [
+                    { data: currentStockLevels, type: 'inventory' },
+                    { data: stockEntriesData, type: 'entries' },
+                    { data: inventoryData, type: 'inventory' }
+                ];
                 
-                // 2. Récupérer depuis Firebase si disponible
+                sources.forEach(source => {
+                    if (source.type === 'inventory' && source.data) {
+                        Object.keys(source.data).forEach(produit => {
+                            if (produit && produit.trim()) {
+                                produitsUniques.add(produit.trim());
+                            }
+                        });
+                    } else if (source.type === 'entries' && Array.isArray(source.data)) {
+                        source.data.forEach(item => {
+                            if (item.product && item.product.trim()) {
+                                produitsUniques.add(item.product.trim());
+                            }
+                        });
+                    }
+                });
+                
+                // 2. Récupération Firebase en parallèle
                 if (isFirebaseInitialized && db) {
                     try {
-                        const inventorySnapshot = await db.collection('inventory').get();
+                        const [inventorySnapshot, stockEntriesSnapshot] = await Promise.all([
+                            db.collection('inventory').get(),
+                            db.collection('stockEntries').get()
+                        ]);
+                        
                         inventorySnapshot.forEach(doc => {
                             const data = doc.data();
                             if (data.product && data.product.trim()) {
                                 produitsUniques.add(data.product.trim());
                             }
                         });
-                        console.log(`🔥 Produits Firebase récupérés: ${inventorySnapshot.size}`);
+                        
+                        stockEntriesSnapshot.forEach(doc => {
+                            const data = doc.data();
+                            if (data.product && data.product.trim()) {
+                                produitsUniques.add(data.product.trim());
+                            }
+                        });
+                        
+                        console.log(`🔥 Firebase: ${inventorySnapshot.size} inventaire + ${stockEntriesSnapshot.size} entrées`);
                     } catch (error) {
-                        console.log('⚠️ Erreur récupération Firebase inventaire:', error.message);
+                        console.log('⚠️ Erreur Firebase:', error.message);
                     }
                 }
                 
-                // 3. Fallback avec localStorage
-                const inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
-                const stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
-                const stockEntries = JSON.parse(localStorage.getItem('stockEntries') || '[]');
+                // 3. Construire la liste finale avec options par défaut
+                let optionsHTML = `
+                    <option value="">-- Choisir un produit existant --</option>
+                    <option value="__nouveau__" style="background: #e8f5e8; font-weight: bold;">➕ Ajouter un nouveau produit</option>
+                `;
                 
-                [...inventoryData, ...stockData, ...stockEntries].forEach(item => {
-                    if (item.product && item.product.trim()) {
-                        produitsUniques.add(item.product.trim());
-                    }
-                });
-                
-                // 4. Produits par défaut si aucun trouvé
-                if (produitsUniques.size === 0) {
-                    ['Produit A', 'Produit B', 'Matière première X', 'Matière première Y'].forEach(p => {
-                        produitsUniques.add(p);
+                if (produitsUniques.size > 0) {
+                    optionsHTML += '<option disabled>──────────────────</option>';
+                    
+                    Array.from(produitsUniques).sort().forEach(produit => {
+                        const stockInfo = currentStockLevels[produit];
+                        let stockText = '';
+                        if (stockInfo) {
+                            const qty = stockInfo.quantity || 0;
+                            const unit = stockInfo.unit || 'unités';
+                            stockText = ` (${qty} ${unit})`;
+                        }
+                        optionsHTML += `<option value="${produit}">${produit}${stockText}</option>`;
                     });
-                    console.log('📦 Aucun produit trouvé, utilisation des produits par défaut');
+                } else {
+                    // Aucun produit trouvé
+                    optionsHTML += '<option disabled style="color: #999;">Aucun produit en stock trouvé</option>';
                 }
-                
-                // Construire la liste des options
-                let optionsHTML = defaultOptions;
-                Array.from(produitsUniques).sort().forEach(produit => {
-                    const stockInfo = currentStockLevels[produit];
-                    const stockText = stockInfo ? ` (Stock: ${stockInfo.quantity} ${stockInfo.unit || ''})` : '';
-                    optionsHTML += `<option value="${produit}">${produit}${stockText}</option>`;
-                });
                 
                 select.innerHTML = optionsHTML;
-                console.log(`✅ ${produitsUniques.size} produits chargés dans la liste déroulante`);
+                console.log(`✅ ${produitsUniques.size} produits chargés dans la liste`);
                 
             } catch (error) {
                 console.error('❌ Erreur chargement produits:', error);
-                // Fallback ultime
                 select.innerHTML = `
-                    <option value="">-- Sélectionner un produit existant --</option>
-                    <option value="__nouveau__">✏️ Saisir un nouveau produit</option>
-                    <option value="Produit A">Produit A</option>
-                    <option value="Produit B">Produit B</option>
-                    <option value="Matière première X">Matière première X</option>
-                    <option value="Matière première Y">Matière première Y</option>
+                    <option value="">-- Erreur de chargement --</option>
+                    <option value="__nouveau__">➕ Ajouter un nouveau produit</option>
                 `;
             }
         }
@@ -14642,19 +14765,43 @@ Date [ESPACES] Client [ESPACES] Montant
         function handleProductSelection() {
             const select = document.getElementById('prodProduitSelect');
             const input = document.getElementById('prodProduit');
+            const stockInfo = document.getElementById('stockInfoDisplay');
+            const stockText = document.getElementById('stockInfoText');
             
             if (select.value === '__nouveau__') {
-                // Afficher le champ de saisie pour nouveau produit
+                // Nouveau produit - afficher le champ de saisie
                 input.style.display = 'block';
+                stockInfo.style.display = 'none';
                 input.focus();
                 input.value = '';
+                console.log('✏️ Mode nouveau produit activé');
+                
             } else if (select.value) {
-                // Produit existant sélectionné
+                // Produit existant sélectionné - afficher les infos de stock
                 input.style.display = 'none';
                 input.value = select.value;
+                
+                // Afficher les informations de stock
+                const produitName = select.value;
+                const stockLevel = currentStockLevels[produitName];
+                
+                if (stockLevel) {
+                    const qty = stockLevel.quantity || 0;
+                    const unit = stockLevel.unit || 'unités';
+                    stockText.innerHTML = `📊 Stock actuel: <strong>${qty} ${unit}</strong>`;
+                    stockInfo.style.display = 'block';
+                    stockInfo.style.background = qty > 0 ? '#e8f5e8' : '#ffe8e8';
+                    console.log(`📊 Stock affiché pour ${produitName}: ${qty} ${unit}`);
+                } else {
+                    stockText.innerHTML = `📊 Stock actuel: <strong>Données non disponibles</strong>`;
+                    stockInfo.style.display = 'block';
+                    stockInfo.style.background = '#f8f9fa';
+                }
+                
             } else {
                 // Aucune sélection
                 input.style.display = 'none';
+                stockInfo.style.display = 'none';
                 input.value = '';
             }
         }
