@@ -6214,29 +6214,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 window.stockLevelsChartInstance.destroy();
             }
             
-            // Récupérer les mouvements de stock depuis localStorage
-            const stockEntries = JSON.parse(localStorage.getItem('stockEntries') || '[]');
-            const stockExits = JSON.parse(localStorage.getItem('stockExits') || '[]');
-            const allMovements = [...stockEntries, ...stockExits].sort((a, b) => new Date(a.date) - new Date(b.date));
-            
-            if (allMovements.length === 0) {
+            // Récupérer les stocks actuels et les trier par quantité décroissante
+            if (!currentStockLevels || Object.keys(currentStockLevels).length === 0) {
                 // Graphique par défaut si pas de données
-                const products = Object.keys(currentStockLevels || {}).slice(0, 8);
-                const datasets = products.map((product, index) => ({
-                    label: product,
-                    data: [Math.max(0, (currentStockLevels[product]?.quantity || 0))],
-                    backgroundColor: `hsla(${index * 45}, 70%, 60%, 0.3)`,
-                    borderColor: `hsla(${index * 45}, 70%, 50%, 1)`,
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4
-                }));
-                
                 window.stockLevelsChartInstance = new Chart(ctx, {
-                    type: 'line',
+                    type: 'doughnut',
                     data: {
-                        labels: ['Stock Actuel'],
-                        datasets: datasets
+                        labels: ['Aucune donnée'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#e3e3e3'],
+                            borderWidth: 0
+                        }]
                     },
                     options: {
                         responsive: true,
@@ -6244,88 +6233,138 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         plugins: {
                             title: {
                                 display: true,
-                                text: 'Évolution des Stocks par Produit',
+                                text: 'Analyse Pareto des Stocks (20/80)',
                                 font: { size: 16, weight: 'bold' }
                             },
                             legend: {
                                 display: true,
-                                position: 'top'
+                                position: 'right'
                             }
-                        },
-                        scales: {
-                            x: { title: { display: true, text: 'Dates' } },
-                            y: { title: { display: true, text: 'Quantités' }, beginAtZero: true }
                         }
                     }
                 });
                 return;
             }
             
-            // Créer une chronologie des stocks
-            const stockHistory = {};
-            const dateSet = new Set();
+            // Convertir les stocks en tableau et trier par quantité décroissante (uniquement stocks positifs)
+            const stocksArray = Object.keys(currentStockLevels)
+                .map(product => ({
+                    product: product,
+                    quantity: Math.max(0, currentStockLevels[product].quantity || 0), // Seulement stocks positifs
+                    unit: currentStockLevels[product].unit || 'Unités'
+                }))
+                .filter(item => item.quantity > 0) // Exclure les stocks nuls ou négatifs
+                .sort((a, b) => b.quantity - a.quantity);
             
-            // Initialiser l'historique des stocks
-            allMovements.forEach(movement => {
-                const product = movement.product;
-                const date = movement.date;
-                dateSet.add(date);
+            if (stocksArray.length === 0) {
+                // Aucun stock positif
+                window.stockLevelsChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Aucun stock positif'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#ffc107'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Analyse Pareto des Stocks (20/80)',
+                                font: { size: 16, weight: 'bold' }
+                            },
+                            legend: {
+                                display: true,
+                                position: 'right'
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+            
+            // Calculer le volume total
+            const totalVolume = stocksArray.reduce((sum, item) => sum + item.quantity, 0);
+            
+            // Appliquer le principe de Pareto : trouver les 20% de produits représentant 80% du volume
+            let cumulativeVolume = 0;
+            let targetVolume = totalVolume * 0.8; // 80% du volume total
+            let paretoProducts = [];
+            let otherProducts = [];
+            
+            stocksArray.forEach((item, index) => {
+                cumulativeVolume += item.quantity;
                 
-                if (!stockHistory[product]) {
-                    stockHistory[product] = {};
+                // Si on n'a pas encore atteint 80% du volume OU si on est dans les 20% premiers produits
+                const percentage = (index + 1) / stocksArray.length;
+                if (cumulativeVolume <= targetVolume || percentage <= 0.2) {
+                    paretoProducts.push(item);
+                } else {
+                    otherProducts.push(item);
                 }
             });
             
-            // Calculer les stocks cumulés pour chaque produit à chaque date
-            const sortedDates = Array.from(dateSet).sort();
-            const products = Object.keys(stockHistory).slice(0, 8); // Limiter à 8 produits pour la lisibilité
+            // S'assurer qu'on a au moins quelques produits dans la catégorie Pareto
+            if (paretoProducts.length === 0 && stocksArray.length > 0) {
+                paretoProducts = stocksArray.slice(0, Math.max(1, Math.ceil(stocksArray.length * 0.2)));
+                otherProducts = stocksArray.slice(paretoProducts.length);
+            }
             
-            products.forEach(product => {
-                let cumulativeStock = 0;
+            // Préparer les données pour le graphique
+            const labels = [];
+            const data = [];
+            const backgroundColors = [];
+            const borderColors = [];
+            
+            // Couleurs pour les produits Pareto (tons de bleu/vert)
+            const paretoColors = [
+                '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+                '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+            ];
+            
+            // Ajouter les produits Pareto individuellement
+            paretoProducts.forEach((item, index) => {
+                const shortName = item.product.length > 25 ? item.product.substring(0, 25) + '...' : item.product;
+                const percentage = ((item.quantity / totalVolume) * 100).toFixed(1);
                 
-                sortedDates.forEach(date => {
-                    // Calculer les mouvements pour ce produit à cette date
-                    const dayMovements = allMovements.filter(m => m.product === product && m.date === date);
-                    
-                    dayMovements.forEach(movement => {
-                        if (stockEntries.includes(movement)) {
-                            cumulativeStock += parseFloat(movement.quantity || 0);
-                        } else {
-                            cumulativeStock -= parseFloat(movement.quantity || 0);
-                        }
-                    });
-                    
-                    stockHistory[product][date] = Math.max(0, cumulativeStock);
-                });
+                labels.push(`${shortName} (${percentage}%)`);
+                data.push(item.quantity);
+                backgroundColors.push(paretoColors[index % paretoColors.length]);
+                borderColors.push('#ffffff');
             });
             
-            // Préparer les datasets pour le graphique
-            const datasets = products.map((product, index) => {
-                const data = sortedDates.map(date => stockHistory[product][date] || 0);
+            // Ajouter les autres produits comme un groupe
+            if (otherProducts.length > 0) {
+                const otherVolume = otherProducts.reduce((sum, item) => sum + item.quantity, 0);
+                const otherPercentage = ((otherVolume / totalVolume) * 100).toFixed(1);
                 
-                return {
-                    label: product.length > 15 ? product.substring(0, 15) + '...' : product,
-                    data: data,
-                    backgroundColor: `hsla(${index * 45}, 70%, 60%, 0.3)`,
-                    borderColor: `hsla(${index * 45}, 70%, 50%, 1)`,
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4
-                };
-            });
+                labels.push(`Autres produits (${otherProducts.length}) - ${otherPercentage}%`);
+                data.push(otherVolume);
+                backgroundColors.push('#95a5a6'); // Gris pour les autres
+                borderColors.push('#ffffff');
+            }
             
-            // Formater les dates pour l'affichage
-            const formattedDates = sortedDates.map(date => {
-                const d = new Date(date);
-                return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-            });
+            // Calculer les statistiques Pareto
+            const paretoVolume = paretoProducts.reduce((sum, item) => sum + item.quantity, 0);
+            const paretoVolumePercentage = ((paretoVolume / totalVolume) * 100).toFixed(1);
+            const paretoProductsPercentage = ((paretoProducts.length / stocksArray.length) * 100).toFixed(1);
             
-            // Créer le graphique d'évolution
+            // Créer le graphique camembert
             window.stockLevelsChartInstance = new Chart(ctx, {
-                type: 'line',
+                type: 'doughnut',
                 data: {
-                    labels: formattedDates,
-                    datasets: datasets
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 2,
+                        hoverBorderWidth: 3
+                    }]
                 },
                 options: {
                     responsive: true,
@@ -6333,76 +6372,75 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     plugins: {
                         title: {
                             display: true,
-                            text: 'Évolution des Stocks par Produit dans le Temps',
-                            font: { size: 16, weight: 'bold' }
+                            text: `Analyse Pareto des Stocks - ${paretoProductsPercentage}%/${paretoVolumePercentage}% (Produits/Volume)`,
+                            font: { size: 14, weight: 'bold' },
+                            padding: { bottom: 20 }
                         },
                         legend: {
                             display: true,
-                            position: 'top',
+                            position: 'right',
                             labels: {
                                 boxWidth: 12,
-                                padding: 10
+                                padding: 8,
+                                font: { size: 11 },
+                                generateLabels: function(chart) {
+                                    const original = Chart.defaults.plugins.legend.labels.generateLabels;
+                                    const labels = original.call(this, chart);
+                                    
+                                    // Marquer visuellement les produits Pareto
+                                    labels.forEach((label, index) => {
+                                        if (index < paretoProducts.length) {
+                                            label.text = '⭐ ' + label.text; // Étoile pour les produits Pareto
+                                        } else {
+                                            label.text = '• ' + label.text; // Puce pour les autres
+                                        }
+                                    });
+                                    
+                                    return labels;
+                                }
                             }
                         },
                         tooltip: {
-                            mode: 'index',
-                            intersect: false,
                             callbacks: {
                                 title: function(context) {
-                                    return 'Date: ' + sortedDates[context[0].dataIndex];
+                                    return context[0].label.replace(/^⭐ |^• /, '');
                                 },
                                 label: function(context) {
-                                    const product = products[context.datasetIndex];
-                                    const unit = currentStockLevels[product]?.unit || 'Unités';
-                                    return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + ' ' + unit;
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    
+                                    return [
+                                        `Quantité: ${value.toLocaleString()}`,
+                                        `Pourcentage: ${percentage}%`,
+                                        `Volume cumulé: ${value.toLocaleString()}`
+                                    ];
+                                },
+                                footer: function(context) {
+                                    const index = context[0].dataIndex;
+                                    if (index < paretoProducts.length) {
+                                        return '🎯 Produit Pareto (20/80)';
+                                    } else {
+                                        return '📦 Autres produits';
+                                    }
                                 }
                             }
                         }
-                    },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Dates',
-                                font: { weight: 'bold' }
-                            },
-                            grid: { display: false },
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 0
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Quantités en Stock',
-                                font: { weight: 'bold' }
-                            },
-                            beginAtZero: true,
-                            grid: { 
-                                color: 'rgba(0,0,0,0.1)',
-                                drawBorder: false 
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toLocaleString();
-                                }
-                            }
-                        }
-                    },
-                    interaction: {
-                        mode: 'nearest',
-                        axis: 'x',
-                        intersect: false
                     },
                     elements: {
-                        point: {
-                            radius: 3,
-                            hoverRadius: 5
+                        arc: {
+                            borderWidth: 2
                         }
+                    },
+                    cutout: '40%', // Taille du trou central
+                    animation: {
+                        animateRotate: true,
+                        animateScale: true
                     }
                 }
             });
+            
+            console.log(`📊 Graphique Pareto créé: ${paretoProducts.length} produits (${paretoProductsPercentage}%) représentent ${paretoVolumePercentage}% du volume`);
         }
 
         // Fonction pour mettre à jour les tableaux de stocks positifs et négatifs
