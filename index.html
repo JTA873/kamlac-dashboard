@@ -3580,6 +3580,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                     <option value="">🔍 Chargement des produits...</option>
                                 </select>
                                 
+                                <!-- Bouton de rechargement des produits -->
+                                <div style="text-align: center; margin-bottom: 10px;">
+                                    <button onclick="chargerProduitsDisponibles()" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Recharger la liste des produits">
+                                        🔄 Recharger la liste des produits
+                                    </button>
+                                </div>
+                                
                                 <input type="text" id="prodProduit" placeholder="✏️ Saisir le nom du nouveau produit" style="width: 100%; padding: 12px; border: 2px solid #28a745; border-radius: 8px; margin-bottom: 10px; display: none; font-size: 14px;">
                                 
                                 <!-- Informations sur le stock actuel -->
@@ -14573,9 +14580,19 @@ Date [ESPACES] Client [ESPACES] Montant
                 }, 100);
                 
                 // NOUVEAU: Charger automatiquement les produits après déverrouillage
-                setTimeout(() => {
-                    console.log('🔐 Module admin déverrouillé - Chargement des produits...');
-                    chargerProduitsDisponibles();
+                setTimeout(async () => {
+                    console.log('🔐 Module admin déverrouillé - Chargement des données et produits...');
+                    
+                    try {
+                        // S'assurer que les données de stock sont chargées
+                        await loadStockData();
+                        console.log('📦 Données de stock rechargées pour le Module 3');
+                    } catch (error) {
+                        console.log('⚠️ Erreur rechargement stock Module 3:', error);
+                    }
+                    
+                    // Charger les produits
+                    await chargerProduitsDisponibles();
                     
                     // Initialiser la date du jour
                     const today = new Date().toISOString().split('T')[0];
@@ -14583,7 +14600,7 @@ Date [ESPACES] Client [ESPACES] Montant
                     if (dateInput && !dateInput.value) {
                         dateInput.value = today;
                     }
-                }, 300);
+                }, 500);
                 
             } else {
                 // PIN incorrect
@@ -15060,9 +15077,9 @@ Date [ESPACES] Client [ESPACES] Montant
                 if (isFirebaseInitialized && db) {
                     try {
                         const [inventorySnapshot, stockEntriesSnapshot, stockExitsSnapshot] = await Promise.all([
-                            getDocs(collection(db, 'inventory')),
-                            getDocs(collection(db, 'stockEntries')),
-                            getDocs(collection(db, 'stockExits'))
+                            db.collection('inventory').get(),
+                            db.collection('stockEntries').get(),
+                            db.collection('stockExits').get()
                         ]);
                         
                         inventorySnapshot.forEach(doc => {
@@ -15102,7 +15119,7 @@ Date [ESPACES] Client [ESPACES] Montant
                             const allCollections = ['productions', 'inventory', 'stockEntries', 'stockExits'];
                             
                             for (const collectionName of allCollections) {
-                                const snapshot = await getDocs(collection(db, collectionName));
+                                const snapshot = await db.collection(collectionName).get();
                                 snapshot.forEach(doc => {
                                     const data = doc.data();
                                     if (data.product && data.product.trim()) {
@@ -15139,8 +15156,12 @@ Date [ESPACES] Client [ESPACES] Montant
                         optionsHTML += `<option value="${produit}">${produit}${stockText}</option>`;
                     });
                 } else {
-                    // Aucun produit trouvé
+                    // Aucun produit trouvé - Ajouter des produits d'exemple
+                    console.log('⚠️ Aucun produit trouvé - Ajout de produits d\'exemple');
                     optionsHTML += '<option disabled style="color: #999;">Aucun produit en stock trouvé</option>';
+                    optionsHTML += '<option disabled>──── Produits d\'exemple ────</option>';
+                    optionsHTML += '<option value="Produit Exemple 1">Produit Exemple 1</option>';
+                    optionsHTML += '<option value="Produit Exemple 2">Produit Exemple 2</option>';
                 }
                 
                 select.innerHTML = optionsHTML;
