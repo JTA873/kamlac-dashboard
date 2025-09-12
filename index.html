@@ -7692,7 +7692,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             console.log(`📊 Données locales: ${stockEntriesData.length} entrées, ${stockExitsData.length} sorties`);
             
             // Si Firebase est initialisé, synchroniser BIDIRECTIONNELLEMENT avec les données du cloud
-            if (false && isFirebaseInitialized && db) { // 🚫 DÉSACTIVÉ pour éviter les conflits
+            if (isFirebaseInitialized && db) {
                 try {
                     console.log('🔄 Synchronisation BIDIRECTIONNELLE des données de stock avec Firebase...');
                     
@@ -10128,8 +10128,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             localStorage.setItem('kamlacProductsData', JSON.stringify(productsData));
             localStorage.setItem('kamlacAiNotes', JSON.stringify(aiNotes));
             localStorage.setItem('kamlacNoteCategories', JSON.stringify(noteCategories));
-            localStorage.setItem('kamlacStockEntries', JSON.stringify(stockEntries));
-            localStorage.setItem('kamlacStockExits', JSON.stringify(stockExits));
+            localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
+            localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
         }
 
         function updateCloudStatus(status, message) {
@@ -10180,6 +10180,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 const salesCount = (await db.collection('sales').get()).size;
                 const paymentsCount = (await db.collection('payments').get()).size;
                 const productsCount = (await db.collection('products').get()).size;
+                const stockEntriesCount = (await db.collection('stockEntries').get()).size;
+                const stockExitsCount = (await db.collection('stockExits').get()).size;
                 
                 // ⚠️ CHARGER LES NOTES IA SEULEMENT SI NÉCESSAIRE
                 if (aiNotes.length === 0) {
@@ -10200,20 +10202,26 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 const firebaseCounts = {
                     sales: salesCount,
                     payments: paymentsCount,
-                    products: productsCount
+                    products: productsCount,
+                    stockEntries: stockEntriesCount,
+                    stockExits: stockExitsCount
                 };
                 
                 const localCounts = {
                     sales: salesData.length,
                     payments: paymentsData.length,
-                    products: productsData.length
+                    products: productsData.length,
+                    stockEntries: stockEntriesData.length,
+                    stockExits: stockExitsData.length
                 };
                 
                 // Vérifier s'il y a des différences
                 const needsSync = 
                     firebaseCounts.sales !== localCounts.sales ||
                     firebaseCounts.payments !== localCounts.payments ||
-                    firebaseCounts.products !== localCounts.products;
+                    firebaseCounts.products !== localCounts.products ||
+                    firebaseCounts.stockEntries !== localCounts.stockEntries ||
+                    firebaseCounts.stockExits !== localCounts.stockExits;
                 
                 if (needsSync) {
                     console.log('⚠️ Différences détectées:', { firebase: firebaseCounts, local: localCounts });
@@ -10239,6 +10247,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 salesData = [];
                 paymentsData = [];
                 productsData = [];
+                stockEntriesData = [];
+                stockExitsData = [];
                 
                 // Charger depuis Firebase
                 const salesSnapshot = await db.collection('sales').get();
@@ -10262,13 +10272,43 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     productsData.push(data);
                 });
                 
+                // Charger les données de stock depuis Firebase
+                const stockEntriesSnapshot = await db.collection('stockEntries').get();
+                stockEntriesSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    delete data.lastUpdated;
+                    stockEntriesData.push(data);
+                });
+                
+                const stockExitsSnapshot = await db.collection('stockExits').get();
+                stockExitsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    delete data.lastUpdated;
+                    stockExitsData.push(data);
+                });
+                
                 // Sauvegarder localement
                 saveToLocalStorage();
+                localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
+                localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
                 
                 // NOUVEAU : Synchroniser les données de stock aussi
-                // ❌ TEMPORAIREMENT DÉSACTIVÉ - CAUSE DU SPAM FIREBASE
-                // await loadStockData();
-                console.log('⚠️ loadStockData() désactivée pour éviter le spam Firebase');
+                await loadStockData();
+                console.log('✅ loadStockData() réactivée pour synchronisation complète');
+                
+                // Recalculer les niveaux de stock après synchronisation
+                calculateCurrentStockLevels();
+                
+                // Mettre à jour les tableaux de mouvements de stock
+                if (typeof updateAllMovementsTable === 'function') {
+                    updateAllMovementsTable();
+                }
+                if (typeof updateEntriesMovementsTable === 'function') {
+                    updateEntriesMovementsTable();
+                }
+                if (typeof updateExitsMovementsTable === 'function') {
+                    updateExitsMovementsTable();
+                }
                 
                 // Mettre à jour l'interface
                 populateFilters();
