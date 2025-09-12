@@ -5300,10 +5300,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
             
             // Vérifier Firebase de manière robuste
-            const firebaseReady = db && firebase && (isFirebaseInitialized || typeof db.collection === 'function');
-            console.log(`🔥 Firebase ready: ${firebaseReady}`);
+            console.log(`🔥 Firebase ready check: isFirebaseInitialized=${isFirebaseInitialized}, db=${!!db}`);
             
-            if (firebaseReady) {
+            if (isFirebaseInitialized && db) {
                 console.log(`🔥 Suppression Firebase ${collectionName} en cours...`);
                 
                 // Utiliser l'ID exact de l'élément
@@ -5315,7 +5314,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         console.log('✅ Suppression Firebase réussie');
                         // Supprimer localement après confirmation Firebase
                         dataArray.splice(index, 1);
-                        saveToLocalStorage();
+                        
+                        // Sauvegarder selon le type de données
+                        if (source === 'entries') {
+                            localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
+                        } else if (source === 'exits') {
+                            localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+                        } else {
+                            saveToLocalStorage();
+                        }
                         
                         // Mettre à jour l'affichage
                         if (document.getElementById('movementTypeFilter').value) {
@@ -5333,7 +5340,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         console.error('❌ Erreur suppression mouvement Firebase:', error);
                         // En cas d'erreur Firebase, on supprime quand même localement
                         dataArray.splice(index, 1);
-                        saveToLocalStorage();
+                        
+                        // Sauvegarder selon le type de données
+                        if (source === 'entries') {
+                            localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
+                        } else if (source === 'exits') {
+                            localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+                        } else {
+                            saveToLocalStorage();
+                        }
                         
                         // Mettre à jour l'affichage
                         if (document.getElementById('movementTypeFilter').value) {
@@ -5351,7 +5366,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // Si Firebase n'est pas disponible, supprimer seulement en local
                 console.log('⚠️ Firebase non disponible, suppression locale uniquement');
                 dataArray.splice(index, 1);
-                saveToLocalStorage();
+                
+                // Sauvegarder selon le type de données
+                if (source === 'entries') {
+                    localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
+                } else if (source === 'exits') {
+                    localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+                } else {
+                    saveToLocalStorage();
+                }
                 
                 // Mettre à jour l'affichage
                 if (document.getElementById('movementTypeFilter').value) {
@@ -5412,10 +5435,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
             
             // Vérifier Firebase de manière robuste
-            const firebaseReady = db && firebase && (isFirebaseInitialized || typeof db.collection === 'function');
-            console.log(`🔥 Firebase ready: ${firebaseReady}`);
+            console.log(`🔥 Firebase ready check: isFirebaseInitialized=${isFirebaseInitialized}, db=${!!db}`);
             
-            if (firebaseReady) {
+            if (isFirebaseInitialized && db) {
                 console.log('🔥 Suppression Firebase en cours...');
                 
                 // Utiliser l'ID exact de l'entrée
@@ -5427,7 +5449,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         console.log('✅ Suppression Firebase réussie');
                         // Supprimer localement après confirmation Firebase
                         stockEntriesData.splice(index, 1);
-                        saveToLocalStorage();
+                        localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
                         
                         // Mettre à jour l'affichage
                         updateEntriesMovementsTable();
@@ -5441,7 +5463,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         console.error('❌ Erreur suppression entrée Firebase:', error);
                         // En cas d'erreur Firebase, on supprime quand même localement
                         stockEntriesData.splice(index, 1);
-                        saveToLocalStorage();
+                        localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
                         
                         updateEntriesMovementsTable();
                         updateAllMovementsTable();
@@ -5454,7 +5476,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // Si Firebase n'est pas prêt, supprimer seulement en local
                 console.log('⚠️ Firebase non disponible, suppression locale uniquement');
                 stockEntriesData.splice(index, 1);
-                saveToLocalStorage();
+                localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
                 
                 updateEntriesMovementsTable();
                 updateAllMovementsTable();
@@ -5487,6 +5509,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette sortie ?');
             if (!confirmed) return;
             
+            console.log(`🗑️ Début suppression sortie ID: ${id}, source: ${source}`);
+            console.log(`🔍 Firebase status: isInitialized=${isFirebaseInitialized}, db=${!!db}`);
+            
             // Ajouter l'ID à la liste des éléments supprimés pour éviter la re-synchronisation
             let deletedItems = JSON.parse(localStorage.getItem('deletedMovements') || '[]');
             
@@ -5499,19 +5524,29 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 const index = salesData.findIndex(s => s.id == id);
                 if (index > -1) {
-                    salesData.splice(index, 1);
-                    saveToLocalStorage();
-                    
-                    // Sync Firebase - supprimer de Firebase aussi
-                    if (isFirebaseInitialized) {
-                        try {
-                            db.collection('sales').doc(id.toString()).delete();
-                        } catch (error) {
-                            console.error('Erreur suppression vente Firebase:', error);
-                        }
+                    // Supprimer de Firebase d'abord
+                    if (isFirebaseInitialized && db) {
+                        db.collection('sales').doc(id.toString()).delete()
+                            .then(() => {
+                                console.log('✅ Vente supprimée de Firebase');
+                                // Supprimer localement après confirmation Firebase
+                                salesData.splice(index, 1);
+                                saveToLocalStorage();
+                                showAlert('✅ Vente supprimée', 'success');
+                            })
+                            .catch((error) => {
+                                console.error('❌ Erreur suppression vente Firebase:', error);
+                                // Supprimer localement même en cas d'erreur Firebase
+                                salesData.splice(index, 1);
+                                saveToLocalStorage();
+                                showAlert('⚠️ Vente supprimée localement (problème de synchronisation)', 'warning');
+                            });
+                    } else {
+                        // Firebase non disponible, supprimer seulement en local
+                        salesData.splice(index, 1);
+                        saveToLocalStorage();
+                        showAlert('✅ Vente supprimée (local uniquement)', 'success');
                     }
-                    
-                    alert('✅ Vente supprimée');
                 }
             } else {
                 const deletedKey = `stockExits:${id}`;
@@ -5522,19 +5557,29 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 const index = stockExitsData.findIndex(e => e.id == id);
                 if (index > -1) {
-                    stockExitsData.splice(index, 1);
-                    saveToLocalStorage();
-                    
-                    // Sync Firebase - supprimer de Firebase aussi
-                    if (isFirebaseInitialized) {
-                        try {
-                            db.collection('stockExits').doc(id.toString()).delete();
-                        } catch (error) {
-                            console.error('Erreur suppression sortie Firebase:', error);
-                        }
+                    // Supprimer de Firebase d'abord
+                    if (isFirebaseInitialized && db) {
+                        db.collection('stockExits').doc(id.toString()).delete()
+                            .then(() => {
+                                console.log('✅ Sortie supprimée de Firebase');
+                                // Supprimer localement après confirmation Firebase
+                                stockExitsData.splice(index, 1);
+                                localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+                                showAlert('✅ Sortie supprimée', 'success');
+                            })
+                            .catch((error) => {
+                                console.error('❌ Erreur suppression sortie Firebase:', error);
+                                // Supprimer localement même en cas d'erreur Firebase
+                                stockExitsData.splice(index, 1);
+                                localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+                                showAlert('⚠️ Sortie supprimée localement (problème de synchronisation)', 'warning');
+                            });
+                    } else {
+                        // Firebase non disponible, supprimer seulement en local
+                        stockExitsData.splice(index, 1);
+                        localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+                        showAlert('✅ Sortie supprimée (local uniquement)', 'success');
                     }
-                    
-                    alert('✅ Sortie supprimée');
                 }
             }
             
