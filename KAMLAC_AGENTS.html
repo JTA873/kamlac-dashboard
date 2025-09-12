@@ -311,7 +311,6 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, query, where, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
         // Configuration Firebase
         const firebaseConfig = {
@@ -327,18 +326,10 @@
         // Initialiser Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
 
-        // Authentification anonyme
-        let isFirebaseReady = false;
-        
-        signInAnonymously(auth).then(() => {
-            console.log('✅ Authentification Firebase réussie');
-            isFirebaseReady = true;
-        }).catch((error) => {
-            console.error('❌ Erreur authentification Firebase:', error);
-            showAlert('⚠️ Connexion Firebase échouée - Mode local uniquement', 'warning');
-        });
+        // Firebase prêt immédiatement (pas d'authentification requise avec les règles ouvertes)
+        let isFirebaseReady = true;
+        console.log('✅ Firebase initialisé (règles ouvertes)');
 
         // Exposer les fonctions Firebase globalement
         window.db = db;
