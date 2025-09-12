@@ -5262,6 +5262,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const itemToDelete = dataArray[index];
             console.log('📦 Mouvement à supprimer:', itemToDelete);
             
+            // Ajouter l'ID à la liste des éléments supprimés pour éviter la re-synchronisation
+            let deletedItems = JSON.parse(localStorage.getItem('deletedMovements') || '[]');
+            const deletedKey = `${collectionName}:${id}`;
+            if (!deletedItems.includes(deletedKey)) {
+                deletedItems.push(deletedKey);
+                localStorage.setItem('deletedMovements', JSON.stringify(deletedItems));
+            }
+            
             // Vérifier Firebase de manière robuste
             const firebaseReady = db && firebase && (isFirebaseInitialized || typeof db.collection === 'function');
             console.log(`🔥 Firebase ready: ${firebaseReady}`);
@@ -5366,6 +5374,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const entryToDelete = stockEntriesData[index];
             console.log('📦 Entrée à supprimer:', entryToDelete);
             
+            // Ajouter l'ID à la liste des éléments supprimés pour éviter la re-synchronisation
+            let deletedItems = JSON.parse(localStorage.getItem('deletedMovements') || '[]');
+            const deletedKey = `stockEntries:${id}`;
+            if (!deletedItems.includes(deletedKey)) {
+                deletedItems.push(deletedKey);
+                localStorage.setItem('deletedMovements', JSON.stringify(deletedItems));
+            }
+            
             // Vérifier Firebase de manière robuste
             const firebaseReady = db && firebase && (isFirebaseInitialized || typeof db.collection === 'function');
             console.log(`🔥 Firebase ready: ${firebaseReady}`);
@@ -5442,7 +5458,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette sortie ?');
             if (!confirmed) return;
             
+            // Ajouter l'ID à la liste des éléments supprimés pour éviter la re-synchronisation
+            let deletedItems = JSON.parse(localStorage.getItem('deletedMovements') || '[]');
+            
             if (source === 'sales') {
+                const deletedKey = `sales:${id}`;
+                if (!deletedItems.includes(deletedKey)) {
+                    deletedItems.push(deletedKey);
+                    localStorage.setItem('deletedMovements', JSON.stringify(deletedItems));
+                }
+                
                 const index = salesData.findIndex(s => s.id == id);
                 if (index > -1) {
                     salesData.splice(index, 1);
@@ -5460,6 +5485,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     alert('✅ Vente supprimée');
                 }
             } else {
+                const deletedKey = `stockExits:${id}`;
+                if (!deletedItems.includes(deletedKey)) {
+                    deletedItems.push(deletedKey);
+                    localStorage.setItem('deletedMovements', JSON.stringify(deletedItems));
+                }
+                
                 const index = stockExitsData.findIndex(e => e.id == id);
                 if (index > -1) {
                     stockExitsData.splice(index, 1);
@@ -7484,12 +7515,31 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         let lastLoadStockTime = 0;
         const LOAD_STOCK_THROTTLE_MS = 60000; // 1 minute au lieu de 5 pour la synchronisation
         
+        // Fonction pour nettoyer la liste des éléments supprimés (garde seulement les 1000 plus récents)
+        function cleanupDeletedMovementsList() {
+            try {
+                const deletedItems = JSON.parse(localStorage.getItem('deletedMovements') || '[]');
+                if (deletedItems.length > 1000) {
+                    // Garder seulement les 500 plus récents (les plus récents sont à la fin)
+                    const cleanedItems = deletedItems.slice(-500);
+                    localStorage.setItem('deletedMovements', JSON.stringify(cleanedItems));
+                    console.log(`🧹 Liste des supprimés nettoyée: ${deletedItems.length} → ${cleanedItems.length}`);
+                }
+            } catch (error) {
+                console.error('❌ Erreur nettoyage liste supprimés:', error);
+            }
+        }
+        
         // Fonction de synchronisation bidirectionnelle pour résoudre les désynchronisations
         async function synchroniserDonneesBidirectionnellement(donneesLocales, donneesFirebase, collection) {
             try {
                 console.log(`🔄 Synchronisation bidirectionnelle pour ${collection}:`);
                 console.log(`📱 Local: ${donneesLocales.length} éléments`);
                 console.log(`🔥 Firebase: ${donneesFirebase.length} éléments`);
+                
+                // Récupérer la liste des éléments supprimés
+                const deletedItems = JSON.parse(localStorage.getItem('deletedMovements') || '[]');
+                console.log(`🗑️ Éléments supprimés: ${deletedItems.length}`);
                 
                 // Créer un Map pour une recherche rapide par ID
                 const localMap = new Map();
@@ -7505,10 +7555,23 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 // Identifier les éléments uniques dans chaque source
                 const uniquesLocal = donneesLocales.filter(item => item.id && !firebaseMap.has(item.id));
-                const uniquesFirebase = donneesFirebase.filter(item => item.id && !localMap.has(item.id));
+                
+                // Filtrer les éléments Firebase pour exclure ceux qui ont été supprimés
+                const uniquesFirebase = donneesFirebase.filter(item => {
+                    if (!item.id || localMap.has(item.id)) return false;
+                    
+                    // Vérifier si cet élément a été supprimé
+                    const deletedKey = `${collection}:${item.id}`;
+                    if (deletedItems.includes(deletedKey)) {
+                        console.log(`🚫 Élément ${item.id} ignoré (supprimé intentionnellement)`);
+                        return false;
+                    }
+                    
+                    return true;
+                });
                 
                 console.log(`🆕 Uniques locales: ${uniquesLocal.length}`);
-                console.log(`🆕 Uniques Firebase: ${uniquesFirebase.length}`);
+                console.log(`🆕 Uniques Firebase (non supprimées): ${uniquesFirebase.length}`);
                 
                 // Fusionner toutes les données uniques
                 const donneesComplete = [
@@ -7576,6 +7639,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             lastLoadStockTime = now;
             console.log('🔄 loadStockData() AUTORISÉE - SYNCHRONISATION BIDIRECTIONNELLE');
+            
+            // Nettoyer périodiquement la liste des éléments supprimés
+            cleanupDeletedMovementsList();
             
             // Charger depuis localStorage d'abord
             const savedEntries = localStorage.getItem('stockEntries');
@@ -10275,6 +10341,15 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     delete data.lastUpdated;
                     
                     if (change.type === 'added' && !existingIds.has(data.id)) {
+                        // Vérifier si cette vente a été supprimée intentionnellement
+                        const deletedItems = JSON.parse(localStorage.getItem('deletedMovements') || '[]');
+                        const deletedKey = `sales:${data.id}`;
+                        
+                        if (deletedItems.includes(deletedKey)) {
+                            console.log(`🚫 Vente ${data.id} ignorée (supprimée intentionnellement)`);
+                            return;
+                        }
+                        
                         salesData.push(data);
                         hasChanges = true;
                         console.log('➕ Vente ajoutée:', data.id);
