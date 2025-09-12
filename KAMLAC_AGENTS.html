@@ -1060,43 +1060,51 @@
                 await addDoc(collection(db, 'productions'), production);
                 console.log('✅ Production sauvée sur Firebase');
                 
-                // Intégrer dans les stocks
-                const isEntry = production.type.includes('reception');
-                await integrerDansStock(production, isEntry);
-                console.log('✅ Stock mis à jour');
-                
-                // Message de succès détaillé
-                const operationType = isEntry ? 'entrée' : 'sortie';
-                const stockMessage = isEntry ? 
-                    `📈 Stock augmenté de ${production.quantite} unités` : 
-                    `📉 Stock diminué de ${production.quantite} unités`;
-                
+                // Message de succès immédiat pour l'enregistrement principal
                 const successMessage = `${typeLabel} enregistrée avec succès!<br>
                           📦 Produit: ${produitFinal}<br>
                           📊 Quantité: ${production.quantite} unités<br>
-                          👤 Agent: ${production.agent}<br>
-                          ${stockMessage}`;
+                          👤 Agent: ${production.agent}`;
                 
-                // Afficher le message avec une durée plus longue pour permettre la lecture
-                showToast(successMessage, 'success', 10000);
+                showToast(successMessage, 'success', 8000);
                 
-                // Réinitialiser le formulaire
+                // Réinitialiser le formulaire immédiatement
                 resetForm();
                 console.log('✅ Formulaire réinitialisé');
+                
+                // Intégrer dans les stocks (ne pas faire échouer si erreur)
+                try {
+                    const isEntry = production.type.includes('reception');
+                    await integrerDansStock(production, isEntry);
+                    console.log('✅ Stock mis à jour');
+                    
+                    // Message additionnel pour confirmer la mise à jour du stock
+                    const stockMessage = isEntry ? 
+                        `� Stock augmenté de ${production.quantite} unités` : 
+                        `📉 Stock diminué de ${production.quantite} unités`;
+                    showToast(stockMessage, 'info', 3000);
+                    
+                } catch (stockError) {
+                    console.warn('⚠️ Erreur mise à jour stock (données sauvées):', stockError);
+                    showToast('⚠️ Données enregistrées, mais erreur lors de la mise à jour du stock', 'warning', 5000);
+                }
                 
                 // Nettoyage automatique du cache après chaque soumission
                 console.log('🧹 Nettoyage automatique du cache...');
                 clearAllCache(true); // Mode silencieux
                 
-                // Recharger la liste des produits après un délai
+                // Recharger la liste des produits après un délai (ne pas faire échouer si erreur)
                 setTimeout(() => {
-                    chargerProduitsDisponibles();
+                    chargerProduitsDisponibles().catch(error => {
+                        console.warn('⚠️ Erreur rechargement produits:', error);
+                    });
                     hideAlert(); // Masquer le message après rechargement
                 }, 3000);
                 
             } catch (error) {
                 console.error('❌ ERREUR enregistrement Firebase:', error);
                 showAlert('❌ Erreur lors de l\'enregistrement sur Firebase', 'error');
+                showToast('❌ Échec de l\'enregistrement - Vérifiez la connexion Firebase', 'error', 8000);
             }
         }
 
