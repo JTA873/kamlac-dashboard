@@ -4416,7 +4416,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         </button>
                         <button onclick="deleteMovement('${movement.source}', '${movement.id}')" 
                                 class="btn-icon" title="Supprimer" style="font-size: 0.8rem;">
-                             ️
+                            🗑️
                         </button>
                     </td>
                 `;
@@ -5854,7 +5854,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             </button>
                             <button onclick="deleteStockExit('${exit.id}', '${exit.source}')" 
                                     class="btn-icon" title="Supprimer">
-                                 ️
+                                🗑️
                             </button>
                         </td>
                     `;
@@ -10218,6 +10218,20 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                         applyRecapFilters();
                         updateClientsOverview();
                         updateClientsSummaryTable();
+                        
+                        // Mettre à jour les tableaux de mouvements (ventes = sorties)
+                        if (typeof updateAllMovementsTable === 'function') {
+                            updateAllMovementsTable();
+                        }
+                        if (typeof updateExitsMovementsTable === 'function') {
+                            updateExitsMovementsTable();
+                        }
+                        
+                        // Recalculer les stocks car les ventes affectent les niveaux
+                        calculateCurrentStockLevels();
+                        if (typeof forceUpdateStockKPIs === 'function') {
+                            forceUpdateStockKPIs();
+                        }
                     }, 100);
                 }
                 
@@ -10370,6 +10384,15 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     if (typeof forceUpdateStockKPIs === 'function') {
                         forceUpdateStockKPIs();
                     }
+                    
+                    // Mettre à jour les tableaux de mouvements
+                    if (typeof updateAllMovementsTable === 'function') {
+                        updateAllMovementsTable();
+                    }
+                    if (typeof updateEntriesMovementsTable === 'function') {
+                        updateEntriesMovementsTable();
+                    }
+                    
                     // Message supprimé pour éviter le spam - showAlert('📦 Données de stock mises à jour en temps réel', 'info');
                     console.log('📦 Données de stock mises à jour en temps réel');
                 }
@@ -10415,10 +10438,89 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     if (typeof forceUpdateStockKPIs === 'function') {
                         forceUpdateStockKPIs();
                     }
+                    
+                    // Mettre à jour les tableaux de mouvements
+                    if (typeof updateAllMovementsTable === 'function') {
+                        updateAllMovementsTable();
+                    }
+                    if (typeof updateExitsMovementsTable === 'function') {
+                        updateExitsMovementsTable();
+                    }
+                    
+                    console.log('📤 Données de sorties de stock mises à jour en temps réel');
                 }
             });
         }
-
+        
+        // FONCTION DE TEST POUR VÉRIFIER LES BOUTONS MODIFIER/SUPPRIMER
+        function testMovementButtons() {
+            console.log('🧪 Test des boutons de modification/suppression des mouvements...');
+            
+            let results = {
+                totalButtons: 0,
+                editButtons: 0,
+                deleteButtons: 0,
+                allMovementsTable: false,
+                entriesTable: false,
+                exitsTable: false
+            };
+            
+            // Test tableau "Tous les mouvements"
+            const allMovementsTable = document.querySelector('#allMovementsTableBody');
+            if (allMovementsTable) {
+                results.allMovementsTable = true;
+                const editBtns = allMovementsTable.querySelectorAll('button[onclick*="editMovement"]');
+                const deleteBtns = allMovementsTable.querySelectorAll('button[onclick*="deleteMovement"]');
+                results.editButtons += editBtns.length;
+                results.deleteButtons += deleteBtns.length;
+                console.log(`📊 Tableau "Tous mouvements" : ${editBtns.length} boutons modifier, ${deleteBtns.length} boutons supprimer`);
+            }
+            
+            // Test tableau "Entrées"
+            const entriesTable = document.querySelector('#entriesMovementsTableBody');
+            if (entriesTable) {
+                results.entriesTable = true;
+                const editBtns = entriesTable.querySelectorAll('button[onclick*="editStockEntry"]');
+                const deleteBtns = entriesTable.querySelectorAll('button[onclick*="deleteStockEntry"]');
+                results.editButtons += editBtns.length;
+                results.deleteButtons += deleteBtns.length;
+                console.log(`📥 Tableau "Entrées" : ${editBtns.length} boutons modifier, ${deleteBtns.length} boutons supprimer`);
+            }
+            
+            // Test tableau "Sorties"
+            const exitsTable = document.querySelector('#exitsMovementsTableBody');
+            if (exitsTable) {
+                results.exitsTable = true;
+                const editBtns = exitsTable.querySelectorAll('button[onclick*="editStockExit"]');
+                const deleteBtns = exitsTable.querySelectorAll('button[onclick*="deleteStockExit"]');
+                results.editButtons += editBtns.length;
+                results.deleteButtons += deleteBtns.length;
+                console.log(`📤 Tableau "Sorties" : ${editBtns.length} boutons modifier, ${deleteBtns.length} boutons supprimer`);
+            }
+            
+            results.totalButtons = results.editButtons + results.deleteButtons;
+            
+            console.log('🧪 RÉSULTATS DU TEST :');
+            console.log(`✅ Tableaux détectés : Tous(${results.allMovementsTable}) Entrées(${results.entriesTable}) Sorties(${results.exitsTable})`);
+            console.log(`✅ Total boutons : ${results.totalButtons} (${results.editButtons} modifier + ${results.deleteButtons} supprimer)`);
+            console.log(`✅ Firebase : ${isFirebaseInitialized ? 'Initialisé' : 'Non initialisé'}`);
+            
+            // Tester une fonction de modification
+            if (typeof editMovement === 'function') {
+                console.log('✅ Fonction editMovement existe');
+            } else {
+                console.log('❌ Fonction editMovement manquante');
+            }
+            
+            if (typeof deleteMovement === 'function') {
+                console.log('✅ Fonction deleteMovement existe');
+            } else {
+                console.log('❌ Fonction deleteMovement manquante');
+            }
+            
+            return results;
+        }
+        
         // Gestion de la liste des clients
         function updateClientsList() {
             const allClients = new Set();
