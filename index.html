@@ -15037,7 +15037,7 @@ Date [ESPACES] Client [ESPACES] Montant
                 const inventory = JSON.parse(localStorage.getItem('inventoryData') || '[]');
                 
                 console.log(`📦 Données localStorage: ${stockEntries.length} entrées, ${stockExits.length} sorties, ${inventory.length} inventaire`);
-                console.log(`📊 Variables globales: currentStockLevels=${Object.keys(currentStockLevels || {}).length}, stockEntriesData=${stockEntriesData?.length || 0}, inventoryData=${inventoryData?.length || 0}`);
+                console.log(`📊 Variables globales: currentStockLevels=${Object.keys(currentStockLevels || {}).length}, stockEntriesData=${stockEntriesData?.length || 0}`);
                 
                 // Récupérer les produits depuis toutes les sources
                 const produitsUniques = new Set();
@@ -15047,8 +15047,8 @@ Date [ESPACES] Client [ESPACES] Montant
                     { data: currentStockLevels, type: 'inventory', name: 'currentStockLevels' },
                     { data: stockEntries, type: 'entries', name: 'stockEntries' },
                     { data: stockExits, type: 'exits', name: 'stockExits' },
-                    { data: inventory, type: 'inventory', name: 'inventory' },
-                    { data: inventoryData, type: 'inventory', name: 'inventoryData' }
+                    { data: inventory, type: 'inventory', name: 'inventory' }
+                    // Suppression de inventoryData qui n'est pas défini
                 ];
                 
                 sources.forEach(source => {
@@ -15084,47 +15084,60 @@ Date [ESPACES] Client [ESPACES] Montant
                 
                 console.log(`📊 Total produits uniques après sources locales: ${produitsUniques.size}`);
                 
-                // 2. Récupération Firebase en parallèle - FORCER L'ESSAI
+                // 2. Récupération Firebase en parallèle - COLLECTION PRODUCTS PRIORITAIRE
                 console.log('🔥 Tentative de chargement Firebase...');
                 console.log(`🔍 Conditions Firebase: isFirebaseInitialized=${isFirebaseInitialized}, db=${!!db}, firebase=${typeof firebase}`);
                 
                 if (db && typeof firebase !== 'undefined') {
                     try {
                         console.log('🚀 Chargement Firebase démarré...');
-                        const [inventorySnapshot, stockEntriesSnapshot, stockExitsSnapshot] = await Promise.all([
-                            db.collection('inventory').get(),
-                            db.collection('stockEntries').get(),
-                            db.collection('stockExits').get()
-                        ]);
+                        
+                        // PRIORITÉ 1: Collection products (source principale)
+                        const productsSnapshot = await db.collection('products').get();
+                        console.log(`📦 Collection PRODUCTS: ${productsSnapshot.size} produits trouvés`);
                         
                         let firebaseCount = 0;
-                        
-                        inventorySnapshot.forEach(doc => {
+                        productsSnapshot.forEach(doc => {
                             const data = doc.data();
-                            if (data.product && data.product.trim()) {
+                            if (data.name && data.name.trim()) {
+                                produitsUniques.add(data.name.trim());
+                                firebaseCount++;
+                            } else if (data.product && data.product.trim()) {
                                 produitsUniques.add(data.product.trim());
+                                firebaseCount++;
+                            } else if (data.produit && data.produit.trim()) {
+                                produitsUniques.add(data.produit.trim());
                                 firebaseCount++;
                             }
                         });
                         
-                        stockEntriesSnapshot.forEach(doc => {
-                            const data = doc.data();
-                            if (data.product && data.product.trim()) {
-                                produitsUniques.add(data.product.trim());
-                                firebaseCount++;
-                            }
-                        });
+                        console.log(`✅ PRODUCTS: ${firebaseCount} produits ajoutés depuis la collection products`);
                         
-                        stockExitsSnapshot.forEach(doc => {
-                            const data = doc.data();
-                            if (data.product && data.product.trim()) {
-                                produitsUniques.add(data.product.trim());
-                                firebaseCount++;
-                            }
-                        });
+                        // PRIORITÉ 2: Collections de mouvements (si pas assez de produits)
+                        if (produitsUniques.size < 5) {
+                            const [inventorySnapshot, stockEntriesSnapshot, stockExitsSnapshot] = await Promise.all([
+                                db.collection('inventory').get(),
+                                db.collection('stockEntries').get(),
+                                db.collection('stockExits').get()
+                            ]);
+                            
+                            let movementCount = 0;
+                            
+                            [inventorySnapshot, stockEntriesSnapshot, stockExitsSnapshot].forEach(snapshot => {
+                                snapshot.forEach(doc => {
+                                    const data = doc.data();
+                                    if (data.product && data.product.trim()) {
+                                        produitsUniques.add(data.product.trim());
+                                        movementCount++;
+                                    }
+                                });
+                            });
+                            
+                            console.log(`� MOUVEMENTS: ${movementCount} produits supplémentaires depuis les mouvements`);
+                        }
                         
-                        console.log(`🔥 Firebase SUCCESS: ${inventorySnapshot.size} inventaire + ${stockEntriesSnapshot.size} entrées + ${stockExitsSnapshot.size} sorties`);
-                        console.log(`📊 Produits Firebase ajoutés: ${firebaseCount}, Total unique: ${produitsUniques.size}`);
+                        console.log(`� Firebase SUCCESS: Total ${produitsUniques.size} produits uniques chargés`);
+                        
                     } catch (error) {
                         console.error('❌ Erreur Firebase complète:', error);
                         console.log('⚠️ Erreur Firebase:', error.message);
@@ -15140,13 +15153,14 @@ Date [ESPACES] Client [ESPACES] Montant
                 // 3. Fallback direct: si pas assez de produits, essayer d'autres sources
                 console.log(`🔍 Produits trouvés avant fallback: ${produitsUniques.size}`);
                 
-                if (produitsUniques.size === 0 || produitsUniques.size < 3) {
-                    console.log('🔍 Pas assez de produits - Recherche fallback dans toutes les collections...');
+                if (produitsUniques.size === 0) {
+                    console.log('🔍 Aucun produit trouvé - Recherche fallback dans toutes les collections...');
                     
                     // Essayer de charger depuis Firebase directement
                     if (db && typeof firebase !== 'undefined') {
                         try {
-                            const allCollections = ['productions', 'inventory', 'stockEntries', 'stockExits', 'sales'];
+                            // Prioriser la collection products en fallback aussi
+                            const allCollections = ['products', 'productions', 'inventory', 'stockEntries', 'stockExits', 'sales'];
                             
                             for (const collectionName of allCollections) {
                                 console.log(`🔍 Recherche dans collection: ${collectionName}`);
@@ -15155,16 +15169,34 @@ Date [ESPACES] Client [ESPACES] Montant
                                 
                                 snapshot.forEach(doc => {
                                     const data = doc.data();
-                                    if (data.product && data.product.trim()) {
-                                        produitsUniques.add(data.product.trim());
-                                        collectionCount++;
-                                    } else if (data.produit && data.produit.trim()) {
-                                        produitsUniques.add(data.produit.trim());
-                                        collectionCount++;
+                                    
+                                    // Recherche dans différents champs selon la collection
+                                    if (collectionName === 'products') {
+                                        if (data.name && data.name.trim()) {
+                                            produitsUniques.add(data.name.trim());
+                                            collectionCount++;
+                                        } else if (data.product && data.product.trim()) {
+                                            produitsUniques.add(data.product.trim());
+                                            collectionCount++;
+                                        }
+                                    } else {
+                                        if (data.product && data.product.trim()) {
+                                            produitsUniques.add(data.product.trim());
+                                            collectionCount++;
+                                        } else if (data.produit && data.produit.trim()) {
+                                            produitsUniques.add(data.produit.trim());
+                                            collectionCount++;
+                                        }
                                     }
                                 });
                                 
                                 console.log(`📋 Collection ${collectionName}: ${collectionCount} produits trouvés (${snapshot.size} docs)`);
+                                
+                                // Si on a trouvé des produits dans 'products', on peut s'arrêter
+                                if (collectionName === 'products' && collectionCount > 0) {
+                                    console.log('✅ Produits trouvés dans la collection PRODUCTS, arrêt du fallback');
+                                    break;
+                                }
                             }
                             console.log(`🆘 Fallback Firebase: ${produitsUniques.size} produits trouvés au total`);
                         } catch (error) {
