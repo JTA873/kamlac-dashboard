@@ -10264,15 +10264,24 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                             });
                             
                             console.log('🔍 === RECHERCHE DOCUMENT SPÉCIFIQUE ===');
-                            // Rechercher le document spécifique qu'on veut supprimer
+                            // Rechercher le document spécifique qu'on veut supprimer avec la NOUVELLE MÉTHODE
                             const targetId = firstEntry.id;
-                            return db.collection('stockEntries').doc(targetId.toString()).get();
-                        }).then(docSnap => {
-                            const targetId = firstEntry.id;
-                            console.log(`🎯 Recherche document ${targetId}:`);
-                            console.log(`   Existe: ${docSnap.exists}`);
-                            if (docSnap.exists) {
-                                console.log(`   Données:`, docSnap.data());
+                            console.log(`🎯 Recherche du document Firebase contenant l'ID ${targetId}:`);
+                            
+                            let foundDoc = null;
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
+                                if (data.id === targetId) {
+                                    foundDoc = doc;
+                                    console.log(`   ✅ Trouvé dans le document Firebase: ${doc.id}`);
+                                }
+                            });
+                            
+                            if (foundDoc) {
+                                console.log(`   ✅ Document Firebase qui contient l'ID ${targetId}: ${foundDoc.id}`);
+                                console.log(`   📄 Données du document:`, foundDoc.data());
+                            } else {
+                                console.log(`   ❌ Aucun document Firebase ne contient l'ID ${targetId}`);
                             }
                             
                             console.log('✅ === DIAGNOSTIC TERMINÉ ===');
