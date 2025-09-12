@@ -4407,14 +4407,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     <td>${movement.totalCost.toLocaleString()} CFA</td>
                     <td style="color: #666; font-size: 0.9rem;">${movement.reference}</td>
                     <td>
-                        <button onclick="editMovement('${movement.source}', '${movement.id}')" 
-                                class="btn-icon" title="Modifier" style="font-size: 0.8rem; margin-right: 5px;">
-                            ✏️
-                        </button>
-                        <button onclick="deleteMovement('${movement.source}', '${movement.id}')" 
-                                class="btn-icon" title="Supprimer" style="font-size: 0.8rem;">
-                            🗑️
-                        </button>
+                        ${movement.source === 'sales' ? 
+                            '<span style="color: #666; font-size: 0.85rem; font-style: italic;">Géré depuis Ventes</span>' 
+                            : 
+                            `<button onclick="editMovement('${movement.source}', '${movement.id}')" 
+                                    class="btn-icon" title="Modifier" style="font-size: 0.8rem; margin-right: 5px;">
+                                ✏️
+                            </button>
+                            <button onclick="deleteMovement('${movement.source}', '${movement.id}')" 
+                                    class="btn-icon" title="Supprimer" style="font-size: 0.8rem;">
+                                🗑️
+                            </button>`
+                        }
                     </td>
                 `;
                 
@@ -4623,14 +4627,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     <td>${movement.totalCost.toLocaleString()} CFA</td>
                     <td style="color: #666; font-size: 0.9rem;">${movement.reference}</td>
                     <td>
-                        <button onclick="editMovement('${movement.source}', '${movement.id}')" 
-                                class="btn-icon" title="Modifier" style="font-size: 0.8rem; margin-right: 5px;">
-                            ✏️
-                        </button>
-                        <button onclick="deleteMovement('${movement.source}', '${movement.id}')" 
-                                class="btn-icon" title="Supprimer" style="font-size: 0.8rem;">
-                            🗑️
-                        </button>
+                        ${movement.source === 'sales' ? 
+                            '<span style="color: #666; font-size: 0.85rem; font-style: italic;">Géré depuis Ventes</span>' 
+                            : 
+                            `<button onclick="editMovement('${movement.source}', '${movement.id}')" 
+                                    class="btn-icon" title="Modifier" style="font-size: 0.8rem; margin-right: 5px;">
+                                ✏️
+                            </button>
+                            <button onclick="deleteMovement('${movement.source}', '${movement.id}')" 
+                                    class="btn-icon" title="Supprimer" style="font-size: 0.8rem;">
+                                🗑️
+                            </button>`
+                        }
                     </td>
                 `;
                 
@@ -4858,6 +4866,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         // FONCTIONS POUR MODIFIER ET SUPPRIMER LES MOUVEMENTS
         function editMovement(source, id) {
+            // 🚫 Empêcher la modification des ventes depuis le module stocks
+            if (source === 'sales') {
+                alert('❌ Les ventes ne peuvent être modifiées que depuis le module Commercial !\n\nPour modifier cette vente, allez dans :\nModule Commercial > Récapitulatif des ventes');
+                return;
+            }
+            
             console.log(`✏️ Modification du mouvement ${source}:${id}`);
             
             let movement = null;
@@ -5238,6 +5252,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         function deleteMovement(source, id) {
+            // 🚫 Empêcher la suppression des ventes depuis le module stocks
+            if (source === 'sales') {
+                alert('❌ Les ventes ne peuvent être supprimées que depuis le module Commercial !\n\nPour supprimer cette vente, allez dans :\nModule Commercial > Récapitulatif des ventes');
+                return;
+            }
+            
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce mouvement ?');
             if (!confirmed) return;
             
