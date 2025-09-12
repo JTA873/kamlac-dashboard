@@ -847,7 +847,6 @@
                 console.log('✅ Données initiales chargées depuis Firebase');
             } catch (error) {
                 console.error('❌ Erreur chargement initial:', error);
-                showAlert('❌ Erreur lors du chargement des données', 'error');
             }
         }
 
@@ -942,7 +941,6 @@
             } catch (error) {
                 console.error('❌ Erreur chargement produits:', error);
                 selectElement.innerHTML = '<option value="">❌ Erreur de chargement</option>';
-                showAlert('❌ Erreur lors du chargement des produits', 'error');
             }
         }
 
@@ -994,7 +992,6 @@
             let produitFinal = '';
             if (selectProduit.value === 'NOUVEAU') {
                 if (!inputProduit.value.trim()) {
-                    showAlert('❌ Veuillez saisir le nom du nouveau produit', 'error');
                     inputProduit.focus();
                     return;
                 }
@@ -1002,32 +999,27 @@
             } else if (selectProduit.value) {
                 produitFinal = selectProduit.value;
             } else {
-                showAlert('❌ Veuillez sélectionner un produit', 'error');
                 selectProduit.focus();
                 return;
             }
             
             if (!quantite.value || quantite.value <= 0) {
-                showAlert('❌ Veuillez saisir une quantité valide', 'error');
                 quantite.focus();
                 return;
             }
             
             if (!date.value) {
-                showAlert('❌ Veuillez sélectionner une date', 'error');
                 date.focus();
                 return;
             }
             
             if (!agent.value.trim()) {
-                showAlert('❌ Veuillez saisir le nom de l\'agent', 'error');
                 agent.focus();
                 return;
             }
             
             // Vérifier la connexion Firebase
             if (!isOnline || !isFirebaseReady) {
-                showAlert('❌ Connexion Firebase requise pour enregistrer les opérations', 'error');
                 return;
             }
             
@@ -1103,8 +1095,6 @@
                 
             } catch (error) {
                 console.error('❌ ERREUR enregistrement Firebase:', error);
-                showAlert('❌ Erreur lors de l\'enregistrement sur Firebase', 'error');
-                showToast('❌ Échec de l\'enregistrement - Vérifiez la connexion Firebase', 'error', 8000);
             }
         }
 
