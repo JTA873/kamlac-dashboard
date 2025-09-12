@@ -14787,6 +14787,8 @@ Date [ESPACES] Client [ESPACES] Montant
         
         function integrerDansStock(production, isEntry) {
             try {
+                console.log(`📦 INTÉGRATION STOCK: ${production.typeLabel} - ${production.produit} (${production.quantite}) - isEntry: ${isEntry}`);
+                
                 // Créer une entrée standardisée pour le système de stock principal
                 const stockEntry = {
                     id: `prod_${production.id}`,
@@ -14803,10 +14805,14 @@ Date [ESPACES] Client [ESPACES] Montant
                     timestamp: production.timestamp
                 };
                 
+                console.log(`📋 Entrée stock créée:`, stockEntry);
+                
                 // S'assurer que le produit existe dans l'inventaire
                 ajouterProduitSiNouveauDansInventaire(production.produit);
                 
                 if (isEntry) {
+                    console.log(`📥 TRAITEMENT COMME ENTRÉE DE STOCK`);
+                    
                     // Vérifier si l'entrée existe déjà avec une vérification plus stricte
                     let stockEntriesData = JSON.parse(localStorage.getItem('stockEntries') || '[]');
                     
@@ -14823,7 +14829,8 @@ Date [ESPACES] Client [ESPACES] Montant
                     if (!existingEntry) {
                         stockEntriesData.push(stockEntry);
                         localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
-                        console.log('✅ Mouvement ajouté aux ENTRÉES de stock:', stockEntry);
+                        console.log('✅ RÉCEPTION ajoutée aux ENTRÉES de stock:', stockEntry);
+                        console.log(`📊 Total entrées dans localStorage: ${stockEntriesData.length}`);
                         
                         // IMPORTANT: Mettre à jour les variables globales immédiatement
                         window.stockEntriesData = stockEntriesData;
@@ -14831,6 +14838,8 @@ Date [ESPACES] Client [ESPACES] Montant
                         console.log('⚠️ Entrée déjà existante, ignorée:', existingEntry.id || 'ID manquant');
                     }
                 } else {
+                    console.log(`📤 TRAITEMENT COMME SORTIE DE STOCK`);
+                    
                     // Vérifier si la sortie existe déjà avec une vérification plus stricte
                     let stockExitsData = JSON.parse(localStorage.getItem('stockExits') || '[]');
                     const exitEntry = {
@@ -14853,7 +14862,8 @@ Date [ESPACES] Client [ESPACES] Montant
                     if (!existingExit) {
                         stockExitsData.push(exitEntry);
                         localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
-                        console.log('✅ Mouvement ajouté aux SORTIES de stock:', exitEntry);
+                        console.log('✅ SORTIE ajoutée aux SORTIES de stock:', exitEntry);
+                        console.log(`📊 Total sorties dans localStorage: ${stockExitsData.length}`);
                         
                         // IMPORTANT: Mettre à jour les variables globales immédiatement
                         window.stockExitsData = stockExitsData;
@@ -14863,6 +14873,26 @@ Date [ESPACES] Client [ESPACES] Montant
                 }
                 
                 console.log('📦 Mouvement intégré avec succès');
+                
+                // NOUVEAU: Mettre à jour immédiatement les affichages et KPI
+                setTimeout(() => {
+                    if (typeof updateAllMovementsTable === 'function') {
+                        updateAllMovementsTable();
+                    }
+                    if (typeof updateEntriesMovementsTable === 'function') {
+                        updateEntriesMovementsTable();
+                    }
+                    if (typeof updateExitsMovementsTable === 'function') {
+                        updateExitsMovementsTable();
+                    }
+                    if (typeof updateMovementKPIs === 'function') {
+                        updateMovementKPIs();
+                    }
+                    if (typeof updateStockDashboard === 'function') {
+                        updateStockDashboard();
+                    }
+                    console.log('🔄 Affichages et KPI mis à jour après intégration');
+                }, 100);
                 
             } catch (error) {
                 console.error('❌ Erreur intégration stock:', error);
