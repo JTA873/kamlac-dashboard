@@ -333,87 +333,51 @@
 
         // Test de connexion Firebase
         async function testFirebaseConnection() {
+            console.log('🔄 Test de connexion Firebase...');
+            
+            // Démarrer directement en mode offline par défaut
+            isFirebaseReady = false;
+            isOnline = false;
+            
             try {
-                // Test simple avec timeout
+                // Test rapide avec timeout très court
                 const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Connection timeout')), 5000);
+                    setTimeout(() => reject(new Error('Connection timeout')), 2000);
                 });
                 
                 const testPromise = getDocs(query(collection(db, 'test'), limit(1)));
                 
                 await Promise.race([testPromise, timeoutPromise]);
                 
+                // Si on arrive ici, Firebase fonctionne
                 isFirebaseReady = true;
                 isOnline = true;
                 console.log('✅ Firebase connecté et prêt');
-                showAlert('✅ Connexion Firebase réussie', 'success');
+                showAlert('✅ Connexion Firebase réussie - Synchronisation activée', 'success');
+                
             } catch (error) {
-                console.warn('⚠️ Firebase en mode offline:', error.message);
+                console.log('📴 Firebase indisponible - Mode offline permanent');
                 isFirebaseReady = false;
                 isOnline = false;
                 
-                // Activer explicitement le mode offline
+                // Forcer le mode offline
                 try {
                     await disableNetwork(db);
-                    console.log('📴 Mode offline activé explicitement');
                 } catch (offlineError) {
-                    console.log('📴 Mode offline déjà actif ou erreur:', offlineError.message);
+                    // Ignorer les erreurs de désactivation
                 }
                 
-                // Message adapté selon le type d'erreur
-                if (error.message.includes('net::ERR_BLOCKED_BY_CLIENT') || 
-                    error.message.includes('blocked') || 
-                    error.message.includes('timeout')) {
-                    showAlert('🛡️ Connexion bloquée par navigateur - Mode offline activé', 'warning');
-                } else {
-                    showAlert('⚠️ Mode offline - Données sauvées localement', 'warning');
-                }
-            }
-        }
-
-        // Tenter de reconnecter périodiquement
-        function attemptReconnection() {
-            if (!isOnline) {
-                setTimeout(async () => {
-                    try {
-                        console.log('🔄 Tentative de reconnexion Firebase...');
-                        await enableNetwork(db);
-                        
-                        // Test de connexion avec timeout réduit
-                        const timeoutPromise = new Promise((_, reject) => {
-                            setTimeout(() => reject(new Error('Reconnection timeout')), 3000);
-                        });
-                        
-                        const testPromise = getDocs(query(collection(db, 'test'), limit(1)));
-                        await Promise.race([testPromise, timeoutPromise]);
-                        
-                        isFirebaseReady = true;
-                        isOnline = true;
-                        console.log('✅ Reconnexion Firebase réussie');
-                        showAlert('🔄 Reconnexion Firebase réussie', 'success');
-                    } catch (error) {
-                        console.log('🔄 Tentative de reconnexion échouée:', error.message);
-                        isFirebaseReady = false;
-                        isOnline = false;
-                        
-                        // Réactiver le mode offline et réessayer
-                        try {
-                            await disableNetwork(db);
-                        } catch (disableError) {
-                            console.log('Erreur désactivation réseau:', disableError.message);
-                        }
-                        
-                        attemptReconnection(); // Réessayer
-                    }
-                }, 30000); // Réessayer toutes les 30 secondes
+                showAlert('� Mode offline - Toutes les données sont sauvées localement', 'warning');
             }
         }
 
         // Initialiser la connexion
-        testFirebaseConnection().then(() => {
-            if (!isOnline) {
-                attemptReconnection();
-            }
+        console.log('🚀 Initialisation Firebase...');
+        testFirebaseConnection().catch(error => {
+            console.log('🚨 Erreur initialisation Firebase, mode offline forcé');
+            isFirebaseReady = false;
+            isOnline = false;
+            showAlert('📴 Mode offline - Application prête', 'warning');
         });
 
         // Exposer les fonctions Firebase globalement
@@ -490,18 +454,25 @@
             selectElement.innerHTML = '<option value="">🔄 Chargement...</option>';
             
             try {
-                // Charger depuis Firebase products
-                const productsSnapshot = await getDocs(collection(db, 'products'));
                 const products = new Set();
                 
-                productsSnapshot.forEach(doc => {
-                    const productData = doc.data();
-                    if (productData.name && productData.name.trim()) {
-                        products.add(productData.name.trim());
+                // Charger depuis Firebase SEULEMENT si connecté
+                if (isOnline && isFirebaseReady) {
+                    try {
+                        const productsSnapshot = await getDocs(collection(db, 'products'));
+                        productsSnapshot.forEach(doc => {
+                            const productData = doc.data();
+                            if (productData.name && productData.name.trim()) {
+                                products.add(productData.name.trim());
+                            }
+                        });
+                        console.log('✅ Produits chargés depuis Firebase');
+                    } catch (firebaseError) {
+                        console.log('❌ Erreur chargement Firebase produits:', firebaseError.message);
                     }
-                });
+                }
                 
-                // Ajouter depuis les ventes locales
+                // Ajouter depuis les données locales
                 if (window.salesData && window.salesData.length > 0) {
                     window.salesData.forEach(sale => {
                         if (sale.product && sale.product.trim()) {
@@ -510,7 +481,6 @@
                     });
                 }
                 
-                // Ajouter depuis les entrées/sorties locales
                 if (window.stockEntriesData && window.stockEntriesData.length > 0) {
                     window.stockEntriesData.forEach(entry => {
                         if (entry.product && entry.product.trim()) {
@@ -526,6 +496,14 @@
                         }
                     });
                 }
+                
+                // Ajouter depuis les productions locales
+                const productions = JSON.parse(localStorage.getItem('productions') || '[]');
+                productions.forEach(prod => {
+                    if (prod.produit && prod.produit.trim()) {
+                        products.add(prod.produit.trim());
+                    }
+                });
                 
                 // Remplir le select
                 selectElement.innerHTML = '<option value="">🔍 Sélectionner un produit existant</option>';
@@ -587,6 +565,8 @@
 
         // Enregistrer une production
         async function enregistrerProduction() {
+            console.log('🔄 Début enregistrement production...');
+            
             const selectProduit = document.getElementById('prodProduitSelect');
             const inputProduit = document.getElementById('prodProduit');
             const quantite = document.getElementById('prodQuantite');
@@ -642,46 +622,47 @@
                 timestamp: new Date().toISOString()
             };
             
-            console.log('📦 Enregistrement production:', production);
+            console.log('📦 Données production:', production);
             
             try {
-                // Sauvegarder en localStorage
+                // TOUJOURS sauvegarder en localStorage EN PREMIER
                 let productions = JSON.parse(localStorage.getItem('productions') || '[]');
                 productions.push(production);
                 localStorage.setItem('productions', JSON.stringify(productions));
+                console.log('✅ Production sauvée en localStorage');
                 
-                // Sauvegarder sur Firebase (si en ligne)
-                if (window.isFirebaseReady && window.isFirebaseReady() && window.isOnline && window.isOnline()) {
-                    try {
-                        await addDoc(collection(db, 'productions'), production);
-                        console.log('✅ Production sauvegardée sur Firebase');
-                        showAlert(`✅ Opération enregistrée et synchronisée pour ${produitFinal}`, 'success');
-                    } catch (firebaseError) {
-                        console.error('❌ Erreur sauvegarde Firebase:', firebaseError);
-                        showAlert('⚠️ Enregistrement local réussi, synchronisation échouée', 'warning');
-                    }
-                } else {
-                    console.log('📴 Mode offline - sauvegarde locale uniquement');
-                    showAlert(`✅ Opération enregistrée localement pour ${produitFinal} (Mode offline)`, 'success');
-                }
-                
-                // Intégrer dans les stocks
+                // Intégrer dans les stocks IMMÉDIATEMENT
                 const isEntry = production.type.includes('reception');
                 await integrerDansStock(production, isEntry);
+                console.log('✅ Stock mis à jour');
                 
-                // Réinitialiser le formulaire
+                // Réinitialiser le formulaire IMMÉDIATEMENT
                 resetForm();
+                console.log('✅ Formulaire réinitialisé');
                 
-                // Ne pas afficher de message de succès ici car c'est déjà fait au-dessus
+                // Tentative de sauvegarde Firebase (sans bloquer)
+                if (isOnline && isFirebaseReady) {
+                    try {
+                        await addDoc(collection(db, 'productions'), production);
+                        console.log('✅ Production synchronisée sur Firebase');
+                        showAlert(`✅ Opération enregistrée et synchronisée: ${produitFinal}`, 'success');
+                    } catch (firebaseError) {
+                        console.log('❌ Échec synchronisation Firebase:', firebaseError.message);
+                        showAlert(`✅ Opération enregistrée localement: ${produitFinal} (Sync échouée)`, 'success');
+                    }
+                } else {
+                    console.log('📴 Mode offline - pas de tentative Firebase');
+                    showAlert(`✅ Opération enregistrée: ${produitFinal} (Mode offline)`, 'success');
+                }
                 
-                // Recharger les données
+                // Recharger la liste des produits
                 setTimeout(() => {
                     chargerProduitsDisponibles();
-                }, 1000);
+                }, 500);
                 
             } catch (error) {
-                console.error('❌ Erreur enregistrement production:', error);
-                showAlert('❌ Erreur lors de l\'enregistrement', 'error');
+                console.error('❌ ERREUR CRITIQUE enregistrement:', error);
+                showAlert('❌ Erreur lors de l\'enregistrement de l\'opération', 'error');
             }
         }
 
@@ -709,7 +690,6 @@
                 if (isEntry) {
                     console.log('📥 TRAITEMENT COMME ENTRÉE DE STOCK');
                     
-                    // Ajouter aux entrées
                     const stockEntryData = {
                         ...stockData,
                         type: mapProductionTypeToStockType(production.type, true),
@@ -718,27 +698,26 @@
                         totalCost: 0
                     };
                     
+                    // Sauvegarder localement
                     let stockEntries = JSON.parse(localStorage.getItem('stockEntries') || '[]');
                     stockEntries.push(stockEntryData);
                     localStorage.setItem('stockEntries', JSON.stringify(stockEntries));
                     window.stockEntriesData = stockEntries;
+                    console.log('✅ Entrée stock sauvée localement');
                     
-                    // Sauvegarder sur Firebase (si en ligne)
-                    if (window.isFirebaseReady && window.isFirebaseReady() && window.isOnline && window.isOnline()) {
+                    // Sauvegarder sur Firebase (si connecté)
+                    if (isOnline && isFirebaseReady) {
                         try {
                             await addDoc(collection(db, 'stockEntries'), stockEntryData);
-                            console.log('✅ Entrée stock sauvegardée sur Firebase');
+                            console.log('✅ Entrée stock synchronisée Firebase');
                         } catch (firebaseError) {
-                            console.error('❌ Erreur sauvegarde Firebase stockEntries:', firebaseError);
+                            console.log('❌ Échec sync Firebase stockEntries:', firebaseError.message);
                         }
-                    } else {
-                        console.log('📴 Mode offline - stockEntries sauvé localement uniquement');
                     }
                     
                 } else {
                     console.log('📤 TRAITEMENT COMME SORTIE DE STOCK');
                     
-                    // Ajouter aux sorties
                     const stockExitData = {
                         ...stockData,
                         type: mapProductionTypeToStockType(production.type, false),
@@ -747,31 +726,31 @@
                         totalCost: 0
                     };
                     
+                    // Sauvegarder localement
                     let stockExits = JSON.parse(localStorage.getItem('stockExits') || '[]');
                     stockExits.push(stockExitData);
                     localStorage.setItem('stockExits', JSON.stringify(stockExits));
                     window.stockExitsData = stockExits;
+                    console.log('✅ Sortie stock sauvée localement');
                     
-                    // Sauvegarder sur Firebase (si en ligne)
-                    if (window.isFirebaseReady && window.isFirebaseReady() && window.isOnline && window.isOnline()) {
+                    // Sauvegarder sur Firebase (si connecté)
+                    if (isOnline && isFirebaseReady) {
                         try {
                             await addDoc(collection(db, 'stockExits'), stockExitData);
-                            console.log('✅ Sortie stock sauvegardée sur Firebase');
+                            console.log('✅ Sortie stock synchronisée Firebase');
                         } catch (firebaseError) {
-                            console.error('❌ Erreur sauvegarde Firebase stockExits:', firebaseError);
+                            console.log('❌ Échec sync Firebase stockExits:', firebaseError.message);
                         }
-                    } else {
-                        console.log('📴 Mode offline - stockExits sauvé localement uniquement');
                     }
                 }
                 
                 // Recalculer les niveaux de stock
                 calculateStockLevels();
-                
                 console.log('✅ Intégration stock terminée');
                 
             } catch (error) {
                 console.error('❌ Erreur intégration stock:', error);
+                throw error; // Propager l'erreur
             }
         }
 
