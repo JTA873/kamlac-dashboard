@@ -5143,7 +5143,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }, 100);
         }
         
-        function saveMovementEdit(source, id) {
+        async function saveMovementEdit(source, id) {
             const modal = document.querySelector('.modal-overlay');
             if (!modal) return;
             
@@ -5211,17 +5211,17 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             if (isFirebaseInitialized) {
                 try {
                     if (source === 'sales') {
-                        db.collection('sales').doc(id.toString()).set({
+                        await db.collection('sales').doc(id.toString()).set({
                             ...movement,
                             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                         });
                     } else if (source === 'entries') {
-                        db.collection('stockEntries').doc(id.toString()).set({
+                        await db.collection('stockEntries').doc(id.toString()).set({
                             ...movement,
                             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                         });
                     } else if (source === 'exits') {
-                        db.collection('stockExits').doc(id.toString()).set({
+                        await db.collection('stockExits').doc(id.toString()).set({
                             ...movement,
                             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                         });
@@ -5253,7 +5253,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             alert('✅ Mouvement modifié avec succès !');
         }
         
-        function deleteMovement(source, id) {
+        async function deleteMovement(source, id) {
             // 🚫 Empêcher la suppression des ventes depuis le module stocks
             if (source === 'sales') {
                 alert('❌ Les ventes ne peuvent être supprimées que depuis le module Commercial !\n\nPour supprimer cette vente, allez dans :\nModule Commercial > Récapitulatif des ventes');
@@ -5269,7 +5269,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 if (isFirebaseInitialized) {
                     try {
-                        db.collection('stockEntries').doc(id.toString()).delete();
+                        await db.collection('stockEntries').doc(id.toString()).delete();
                     } catch (error) {
                         // Pas de console.error comme dans le module commercial
                     }
@@ -5286,7 +5286,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 if (isFirebaseInitialized) {
                     try {
-                        db.collection('stockExits').doc(id.toString()).delete();
+                        await db.collection('stockExits').doc(id.toString()).delete();
                     } catch (error) {
                         // Pas de console.error comme dans le module commercial
                     }
@@ -5309,7 +5309,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             editMovement('entries', id);
         }
         
-        function deleteStockEntry(id) {
+        async function deleteStockEntry(id) {
             if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette entrée ?')) return;
             
             // Logique copiée du module commercial - simple et efficace
@@ -5318,7 +5318,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             if (isFirebaseInitialized) {
                 try {
-                    db.collection('stockEntries').doc(id.toString()).delete();
+                    await db.collection('stockEntries').doc(id.toString()).delete();
                 } catch (error) {
                     // Pas de console.error comme dans le module commercial
                 }
@@ -5348,7 +5348,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
         }
         
-        function deleteStockExit(id, source) {
+        async function deleteStockExit(id, source) {
             // 🚫 Empêcher la suppression des ventes depuis le module stocks
             if (source === 'sales') {
                 alert('❌ Les ventes ne peuvent être supprimées que depuis le module Commercial !\n\nPour supprimer cette vente, allez dans :\nModule Commercial > Récapitulatif des ventes');
@@ -5363,7 +5363,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             if (isFirebaseInitialized) {
                 try {
-                    db.collection('stockExits').doc(id.toString()).delete();
+                    await db.collection('stockExits').doc(id.toString()).delete();
                 } catch (error) {
                     // Pas de console.error comme dans le module commercial
                 }
@@ -7789,7 +7789,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             document.getElementById('entryTotalCost').value = total;
         }
         
-        function saveStockEntry() {
+        async function saveStockEntry() {
             const date = document.getElementById('entryDate').value;
             const type = document.getElementById('entryType').value;
             const reference = document.getElementById('entryReference').value;
@@ -7832,7 +7832,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Sync Firebase - logique copiée du module commercial
             if (isFirebaseInitialized) {
                 try {
-                    db.collection('stockEntries').doc(entry.id.toString()).set({
+                    await db.collection('stockEntries').doc(entry.id.toString()).set({
                         ...entry,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
@@ -8091,7 +8091,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
         }
         
-        function saveStockExit() {
+        async function saveStockExit() {
             const date = document.getElementById('exitDate').value;
             const type = document.getElementById('exitType').value;
             const reference = document.getElementById('exitReference').value;
@@ -8143,7 +8143,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Sync Firebase - logique copiée du module commercial
             if (isFirebaseInitialized) {
                 try {
-                    db.collection('stockExits').doc(exit.id.toString()).set({
+                    await db.collection('stockExits').doc(exit.id.toString()).set({
                         ...exit,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
