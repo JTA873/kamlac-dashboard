@@ -3525,6 +3525,14 @@
                                     💡 Analyse basée sur les ventes existantes
                                 </small>
                             </div>
+                            
+                            <div class="form-group">
+                                <label>🔥 Test Firebase</label>
+                                <button class="btn btn-warning" onclick="testFirebaseConnection()">🔍 Tester Firebase</button>
+                                <small style="color: #ffc107; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    💡 Diagnostiquer la connexion Firebase
+                                </small>
+                            </div>
 
                             <div class="form-group">
                                 <label>Import en Masse - Corrections de Stock</label>
@@ -9638,7 +9646,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         
         // Configuration Firebase
         const firebaseConfig = {
-            apiKey: "AIzaSyBuR-B_bOyMtN1xnSQCCsxfJWydzg9mvs8",
+            apiKey: "AIzaSyBuR-B_bOyMtN1xnSQCCsxfJWydzg9mvs8Q",
             authDomain: "kamlac-dashboard.firebaseapp.com",
             projectId: "kamlac-dashboard",
             storageBucket: "kamlac-dashboard.appspot.com",
@@ -10064,6 +10072,73 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 updateCloudStatus('offline', '❌ Offline');
                 isFirebaseInitialized = false;
                 db = null;
+            }
+        }
+
+        // 🔥 FONCTION DE TEST FIREBASE
+        async function testFirebaseConnection() {
+            console.log('🔍 === TEST FIREBASE DÉMARRÉ ===');
+            
+            try {
+                // Test 1: Vérifier que Firebase est chargé
+                console.log('1️⃣ Test de chargement de Firebase...');
+                if (typeof firebase === 'undefined') {
+                    throw new Error('❌ La bibliothèque Firebase n\'est pas chargée');
+                }
+                console.log('✅ Firebase disponible, version:', firebase.SDK_VERSION);
+                
+                // Test 2: Vérifier la configuration
+                console.log('2️⃣ Test de la configuration...');
+                console.log('🔧 Configuration Firebase:', JSON.stringify(firebaseConfig, null, 2));
+                
+                // Test 3: État de l'initialisation
+                console.log('3️⃣ État d\'initialisation...');
+                console.log(`🔍 isFirebaseInitialized: ${isFirebaseInitialized}`);
+                console.log(`🔍 db disponible: ${!!db}`);
+                console.log(`🔍 isFirebaseReady(): ${isFirebaseReady()}`);
+                
+                // Test 4: Tentative de réinitialisation si nécessaire
+                if (!isFirebaseInitialized || !db) {
+                    console.log('4️⃣ Tentative de réinitialisation...');
+                    await initializeFirebase();
+                }
+                
+                // Test 5: Test de connexion basique
+                console.log('5️⃣ Test de connexion basique...');
+                if (db) {
+                    const testDoc = await db.collection('test').limit(1).get();
+                    console.log('✅ Connexion Firestore OK, taille:', testDoc.size);
+                } else {
+                    throw new Error('❌ Base de données indisponible');
+                }
+                
+                // Test 6: Test d'écriture/lecture
+                console.log('6️⃣ Test d\'écriture/lecture...');
+                const testId = `test_${Date.now()}`;
+                await db.collection('test_connection').doc(testId).set({
+                    message: 'Test de connexion',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log('✅ Écriture OK');
+                
+                const readTest = await db.collection('test_connection').doc(testId).get();
+                if (readTest.exists) {
+                    console.log('✅ Lecture OK:', readTest.data());
+                    // Nettoyer le test
+                    await db.collection('test_connection').doc(testId).delete();
+                    console.log('✅ Suppression OK');
+                } else {
+                    throw new Error('❌ Document de test non trouvé');
+                }
+                
+                console.log('🎉 === TEST FIREBASE RÉUSSI ===');
+                showAlert('🎉 Firebase fonctionne parfaitement !', 'success');
+                
+            } catch (error) {
+                console.error('❌ === TEST FIREBASE ÉCHOUÉ ===');
+                console.error('❌ Erreur:', error.message);
+                console.error('❌ Stack:', error.stack);
+                showAlert(`❌ Test Firebase échoué: ${error.message}`, 'error');
             }
         }
 
