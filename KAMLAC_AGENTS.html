@@ -456,9 +456,10 @@
             try {
                 const products = new Set();
                 
-                // Charger depuis Firebase SEULEMENT si connecté
+                // Charger depuis Firebase UNIQUEMENT
                 if (isOnline && isFirebaseReady) {
                     try {
+                        // Charger depuis la collection products
                         const productsSnapshot = await getDocs(collection(db, 'products'));
                         productsSnapshot.forEach(doc => {
                             const productData = doc.data();
@@ -466,44 +467,46 @@
                                 products.add(productData.name.trim());
                             }
                         });
+                        
+                        // Charger depuis les productions existantes
+                        const productionsSnapshot = await getDocs(collection(db, 'productions'));
+                        productionsSnapshot.forEach(doc => {
+                            const productionData = doc.data();
+                            if (productionData.produit && productionData.produit.trim()) {
+                                products.add(productionData.produit.trim());
+                            }
+                        });
+                        
+                        // Charger depuis stockEntries
+                        const stockEntriesSnapshot = await getDocs(collection(db, 'stockEntries'));
+                        stockEntriesSnapshot.forEach(doc => {
+                            const stockData = doc.data();
+                            if (stockData.product && stockData.product.trim()) {
+                                products.add(stockData.product.trim());
+                            }
+                        });
+                        
+                        // Charger depuis stockExits
+                        const stockExitsSnapshot = await getDocs(collection(db, 'stockExits'));
+                        stockExitsSnapshot.forEach(doc => {
+                            const stockData = doc.data();
+                            if (stockData.product && stockData.product.trim()) {
+                                products.add(stockData.product.trim());
+                            }
+                        });
+                        
                         console.log('✅ Produits chargés depuis Firebase');
                     } catch (firebaseError) {
                         console.log('❌ Erreur chargement Firebase produits:', firebaseError.message);
+                        selectElement.innerHTML = '<option value="">❌ Erreur connexion Firebase</option>';
+                        showAlert('❌ Impossible de charger les produits - Vérifiez la connexion Firebase', 'error');
+                        return;
                     }
+                } else {
+                    selectElement.innerHTML = '<option value="">❌ Connexion Firebase requise</option>';
+                    showAlert('❌ Connexion Firebase requise pour charger les produits', 'error');
+                    return;
                 }
-                
-                // Ajouter depuis les données locales
-                if (window.salesData && window.salesData.length > 0) {
-                    window.salesData.forEach(sale => {
-                        if (sale.product && sale.product.trim()) {
-                            products.add(sale.product.trim());
-                        }
-                    });
-                }
-                
-                if (window.stockEntriesData && window.stockEntriesData.length > 0) {
-                    window.stockEntriesData.forEach(entry => {
-                        if (entry.product && entry.product.trim()) {
-                            products.add(entry.product.trim());
-                        }
-                    });
-                }
-                
-                if (window.stockExitsData && window.stockExitsData.length > 0) {
-                    window.stockExitsData.forEach(exit => {
-                        if (exit.product && exit.product.trim()) {
-                            products.add(exit.product.trim());
-                        }
-                    });
-                }
-                
-                // Ajouter depuis les productions locales
-                const productions = JSON.parse(localStorage.getItem('productions') || '[]');
-                productions.forEach(prod => {
-                    if (prod.produit && prod.produit.trim()) {
-                        products.add(prod.produit.trim());
-                    }
-                });
                 
                 // Remplir le select
                 selectElement.innerHTML = '<option value="">🔍 Sélectionner un produit existant</option>';
@@ -610,6 +613,12 @@
                 return;
             }
             
+            // Vérifier la connexion Firebase
+            if (!isOnline || !isFirebaseReady) {
+                showAlert('❌ Connexion Firebase requise pour enregistrer les opérations', 'error');
+                return;
+            }
+            
             // Créer l'objet production
             const production = {
                 id: 'prod_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -625,35 +634,20 @@
             console.log('📦 Données production:', production);
             
             try {
-                // TOUJOURS sauvegarder en localStorage EN PREMIER
-                let productions = JSON.parse(localStorage.getItem('productions') || '[]');
-                productions.push(production);
-                localStorage.setItem('productions', JSON.stringify(productions));
-                console.log('✅ Production sauvée en localStorage');
+                // Sauvegarder sur Firebase UNIQUEMENT
+                await addDoc(collection(db, 'productions'), production);
+                console.log('✅ Production sauvée sur Firebase');
                 
-                // Intégrer dans les stocks IMMÉDIATEMENT
+                // Intégrer dans les stocks
                 const isEntry = production.type.includes('reception');
                 await integrerDansStock(production, isEntry);
                 console.log('✅ Stock mis à jour');
                 
-                // Réinitialiser le formulaire IMMÉDIATEMENT
+                // Réinitialiser le formulaire
                 resetForm();
                 console.log('✅ Formulaire réinitialisé');
                 
-                // Tentative de sauvegarde Firebase (sans bloquer)
-                if (isOnline && isFirebaseReady) {
-                    try {
-                        await addDoc(collection(db, 'productions'), production);
-                        console.log('✅ Production synchronisée sur Firebase');
-                        showAlert(`✅ Opération enregistrée et synchronisée: ${produitFinal}`, 'success');
-                    } catch (firebaseError) {
-                        console.log('❌ Échec synchronisation Firebase:', firebaseError.message);
-                        showAlert(`✅ Opération enregistrée localement: ${produitFinal} (Sync échouée)`, 'success');
-                    }
-                } else {
-                    console.log('📴 Mode offline - pas de tentative Firebase');
-                    showAlert(`✅ Opération enregistrée: ${produitFinal} (Mode offline)`, 'success');
-                }
+                showAlert(`✅ Opération enregistrée et synchronisée: ${produitFinal}`, 'success');
                 
                 // Recharger la liste des produits
                 setTimeout(() => {
@@ -661,8 +655,8 @@
                 }, 500);
                 
             } catch (error) {
-                console.error('❌ ERREUR CRITIQUE enregistrement:', error);
-                showAlert('❌ Erreur lors de l\'enregistrement de l\'opération', 'error');
+                console.error('❌ ERREUR enregistrement Firebase:', error);
+                showAlert('❌ Erreur lors de l\'enregistrement sur Firebase', 'error');
             }
         }
 
@@ -698,22 +692,9 @@
                         totalCost: 0
                     };
                     
-                    // Sauvegarder localement
-                    let stockEntries = JSON.parse(localStorage.getItem('stockEntries') || '[]');
-                    stockEntries.push(stockEntryData);
-                    localStorage.setItem('stockEntries', JSON.stringify(stockEntries));
-                    window.stockEntriesData = stockEntries;
-                    console.log('✅ Entrée stock sauvée localement');
-                    
-                    // Sauvegarder sur Firebase (si connecté)
-                    if (isOnline && isFirebaseReady) {
-                        try {
-                            await addDoc(collection(db, 'stockEntries'), stockEntryData);
-                            console.log('✅ Entrée stock synchronisée Firebase');
-                        } catch (firebaseError) {
-                            console.log('❌ Échec sync Firebase stockEntries:', firebaseError.message);
-                        }
-                    }
+                    // Sauvegarder sur Firebase UNIQUEMENT
+                    await addDoc(collection(db, 'stockEntries'), stockEntryData);
+                    console.log('✅ Entrée stock sauvée sur Firebase');
                     
                 } else {
                     console.log('📤 TRAITEMENT COMME SORTIE DE STOCK');
@@ -726,26 +707,13 @@
                         totalCost: 0
                     };
                     
-                    // Sauvegarder localement
-                    let stockExits = JSON.parse(localStorage.getItem('stockExits') || '[]');
-                    stockExits.push(stockExitData);
-                    localStorage.setItem('stockExits', JSON.stringify(stockExits));
-                    window.stockExitsData = stockExits;
-                    console.log('✅ Sortie stock sauvée localement');
-                    
-                    // Sauvegarder sur Firebase (si connecté)
-                    if (isOnline && isFirebaseReady) {
-                        try {
-                            await addDoc(collection(db, 'stockExits'), stockExitData);
-                            console.log('✅ Sortie stock synchronisée Firebase');
-                        } catch (firebaseError) {
-                            console.log('❌ Échec sync Firebase stockExits:', firebaseError.message);
-                        }
-                    }
+                    // Sauvegarder sur Firebase UNIQUEMENT
+                    await addDoc(collection(db, 'stockExits'), stockExitData);
+                    console.log('✅ Sortie stock sauvée sur Firebase');
                 }
                 
-                // Recalculer les niveaux de stock
-                calculateStockLevels();
+                // Recharger les données de stock depuis Firebase
+                await loadStockData();
                 console.log('✅ Intégration stock terminée');
                 
             } catch (error) {
@@ -784,20 +752,68 @@
         // Charger les données de stock
         async function loadStockData() {
             try {
-                window.stockEntriesData = JSON.parse(localStorage.getItem('stockEntries') || '[]');
-                window.stockExitsData = JSON.parse(localStorage.getItem('stockExits') || '[]');
+                if (!isOnline || !isFirebaseReady) {
+                    console.log('❌ Firebase non disponible pour charger le stock');
+                    window.stockEntriesData = [];
+                    window.stockExitsData = [];
+                    calculateStockLevels();
+                    return;
+                }
+                
+                // Charger depuis Firebase UNIQUEMENT
+                const stockEntriesSnapshot = await getDocs(collection(db, 'stockEntries'));
+                window.stockEntriesData = [];
+                stockEntriesSnapshot.forEach(doc => {
+                    window.stockEntriesData.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                const stockExitsSnapshot = await getDocs(collection(db, 'stockExits'));
+                window.stockExitsData = [];
+                stockExitsSnapshot.forEach(doc => {
+                    window.stockExitsData.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
                 calculateStockLevels();
+                console.log('✅ Données de stock chargées depuis Firebase');
+                
             } catch (error) {
-                console.error('❌ Erreur chargement stock:', error);
+                console.error('❌ Erreur chargement stock Firebase:', error);
+                window.stockEntriesData = [];
+                window.stockExitsData = [];
+                calculateStockLevels();
             }
         }
 
         // Charger les données de ventes
         async function loadSalesData() {
             try {
-                window.salesData = JSON.parse(localStorage.getItem('salesData') || '[]');
+                if (!isOnline || !isFirebaseReady) {
+                    console.log('❌ Firebase non disponible pour charger les ventes');
+                    window.salesData = [];
+                    return;
+                }
+                
+                // Charger depuis Firebase UNIQUEMENT
+                const salesSnapshot = await getDocs(collection(db, 'sales'));
+                window.salesData = [];
+                salesSnapshot.forEach(doc => {
+                    window.salesData.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                console.log('✅ Données de ventes chargées depuis Firebase');
+                
             } catch (error) {
-                console.error('❌ Erreur chargement ventes:', error);
+                console.error('❌ Erreur chargement ventes Firebase:', error);
+                window.salesData = [];
             }
         }
 
@@ -844,12 +860,20 @@
 
         // Synchroniser avec Firebase
         async function synchroniserStocksFirebase() {
+            if (!isOnline || !isFirebaseReady) {
+                showAlert('❌ Connexion Firebase requise pour la synchronisation', 'error');
+                return;
+            }
+            
             showAlert('🔄 Synchronisation en cours...', 'info');
             
             try {
-                // Ici vous pouvez ajouter la logique de synchronisation Firebase
-                // Pour l'instant, on simule juste une synchronisation
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // Recharger toutes les données depuis Firebase
+                await Promise.all([
+                    chargerProduitsDisponibles(),
+                    loadStockData(),
+                    loadSalesData()
+                ]);
                 
                 showAlert('✅ Synchronisation terminée', 'success');
             } catch (error) {
@@ -859,25 +883,43 @@
         }
 
         // Nettoyer les doublons
-        function nettoyerDoublonsStock() {
+        async function nettoyerDoublonsStock() {
+            if (!isOnline || !isFirebaseReady) {
+                showAlert('❌ Connexion Firebase requise pour nettoyer les doublons', 'error');
+                return;
+            }
+            
             showAlert('🧹 Nettoyage en cours...', 'info');
             
             try {
-                // Nettoyer les productions
-                let productions = JSON.parse(localStorage.getItem('productions') || '[]');
-                const uniqueProductions = productions.filter((prod, index, arr) => 
-                    arr.findIndex(p => p.id === prod.id) === index
-                );
-                localStorage.setItem('productions', JSON.stringify(uniqueProductions));
+                // Nettoyer les productions sur Firebase
+                const productionsSnapshot = await getDocs(collection(db, 'productions'));
+                const productions = [];
+                const duplicateIds = [];
                 
-                const removed = productions.length - uniqueProductions.length;
-                if (removed > 0) {
-                    showAlert(`✅ ${removed} doublons supprimés`, 'success');
+                productionsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const existing = productions.find(p => p.id === data.id);
+                    if (existing) {
+                        duplicateIds.push(doc.id);
+                    } else {
+                        productions.push({...data, docId: doc.id});
+                    }
+                });
+                
+                // Supprimer les doublons
+                for (const docId of duplicateIds) {
+                    await deleteDoc(doc(db, 'productions', docId));
+                }
+                
+                if (duplicateIds.length > 0) {
+                    showAlert(`✅ ${duplicateIds.length} doublons supprimés`, 'success');
                 } else {
                     showAlert('✅ Aucun doublon trouvé', 'success');
                 }
+                
             } catch (error) {
-                console.error('❌ Erreur nettoyage:', error);
+                console.error('❌ Erreur nettoyage Firebase:', error);
                 showAlert('❌ Erreur lors du nettoyage', 'error');
             }
         }
@@ -896,50 +938,65 @@
         }
 
         // Afficher les statistiques
-        function afficherStatistiques() {
+        async function afficherStatistiques() {
             const statsContainer = document.getElementById('statsContainer');
             const statsGrid = document.getElementById('statsGrid');
             
             if (statsContainer.classList.contains('hidden')) {
-                // Calculer les statistiques du jour
-                const today = new Date().toISOString().split('T')[0];
-                const productions = JSON.parse(localStorage.getItem('productions') || '[]');
+                if (!isOnline || !isFirebaseReady) {
+                    showAlert('❌ Connexion Firebase requise pour afficher les statistiques', 'error');
+                    return;
+                }
                 
-                const todayProductions = productions.filter(p => p.date === today);
-                const receptions = todayProductions.filter(p => p.type.includes('reception'));
-                const sorties = todayProductions.filter(p => p.type.includes('sortie'));
-                
-                const totalReceptions = receptions.reduce((sum, p) => sum + parseFloat(p.quantite), 0);
-                const totalSorties = sorties.reduce((sum, p) => sum + parseFloat(p.quantite), 0);
-                
-                statsGrid.innerHTML = `
-                    <div class="stat-card">
-                        <div class="stat-value">${todayProductions.length}</div>
-                        <div class="stat-label">Opérations du jour</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${receptions.length}</div>
-                        <div class="stat-label">Réceptions</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${sorties.length}</div>
-                        <div class="stat-label">Sorties</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${totalReceptions.toLocaleString()}</div>
-                        <div class="stat-label">Quantité reçue</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${totalSorties.toLocaleString()}</div>
-                        <div class="stat-label">Quantité sortie</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${Object.keys(window.currentStockLevels).length}</div>
-                        <div class="stat-label">Produits en stock</div>
-                    </div>
-                `;
-                
-                statsContainer.classList.remove('hidden');
+                try {
+                    // Calculer les statistiques du jour depuis Firebase
+                    const today = new Date().toISOString().split('T')[0];
+                    
+                    const productionsSnapshot = await getDocs(collection(db, 'productions'));
+                    const productions = [];
+                    productionsSnapshot.forEach(doc => {
+                        productions.push(doc.data());
+                    });
+                    
+                    const todayProductions = productions.filter(p => p.date === today);
+                    const receptions = todayProductions.filter(p => p.type.includes('reception'));
+                    const sorties = todayProductions.filter(p => p.type.includes('sortie'));
+                    
+                    const totalReceptions = receptions.reduce((sum, p) => sum + parseFloat(p.quantite || 0), 0);
+                    const totalSorties = sorties.reduce((sum, p) => sum + parseFloat(p.quantite || 0), 0);
+                    
+                    statsGrid.innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-value">${todayProductions.length}</div>
+                            <div class="stat-label">Opérations du jour</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${receptions.length}</div>
+                            <div class="stat-label">Réceptions</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${sorties.length}</div>
+                            <div class="stat-label">Sorties</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${totalReceptions.toLocaleString()}</div>
+                            <div class="stat-label">Quantité reçue</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${totalSorties.toLocaleString()}</div>
+                            <div class="stat-label">Quantité sortie</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${Object.keys(window.currentStockLevels).length}</div>
+                            <div class="stat-label">Produits en stock</div>
+                        </div>
+                    `;
+                    
+                    statsContainer.classList.remove('hidden');
+                } catch (error) {
+                    console.error('❌ Erreur chargement statistiques:', error);
+                    showAlert('❌ Erreur lors du chargement des statistiques', 'error');
+                }
             } else {
                 statsContainer.classList.add('hidden');
             }
