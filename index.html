@@ -2962,11 +2962,27 @@
                     </div>
                 </div>
                 
-                <!-- Graphique en aires empilées des stocks -->
+                <!-- Graphique Pareto des stocks -->
                 <div class="card" style="margin-bottom: 20px;">
-                    <h3 style="margin-bottom: 15px; color: #667eea; text-align: center;">  Niveaux de Stock Actuels</h3>
-                    <div class="chart-container" style="height: 350px;">
-                        <canvas id="stockLevelsChart"></canvas>
+                    <h3 style="margin-bottom: 15px; color: #667eea; text-align: center;">📊 Analyse Pareto des Stocks (Principe 20/80)</h3>
+                    
+                    <div style="position: relative;">
+                        <!-- Container du graphique avec position relative pour le texte central -->
+                        <div class="chart-container" style="height: 400px; position: relative;">
+                            <canvas id="stockLevelsChart"></canvas>
+                            <!-- Texte au centre du donut -->
+                            <div id="stockChartCenterText" style="
+                                position: absolute;
+                                top: 50%;
+                                left: 50%;
+                                transform: translate(-50%, -50%);
+                                pointer-events: none;
+                                z-index: 10;
+                            "></div>
+                        </div>
+                        
+                        <!-- Statistiques détaillées sous le graphique -->
+                        <div id="stockChartStats"></div>
                     </div>
                 </div>
                 
@@ -6353,7 +6369,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const paretoVolumePercentage = ((paretoVolume / totalVolume) * 100).toFixed(1);
             const paretoProductsPercentage = ((paretoProducts.length / stocksArray.length) * 100).toFixed(1);
             
-            // Créer le graphique camembert
+            console.log('🔍 Données pour le graphique:', {
+                labels: labels,
+                data: data,
+                paretoProducts: paretoProducts.length,
+                otherProducts: otherProducts.length,
+                totalVolume: totalVolume
+            });
+            
+            // Créer le graphique camembert avec informations enrichies
             window.stockLevelsChartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -6369,59 +6393,70 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            left: 20,
+                            right: 20,
+                            top: 10,
+                            bottom: 20
+                        }
+                    },
                     plugins: {
                         title: {
                             display: true,
-                            text: `Analyse Pareto des Stocks - ${paretoProductsPercentage}%/${paretoVolumePercentage}% (Produits/Volume)`,
+                            text: [
+                                'Analyse Pareto des Stocks (Principe 20/80)',
+                                `${paretoProducts.length} produits (${paretoProductsPercentage}%) = ${paretoVolumePercentage}% du volume`
+                            ],
                             font: { size: 14, weight: 'bold' },
-                            padding: { bottom: 20 }
+                            padding: { bottom: 20 },
+                            color: '#2c3e50'
                         },
                         legend: {
                             display: true,
-                            position: 'right',
+                            position: 'bottom',
                             labels: {
-                                boxWidth: 12,
-                                padding: 8,
-                                font: { size: 11 },
-                                generateLabels: function(chart) {
-                                    const original = Chart.defaults.plugins.legend.labels.generateLabels;
-                                    const labels = original.call(this, chart);
-                                    
-                                    // Marquer visuellement les produits Pareto
-                                    labels.forEach((label, index) => {
-                                        if (index < paretoProducts.length) {
-                                            label.text = '⭐ ' + label.text; // Étoile pour les produits Pareto
-                                        } else {
-                                            label.text = '• ' + label.text; // Puce pour les autres
-                                        }
-                                    });
-                                    
-                                    return labels;
+                                boxWidth: 15,
+                                padding: 15,
+                                font: { size: 12 },
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                filter: function(legendItem, chartData) {
+                                    // S'assurer que tous les éléments sont affichés
+                                    return true;
                                 }
                             }
                         },
                         tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#ccc',
+                            borderWidth: 1,
                             callbacks: {
                                 title: function(context) {
-                                    return context[0].label.replace(/^⭐ |^• /, '');
+                                    const label = context[0].label;
+                                    return label.split(' (')[0]; // Nom du produit sans pourcentage
                                 },
                                 label: function(context) {
                                     const value = context.parsed;
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                     const percentage = ((value / total) * 100).toFixed(1);
+                                    const index = context.dataIndex;
+                                    const isParetoProduct = index < paretoProducts.length;
                                     
                                     return [
-                                        `Quantité: ${value.toLocaleString()}`,
-                                        `Pourcentage: ${percentage}%`,
-                                        `Volume cumulé: ${value.toLocaleString()}`
+                                        `Quantité en stock: ${value.toLocaleString()}`,
+                                        `Part du volume total: ${percentage}%`,
+                                        isParetoProduct ? '🎯 Produit clé (Pareto 20/80)' : '📦 Autre produit'
                                     ];
                                 },
                                 footer: function(context) {
                                     const index = context[0].dataIndex;
                                     if (index < paretoProducts.length) {
-                                        return '🎯 Produit Pareto (20/80)';
+                                        return `Rang: ${index + 1}/${paretoProducts.length} (Top produits)`;
                                     } else {
-                                        return '📦 Autres produits';
+                                        return `Groupe: ${otherProducts.length} autres produits`;
                                     }
                                 }
                             }
@@ -6432,7 +6467,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             borderWidth: 2
                         }
                     },
-                    cutout: '40%', // Taille du trou central
+                    cutout: '50%', // Taille du trou central plus grande
                     animation: {
                         animateRotate: true,
                         animateScale: true
@@ -6440,7 +6475,119 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 }
             });
             
-            console.log(`📊 Graphique Pareto créé: ${paretoProducts.length} produits (${paretoProductsPercentage}%) représentent ${paretoVolumePercentage}% du volume`);
+            // Ajouter des informations détaillées dans le centre du donut
+            const centerTextElement = document.getElementById('stockChartCenterText');
+            if (centerTextElement) {
+                centerTextElement.innerHTML = `
+                    <div style="text-align: center; font-size: 12px; color: #2c3e50; line-height: 1.3;">
+                        <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">Volume Total</div>
+                        <div style="font-size: 16px; font-weight: bold; color: #3498db;">${totalVolume.toLocaleString()}</div>
+                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 5px;">${stocksArray.length} produits</div>
+                    </div>
+                `;
+            }
+            
+            // Ajouter des statistiques détaillées sous le graphique
+            const statsElement = document.getElementById('stockChartStats');
+            if (statsElement) {
+                const otherVolume = otherProducts.reduce((sum, item) => sum + item.quantity, 0);
+                const topProduct = paretoProducts[0];
+                const topProductPercentage = topProduct ? ((topProduct.quantity / totalVolume) * 100).toFixed(1) : '0';
+                
+                // Créer la légende personnalisée
+                let legendHtml = '';
+                if (paretoProducts.length > 0) {
+                    legendHtml += '<div style="margin-bottom: 15px;"><h4 style="color: #2980b9; margin-bottom: 10px;">⭐ Produits Pareto (Top contributeurs):</h4>';
+                    paretoProducts.slice(0, 5).forEach((product, index) => {
+                        const percentage = ((product.quantity / totalVolume) * 100).toFixed(1);
+                        const color = paretoColors[index % paretoColors.length];
+                        legendHtml += `
+                            <div style="display: flex; align-items: center; margin-bottom: 5px; font-size: 12px;">
+                                <div style="width: 15px; height: 15px; background: ${color}; border-radius: 50%; margin-right: 10px;"></div>
+                                <span style="flex: 1;">${product.product.length > 40 ? product.product.substring(0, 40) + '...' : product.product}</span>
+                                <span style="font-weight: bold; color: ${color};">${percentage}%</span>
+                            </div>
+                        `;
+                    });
+                    if (paretoProducts.length > 5) {
+                        legendHtml += `<div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">... et ${paretoProducts.length - 5} autres produits Pareto</div>`;
+                    }
+                    legendHtml += '</div>';
+                }
+                
+                if (otherProducts.length > 0) {
+                    const otherPercentage = ((otherVolume / totalVolume) * 100).toFixed(1);
+                    legendHtml += `
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="color: #95a5a6; margin-bottom: 10px;">📦 Autres produits:</h4>
+                            <div style="display: flex; align-items: center; margin-bottom: 5px; font-size: 12px;">
+                                <div style="width: 15px; height: 15px; background: #95a5a6; border-radius: 50%; margin-right: 10px;"></div>
+                                <span style="flex: 1;">${otherProducts.length} autres produits</span>
+                                <span style="font-weight: bold; color: #95a5a6;">${otherPercentage}%</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                statsElement.innerHTML = `
+                    <!-- Légende personnalisée -->
+                    <div style="
+                        margin-bottom: 20px; 
+                        padding: 15px; 
+                        background: #f8f9fa; 
+                        border-radius: 10px;
+                        border-left: 4px solid #3498db;
+                    ">
+                        <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 16px;">📊 Légende du Graphique</h3>
+                        ${legendHtml}
+                    </div>
+                    
+                    <!-- Statistiques Pareto -->
+                    <div class="stock-pareto-stats" style="
+                        display: grid; 
+                        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+                        gap: 15px; 
+                        margin-bottom: 20px; 
+                        padding: 15px; 
+                        background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+                        border-radius: 10px;
+                        border-left: 4px solid #3498db;
+                    ">
+                        <div style="text-align: center;">
+                            <div style="font-size: 18px; font-weight: bold; color: #2980b9;">${paretoProducts.length}</div>
+                            <div style="font-size: 12px; color: #7f8c8d;">Produits Pareto</div>
+                            <div style="font-size: 11px; color: #95a5a6;">(${paretoProductsPercentage}% des produits)</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 18px; font-weight: bold; color: #27ae60;">${paretoVolumePercentage}%</div>
+                            <div style="font-size: 12px; color: #7f8c8d;">Volume représenté</div>
+                            <div style="font-size: 11px; color: #95a5a6;">${paretoVolume.toLocaleString()} unités</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 18px; font-weight: bold; color: #e74c3c;">${topProductPercentage}%</div>
+                            <div style="font-size: 12px; color: #7f8c8d;">Top produit</div>
+                            <div style="font-size: 11px; color: #95a5a6;">${topProduct ? topProduct.product.substring(0, 20) + '...' : 'N/A'}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 18px; font-weight: bold; color: #9b59b6;">${otherProducts.length}</div>
+                            <div style="font-size: 12px; color: #7f8c8d;">Autres produits</div>
+                            <div style="font-size: 11px; color: #95a5a6;">${((otherVolume / totalVolume) * 100).toFixed(1)}% du volume</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Explication de l'analyse Pareto -->
+                    <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 3px solid #ffc107;">
+                        <div style="font-size: 13px; font-weight: bold; color: #856404; margin-bottom: 5px;">💡 Analyse Pareto</div>
+                        <div style="font-size: 12px; color: #856404; line-height: 1.4;">
+                            <strong>${paretoProducts.length} produits</strong> (${paretoProductsPercentage}% de votre catalogue) 
+                            représentent <strong>${paretoVolumePercentage}% de votre volume de stock</strong>. 
+                            Ces produits sont vos articles clés à surveiller en priorité pour optimiser votre gestion de stock.
+                        </div>
+                    </div>
+                `;
+            }
+            
+            console.log(`📊 Graphique Pareto enrichi créé: ${paretoProducts.length} produits (${paretoProductsPercentage}%) représentent ${paretoVolumePercentage}% du volume`);
         }
 
         // Fonction pour mettre à jour les tableaux de stocks positifs et négatifs
