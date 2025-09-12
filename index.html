@@ -7,9 +7,9 @@
     <script src=https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js></script>
 
     <!-- Firebase SDKs -->
-    <script src=https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js></script>
-    <script src=https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js></script>
-    <script src=https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
     <!-- Bibliothèques pour exports -->
     <script src=https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js></script>
@@ -3947,6 +3947,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         let isFirebaseInitialized = false;
         let deletionInProgress = false;
         
+        // Fonction utilitaire pour vérifier Firebase
+        function isFirebaseReady() {
+            const ready = isFirebaseInitialized && db !== null && typeof db.collection === 'function';
+            if (!ready) {
+                console.warn('⚠️ Firebase non disponible - opération ignorée');
+                console.log(`🔍 État: isFirebaseInitialized=${isFirebaseInitialized}, db=${!!db}, typeof db=${typeof db}`);
+            }
+            return ready;
+        }
+        
         let salesLines = [];
         let editingProductId = null;
         let editingSaleId = null;
@@ -5267,12 +5277,17 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 stockEntriesData = stockEntriesData.filter(e => e.id != id);
                 saveToLocalStorage();
                 
-                if (isFirebaseInitialized) {
+                // ✅ Utiliser la nouvelle vérification Firebase
+                if (isFirebaseReady()) {
                     try {
+                        console.log(`🗑️ Suppression Firebase de l'entrée ID: ${id}`);
                         await db.collection('stockEntries').doc(id.toString()).delete();
+                        console.log(`✅ Entrée ${id} supprimée de Firebase`);
                     } catch (error) {
-                        // Pas de console.error comme dans le module commercial
+                        console.error(`❌ Erreur suppression Firebase entrée ${id}:`, error);
                     }
+                } else {
+                    console.log(`⚠️ Firebase indisponible - entrée ${id} supprimée seulement en local`);
                 }
                 
                 updateEntriesMovementsTable();
@@ -5284,12 +5299,17 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 stockExitsData = stockExitsData.filter(e => e.id != id);
                 saveToLocalStorage();
                 
-                if (isFirebaseInitialized) {
+                // ✅ Utiliser la nouvelle vérification Firebase
+                if (isFirebaseReady()) {
                     try {
+                        console.log(`🗑️ Suppression Firebase de la sortie ID: ${id}`);
                         await db.collection('stockExits').doc(id.toString()).delete();
+                        console.log(`✅ Sortie ${id} supprimée de Firebase`);
                     } catch (error) {
-                        // Pas de console.error comme dans le module commercial
+                        console.error(`❌ Erreur suppression Firebase sortie ${id}:`, error);
                     }
+                } else {
+                    console.log(`⚠️ Firebase indisponible - sortie ${id} supprimée seulement en local`);
                 }
                 
                 updateExitsMovementsTable();
@@ -5316,12 +5336,17 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             stockEntriesData = stockEntriesData.filter(e => e.id != id);
             saveToLocalStorage();
             
-            if (isFirebaseInitialized) {
+            // ✅ Utiliser la nouvelle vérification Firebase
+            if (isFirebaseReady()) {
                 try {
+                    console.log(`🗑️ Suppression Firebase de l'entrée ID: ${id}`);
                     await db.collection('stockEntries').doc(id.toString()).delete();
+                    console.log(`✅ Entrée ${id} supprimée de Firebase`);
                 } catch (error) {
-                    // Pas de console.error comme dans le module commercial
+                    console.error(`❌ Erreur suppression Firebase entrée ${id}:`, error);
                 }
+            } else {
+                console.log(`⚠️ Firebase indisponible - entrée ${id} supprimée seulement en local`);
             }
             
             updateEntriesMovementsTable();
@@ -5361,12 +5386,17 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             stockExitsData = stockExitsData.filter(e => e.id != id);
             saveToLocalStorage();
             
-            if (isFirebaseInitialized) {
+            // ✅ Utiliser la nouvelle vérification Firebase
+            if (isFirebaseReady()) {
                 try {
+                    console.log(`🗑️ Suppression Firebase de la sortie ID: ${id}`);
                     await db.collection('stockExits').doc(id.toString()).delete();
+                    console.log(`✅ Sortie ${id} supprimée de Firebase`);
                 } catch (error) {
-                    // Pas de console.error comme dans le module commercial
+                    console.error(`❌ Erreur suppression Firebase sortie ${id}:`, error);
                 }
+            } else {
+                console.log(`⚠️ Firebase indisponible - sortie ${id} supprimée seulement en local`);
             }
             
             updateExitsMovementsTable();
@@ -7830,15 +7860,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             saveToLocalStorage();
             
             // Sync Firebase - logique copiée du module commercial
-            if (isFirebaseInitialized) {
+            if (isFirebaseReady()) {
                 try {
+                    console.log(`💾 Sauvegarde Firebase de l'entrée ID: ${entry.id}`);
                     await db.collection('stockEntries').doc(entry.id.toString()).set({
                         ...entry,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
+                    console.log(`✅ Entrée ${entry.id} sauvegardée dans Firebase`);
                 } catch (error) {
-                    // Pas de console.error comme dans le module commercial
+                    console.error(`❌ Erreur sauvegarde Firebase entrée ${entry.id}:`, error);
                 }
+            } else {
+                console.log(`⚠️ Firebase indisponible - entrée ${entry.id} sauvegardée seulement en local`);
             }
             
             // Recalculer les niveaux de stock
@@ -8141,15 +8175,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             saveToLocalStorage();
             
             // Sync Firebase - logique copiée du module commercial
-            if (isFirebaseInitialized) {
+            if (isFirebaseReady()) {
                 try {
+                    console.log(`💾 Sauvegarde Firebase de la sortie ID: ${exit.id}`);
                     await db.collection('stockExits').doc(exit.id.toString()).set({
                         ...exit,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
+                    console.log(`✅ Sortie ${exit.id} sauvegardée dans Firebase`);
                 } catch (error) {
-                    // Pas de console.error comme dans le module commercial
+                    console.error(`❌ Erreur sauvegarde Firebase sortie ${exit.id}:`, error);
                 }
+            } else {
+                console.log(`⚠️ Firebase indisponible - sortie ${exit.id} sauvegardée seulement en local`);
             }
             
             // Recalculer les niveaux de stock
@@ -9600,7 +9638,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         
         // Configuration Firebase
         const firebaseConfig = {
-            apiKey: "AIzaSyBuR-B_bOyMtN1xnSQCCsxfJWydzg9mvs",
+            apiKey: "AIzaSyBuR-B_bOyMtN1xnSQCCsxfJWydzg9mvs8",
             authDomain: "kamlac-dashboard.firebaseapp.com",
             projectId: "kamlac-dashboard",
             storageBucket: "kamlac-dashboard.appspot.com",
@@ -9916,9 +9954,9 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             
             // Message de bienvenue avec fonctionnalités
         setTimeout(() => {
-            showToast('Bienvenue dans KAMLAC Dashboard ! 🎉', 'success');
+            showAlert('Bienvenue dans KAMLAC Dashboard ! 🎉', 'success');
             setTimeout(() => {
-                showToast('Nouvelles fonctionnalités: Module Stocks 📦, Gestion modulaire 🔧, Analyses avancées 📊', 'info');
+                showAlert('Nouvelles fonctionnalités: Module Stocks 📦, Gestion modulaire 🔧, Analyses avancées 📊', 'info');
             }, 2000);
             
             // NOUVEAU: Démarrer le nettoyage automatique périodique du cache (toutes les 30 minutes)
@@ -9976,12 +10014,37 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         async function initializeFirebase() {
+            console.log('🔄 Début de l\'initialisation Firebase...');
             
             try {
+                // Vérifier que Firebase est chargé
+                if (typeof firebase === 'undefined') {
+                    throw new Error('La bibliothèque Firebase n\'est pas chargée');
+                }
+                console.log('✅ Bibliothèque Firebase détectée');
+
+                // Vérifier la configuration
+                console.log('🔧 Configuration Firebase:', firebaseConfig);
+                
                 updateCloudStatus('syncing', '🔄 Connexion...');
+                
+                // Initialiser Firebase
+                console.log('🔥 Initialisation de l\'app Firebase...');
                 firebase.initializeApp(firebaseConfig);
+                console.log('✅ App Firebase initialisée');
+                
+                // Initialiser Firestore
+                console.log('🗄️ Initialisation de Firestore...');
                 db = firebase.firestore();
+                console.log('✅ Firestore initialisé');
+                
+                // Test de connexion simple
+                console.log('🔍 Test de connexion Firebase...');
+                await db.collection('test').limit(1).get();
+                console.log('✅ Test de connexion réussi');
+                
                 isFirebaseInitialized = true;
+                console.log('✅ Firebase complètement initialisé');
                 
                 // Synchronisation automatique au démarrage
                 await autoSyncOnStartup();
@@ -9995,8 +10058,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 updateCloudStatus('online', '☁️ Sync');
                 console.log('✅ Firebase initialisé avec succès');
             } catch (error) {
-                console.error('Erreur Firebase:', error);
+                console.error('❌ Erreur Firebase:', error.message);
+                console.error('❌ Stack trace:', error.stack);
+                console.error('❌ Erreur complète:', error);
                 updateCloudStatus('offline', '❌ Offline');
+                isFirebaseInitialized = false;
+                db = null;
             }
         }
 
