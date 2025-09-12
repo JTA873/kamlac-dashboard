@@ -2909,12 +2909,16 @@
                 
                 <!-- KPI Mouvements de Stock -->
                 <div class="kpi-grid" style="margin-bottom: 20px;">
-                    <div class="kpi-card" style="background: linear-gradient(135deg, #e8f5e8, #d4edda);">
+                    <div class="kpi-card" style="background: linear-gradient(135deg, #e8f5e8, #d4edda); cursor: pointer;" 
+                         onclick="navigateToStockMovements('entry')" 
+                         title="Cliquer pour voir les entrées de stock">
                         <div class="kpi-icon" style="color: #28a745;">📥</div>
                         <div class="kpi-value" id="totalEntriesKPI">-</div>
                         <div class="kpi-label">Entrées de Stock</div>
                     </div>
-                    <div class="kpi-card" style="background: linear-gradient(135deg, #fff3cd, #f8d7da);">
+                    <div class="kpi-card" style="background: linear-gradient(135deg, #fff3cd, #f8d7da); cursor: pointer;" 
+                         onclick="navigateToStockMovements('exit')" 
+                         title="Cliquer pour voir les sorties de stock">
                         <div class="kpi-icon" style="color: #dc3545;">📤</div>
                         <div class="kpi-value" id="totalExitsKPI">-</div>
                         <div class="kpi-label">Sorties (hors ventes)</div>
@@ -3007,22 +3011,11 @@
                     </div>
                 </div>
                 
-                <!-- Top Produits et Alertes -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                    <!-- Top produits par valeur -->
-                    <div class="card">
-                        <h3 style="margin-bottom: 15px; color: #667eea;">💎 Top Produits par Valeur</h3>
-                        <div id="topProductsByValue" style="max-height: 250px; overflow-y: auto;">
-                            <!-- Rempli dynamiquement -->
-                        </div>
-                    </div>
-                    
-                    <!-- Alertes stock -->
-                    <div class="card">
-                        <h3 style="margin-bottom: 15px; color: #667eea;">🚨 Alertes Stock</h3>
-                        <div id="stockAlerts" style="max-height: 250px; overflow-y: auto;">
-                            <!-- Rempli dynamiquement -->
-                        </div>
+                <!-- Alertes stock -->
+                <div class="card">
+                    <h3 style="margin-bottom: 15px; color: #667eea;">🚨 Alertes Stock</h3>
+                    <div id="stockAlerts" style="max-height: 250px; overflow-y: auto;">
+                        <!-- Rempli dynamiquement -->
                     </div>
                 </div>
             </div>
@@ -5922,6 +5915,84 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }, 500); // Augmentation du délai pour être sûr
         }
         
+        // Fonction pour naviguer vers les mouvements filtrés par type
+        function navigateToStockMovements(movementType) {
+            console.log(`🔍 Navigation vers les mouvements de type: ${movementType}`);
+            
+            // D'abord s'assurer qu'on est dans le module stocks
+            showModule('stocks');
+            
+            // Naviguer vers la section des mouvements
+            showStocksSection('stock-recap');
+            
+            // Attendre que la section soit chargée puis appliquer le filtre
+            setTimeout(() => {
+                console.log('Application du filtre de type de mouvement');
+                const typeFilter = document.getElementById('movementTypeFilter');
+                
+                if (typeFilter) {
+                    // Définir le type de mouvement à filtrer
+                    if (movementType === 'entry') {
+                        typeFilter.value = 'entry';
+                        showAlert('📥 Affichage des entrées de stock', 'success');
+                    } else if (movementType === 'exit') {
+                        typeFilter.value = 'exit';
+                        showAlert('📤 Affichage des sorties de stock', 'success');
+                    }
+                    
+                    // Appliquer les filtres
+                    applyMovementFilters();
+                    
+                    // Scroll vers le tableau de mouvements
+                    const movementsTable = document.querySelector('#movements-all .data-table');
+                    if (movementsTable) {
+                        movementsTable.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                } else {
+                    console.log('❌ Filtre de type non trouvé');
+                    showAlert('❌ Impossible de filtrer les mouvements - filtre non trouvé', 'error');
+                }
+            }, 500);
+        }
+        
+        // Fonction pour naviguer vers tous les mouvements
+        function navigateToAllMovements() {
+            console.log('🔍 Navigation vers tous les mouvements');
+            
+            // D'abord s'assurer qu'on est dans le module stocks
+            showModule('stocks');
+            
+            // Naviguer vers la section des mouvements
+            showStocksSection('stock-recap');
+            
+            // Attendre que la section soit chargée puis réinitialiser les filtres
+            setTimeout(() => {
+                console.log('Réinitialisation de tous les filtres');
+                
+                // Réinitialiser tous les filtres
+                const productFilter = document.getElementById('movementProductFilter');
+                const typeFilter = document.getElementById('movementTypeFilter');
+                const dateFromFilter = document.getElementById('movementDateFrom');
+                const dateToFilter = document.getElementById('movementDateTo');
+                
+                if (productFilter) productFilter.value = '';
+                if (typeFilter) typeFilter.value = '';
+                if (dateFromFilter) dateFromFilter.value = '';
+                if (dateToFilter) dateToFilter.value = '';
+                
+                // Appliquer les filtres (vides = afficher tout)
+                applyMovementFilters();
+                
+                showAlert('📊 Affichage de tous les mouvements de stock', 'success');
+                
+                // Scroll vers le tableau de mouvements
+                const movementsTable = document.querySelector('#movements-all .data-table');
+                if (movementsTable) {
+                    movementsTable.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 500);
+        }
+        
         // Fonction utilitaire pour voir les détails d'un mouvement
         function viewMovementDetails(source, id) {
             let item;
@@ -6147,7 +6218,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             updateStockKPICards();
             
             // Mettre à jour les sections informatives
-            updateTopProductsByValue();
             updateStockAlerts();
             
             // Mettre à jour le tableau simple
@@ -6471,6 +6541,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     animation: {
                         animateRotate: true,
                         animateScale: true
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const productName = pareto20.products[index];
+                            console.log('Clic sur le graphique Pareto - Produit:', productName);
+                            navigateToProductMovements(productName);
+                        }
                     }
                 }
             });
@@ -6479,7 +6557,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const centerTextElement = document.getElementById('stockChartCenterText');
             if (centerTextElement) {
                 centerTextElement.innerHTML = `
-                    <div style="text-align: center; font-size: 12px; color: #2c3e50; line-height: 1.3;">
+                    <div style="text-align: center; font-size: 12px; color: #2c3e50; line-height: 1.3; cursor: pointer; padding: 10px; border-radius: 50%; transition: background-color 0.2s;" 
+                         onclick="navigateToAllMovements()" 
+                         onmouseover="this.style.backgroundColor='#f8f9fa'" 
+                         onmouseout="this.style.backgroundColor='transparent'"
+                         title="Cliquer pour voir tous les mouvements">
                         <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">Volume Total</div>
                         <div style="font-size: 16px; font-weight: bold; color: #3498db;">${totalVolume.toLocaleString()}</div>
                         <div style="font-size: 10px; color: #7f8c8d; margin-top: 5px;">${stocksArray.length} produits</div>
@@ -6502,7 +6584,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         const percentage = ((product.quantity / totalVolume) * 100).toFixed(1);
                         const color = paretoColors[index % paretoColors.length];
                         legendHtml += `
-                            <div style="display: flex; align-items: center; margin-bottom: 5px; font-size: 12px;">
+                            <div style="display: flex; align-items: center; margin-bottom: 5px; font-size: 12px; cursor: pointer; padding: 3px; border-radius: 3px; transition: background-color 0.2s;" 
+                                 onclick="navigateToProductMovements('${product.product.replace(/'/g, "\\'")}')" 
+                                 onmouseover="this.style.backgroundColor='#f8f9fa'" 
+                                 onmouseout="this.style.backgroundColor='transparent'"
+                                 title="Cliquer pour voir les mouvements de ${product.product}">
                                 <div style="width: 15px; height: 15px; background: ${color}; border-radius: 50%; margin-right: 10px;"></div>
                                 <span style="flex: 1;">${product.product.length > 40 ? product.product.substring(0, 40) + '...' : product.product}</span>
                                 <span style="font-weight: bold; color: ${color};">${percentage}%</span>
@@ -6907,51 +6993,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         // Fonction pour afficher le top des produits par valeur
-        function updateTopProductsByValue() {
-            const container = document.getElementById('topProductsByValue');
-            if (!container || !currentStockLevels) return;
-            
-            const products = Object.entries(currentStockLevels)
-                .map(([name, stock]) => ({
-                    name,
-                    quantity: stock.quantity || 0,
-                    value: stock.value || 0,
-                    unit: stock.unit || 'unités'
-                }))
-                .sort((a, b) => b.value - a.value)
-                .slice(0, 5);
-            
-            if (products.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Aucun produit trouvé</div>';
-                return;
-            }
-            
-            let html = '';
-            products.forEach((product, index) => {
-                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-                const statusColor = product.quantity < 0 ? '#dc3545' : product.quantity <= 10 ? '#ffc107' : '#28a745';
-                
-                html += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin: 8px 0; background: #f8f9fa; border-radius: 8px; border-left: 4px solid ${statusColor};">
-                        <div>
-                            <span style="font-size: 18px; margin-right: 8px;">${medal}</span>
-                            <strong>${product.name}</strong>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                                ${product.quantity.toLocaleString()} ${product.unit}
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-weight: 600; color: #667eea;">
-                                ${product.value.toLocaleString()} CFA
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-
         // ========== FONCTIONS DE FILTRAGE DASHBOARD STOCKS ==========
         
         // Fonction pour initialiser les filtres du dashboard stocks
@@ -7215,7 +7256,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Remettre l'affichage par défaut
             updateStockKPICards();
             updateSimpleStocksTable();
-            updateTopProductsByValue();
             updateStockAlerts();
         }
 
