@@ -3269,10 +3269,6 @@
                                 <div class="stat-value" id="allExitsCount">0</div>
                                 <div class="stat-label">Sorties</div>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="netMovement">0</div>
-                                <div class="stat-label">Mouvement Net</div>
-                            </div>
                         </div>
                         
                         <div style="overflow-x: auto;">
@@ -3308,10 +3304,6 @@
                             <div class="stat-item">
                                 <div class="stat-value" id="totalEntriesQuantity">0</div>
                                 <div class="stat-label">Quantité Totale</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="totalEntriesCost">0 CFA</div>
-                                <div class="stat-label">Coût Total</div>
                             </div>
                         </div>
                         
@@ -3349,10 +3341,6 @@
                             <div class="stat-item">
                                 <div class="stat-value" id="totalExitsQuantity">0</div>
                                 <div class="stat-label">Quantité Totale</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="totalExitsCost">0 CFA</div>
-                                <div class="stat-label">Coût Total</div>
                             </div>
                         </div>
                         
@@ -4384,12 +4372,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const allMovementsCount = document.getElementById('allMovementsCount');
             const allEntriesCount = document.getElementById('allEntriesCount');
             const allExitsCount = document.getElementById('allExitsCount');
-            const netMovement = document.getElementById('netMovement');
             
             if (allMovementsCount) allMovementsCount.textContent = allMovements.length.toLocaleString();
             if (allEntriesCount) allEntriesCount.textContent = totalEntries.toLocaleString();
             if (allExitsCount) allExitsCount.textContent = totalExits.toLocaleString();
-            if (netMovement) netMovement.textContent = (totalEntriesQuantity - totalExitsQuantity).toLocaleString();
             
             // Remplir le tableau (limiter à 100 lignes pour les performances)
             const displayMovements = allMovements.slice(0, 100);
@@ -5701,16 +5687,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Statistiques
             const totalEntries = stockEntriesData.length;
             const totalQuantity = stockEntriesData.reduce((sum, entry) => sum + (parseFloat(entry.quantity) || 0), 0);
-            const totalCost = stockEntriesData.reduce((sum, entry) => sum + (parseFloat(entry.totalCost) || 0), 0);
             
             // Mettre à jour les statistiques
             const entriesMovementsCount = document.getElementById('entriesMovementsCount');
             const totalEntriesQuantity = document.getElementById('totalEntriesQuantity');
-            const totalEntriesCost = document.getElementById('totalEntriesCost');
             
             if (entriesMovementsCount) entriesMovementsCount.textContent = totalEntries.toLocaleString();
             if (totalEntriesQuantity) totalEntriesQuantity.textContent = totalQuantity.toLocaleString();
-            if (totalEntriesCost) totalEntriesCost.textContent = totalCost.toLocaleString() + ' CFA';
             
             // Remplir le tableau
             stockEntriesData
@@ -5814,16 +5797,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Statistiques
             const totalExits = allExits.length;
             const totalQuantity = allExits.reduce((sum, exit) => sum + exit.quantity, 0);
-            const totalCost = allExits.reduce((sum, exit) => sum + exit.totalCost, 0);
             
             // Mettre à jour les statistiques
             const exitsMovementsCount = document.getElementById('exitsMovementsCount');
             const totalExitsQuantity = document.getElementById('totalExitsQuantity');
-            const totalExitsCost = document.getElementById('totalExitsCost');
             
             if (exitsMovementsCount) exitsMovementsCount.textContent = totalExits.toLocaleString();
             if (totalExitsQuantity) totalExitsQuantity.textContent = totalQuantity.toLocaleString();
-            if (totalExitsCost) totalExitsCost.textContent = totalCost.toLocaleString() + ' CFA';
             
             // Remplir le tableau
             allExits
@@ -5847,6 +5827,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         <td style="font-weight: 500;">${exit.totalCost.toLocaleString()} CFA</td>
                         <td><span class="${typeClass}" style="font-weight: 500;">${exit.type}</span></td>
                         <td style="color: #666;">${exit.destination || exit.client || 'Non spécifié'}</td>
+                        <td style="color: #666; font-size: 0.9rem;">${exit.reference || 'Non spécifiée'}</td>
                         <td>
                             <button onclick="editStockExit('${exit.id}', '${exit.source}')" 
                                     class="btn-icon" title="Modifier" style="margin-right: 5px;">
