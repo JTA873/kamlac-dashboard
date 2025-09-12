@@ -5690,30 +5690,51 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         function navigateToProductMovements(productName) {
             console.log(`🔍 Navigation vers les mouvements du produit: ${productName}`);
             
-            // Naviguer vers la section des mouvements
-            showStocksSection('stock-movements');
+            // Ajouter plus de logs pour déboguer
+            console.log('Étape 1: Appel de showModule("stocks")');
+            
+            // D'abord s'assurer qu'on est dans le module stocks
+            showModule('stocks');
+            
+            console.log('Étape 2: Appel de showStocksSection("stock-recap")');
+            
+            // Naviguer vers la section des mouvements (nom correct: 'stock-recap')
+            showStocksSection('stock-recap');
+            
+            console.log('Étape 3: Attente et application des filtres');
             
             // Attendre que la section soit chargée puis appliquer le filtre
             setTimeout(() => {
+                console.log('Étape 4: Recherche du filtre de produit');
                 const productFilter = document.getElementById('movementProductFilter');
+                console.log('Filtre trouvé:', productFilter);
+                
                 if (productFilter) {
+                    console.log('Étape 5: Application du filtre produit');
                     productFilter.value = productName;
                     
                     // Appliquer les filtres
+                    console.log('Étape 6: Appel de applyMovementFilters()');
                     applyMovementFilters();
                     
                     // Notification à l'utilisateur
+                    console.log('Étape 7: Affichage de la notification');
                     showAlert(`📊 Affichage des mouvements pour: ${productName}`, 'success');
                     
-                    // Scroll vers le tableau de mouvements
-                    const movementsTable = document.querySelector('#movements-global .data-table');
+                    // Scroll vers le tableau de mouvements (ID correct: #movements-all)
+                    console.log('Étape 8: Recherche du tableau de mouvements');
+                    const movementsTable = document.querySelector('#movements-all .data-table');
+                    console.log('Tableau trouvé:', movementsTable);
+                    
                     if (movementsTable) {
+                        console.log('Étape 9: Scroll vers le tableau');
                         movementsTable.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                 } else {
                     console.log('❌ Filtre de produit non trouvé');
+                    showAlert('❌ Impossible de filtrer les mouvements - filtre non trouvé', 'error');
                 }
-            }, 300);
+            }, 500); // Augmentation du délai pour être sûr
         }
         
         // Fonction utilitaire pour voir les détails d'un mouvement
@@ -5991,7 +6012,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 const row = document.createElement('tr');
                 row.style.cursor = 'pointer';
                 row.setAttribute('data-product', product);
-                row.addEventListener('click', () => navigateToProductMovements(product));
+                row.addEventListener('click', () => {
+                    console.log(`🖱️ Clic détecté sur le produit: ${product}`);
+                    navigateToProductMovements(product);
+                });
                 row.innerHTML = `
                     <td style="font-weight: 600;">${product}</td>
                     <td style="text-align: center; font-weight: 700; color: ${statusColor};">${quantity.toLocaleString()}</td>
@@ -6248,7 +6272,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         const row = document.createElement('tr');
                         row.style.cursor = 'pointer';
                         row.setAttribute('data-product', stock.product);
-                        row.addEventListener('click', () => navigateToProductMovements(stock.product));
+                        row.addEventListener('click', () => {
+                            console.log(`🖱️ Clic détecté sur le produit (tableau positif): ${stock.product}`);
+                            navigateToProductMovements(stock.product);
+                        });
                         row.innerHTML = `
                             <td>${stock.product}</td>
                             <td style="text-align: right; font-weight: bold; color: #28a745;">${stock.quantity.toLocaleString()}</td>
