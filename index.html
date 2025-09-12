@@ -7991,11 +7991,24 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 timestamp: new Date().toISOString()
             };
             
-            // Ajouter à la liste
+            // Ajouter à la liste locale
             stockEntriesData.push(entry);
             
-            // Sauvegarder
-            saveStockData();
+            // Sauvegarder en local
+            localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
+            
+            // 🔥 NOUVEAU : Sauvegarder directement dans Firebase
+            if (isFirebaseInitialized && db) {
+                db.collection('stockEntries').doc(entry.id.toString()).set({
+                    ...entry,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    console.log('✅ Entrée sauvegardée dans Firebase:', entry.id);
+                }).catch((error) => {
+                    console.error('❌ Erreur sauvegarde Firebase:', error);
+                    showAlert('⚠️ Erreur de synchronisation Firebase', 'warning');
+                });
+            }
             
             // Recalculer les niveaux de stock
             calculateCurrentStockLevels();
@@ -8290,11 +8303,24 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 timestamp: new Date().toISOString()
             };
             
-            // Ajouter à la liste
+            // Ajouter à la liste locale
             stockExitsData.push(exit);
             
-            // Sauvegarder
-            saveStockData();
+            // Sauvegarder en local
+            localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+            
+            // 🔥 NOUVEAU : Sauvegarder directement dans Firebase
+            if (isFirebaseInitialized && db) {
+                db.collection('stockExits').doc(exit.id.toString()).set({
+                    ...exit,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    console.log('✅ Sortie sauvegardée dans Firebase:', exit.id);
+                }).catch((error) => {
+                    console.error('❌ Erreur sauvegarde Firebase:', error);
+                    showAlert('⚠️ Erreur de synchronisation Firebase', 'warning');
+                });
+            }
             
             // Recalculer les niveaux de stock
             calculateCurrentStockLevels();
