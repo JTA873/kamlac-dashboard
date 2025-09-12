@@ -4675,6 +4675,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         function resetMovementFilters() {
+            // Ne pas réinitialiser si on est en cours de navigation depuis le dashboard
+            if (preventMovementFilterReset) {
+                console.log('🚫 Réinitialisation des filtres empêchée (navigation en cours)');
+                return;
+            }
+            
+            console.log('🗑️ Réinitialisation des filtres de mouvements');
             document.getElementById('movementProductFilter').value = '';
             document.getElementById('movementDirectionFilter').value = '';
             document.getElementById('movementTypeFilter').value = '';
@@ -5865,8 +5872,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         // NOUVELLE FONCTION: Navigation vers les mouvements d'un produit spécifique
+        // Variable globale pour empêcher la réinitialisation automatique des filtres
+        let preventMovementFilterReset = false;
+        
         function navigateToProductMovements(productName) {
             console.log(`🔍 Navigation vers les mouvements du produit: ${productName}`);
+            
+            // Empêcher la réinitialisation automatique des filtres
+            preventMovementFilterReset = true;
             
             // Ajouter plus de logs pour déboguer
             console.log('Étape 1: Appel de showModule("stocks")');
@@ -5891,9 +5904,26 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     console.log('Étape 5: Application du filtre produit');
                     productFilter.value = productName;
                     
+                    // Vérifier que la valeur est bien définie
+                    console.log('Valeur du filtre définie:', productFilter.value);
+                    
                     // Appliquer les filtres
                     console.log('Étape 6: Appel de applyMovementFilters()');
                     applyMovementFilters();
+                    
+                    // Vérifier après un délai si le filtre est toujours là
+                    setTimeout(() => {
+                        console.log('Vérification après 1 seconde - Valeur du filtre:', productFilter.value);
+                        if (productFilter.value !== productName) {
+                            console.log('⚠️ Le filtre a été réinitialisé, on le remet');
+                            productFilter.value = productName;
+                            applyMovementFilters();
+                        }
+                        // Réactiver la réinitialisation automatique après 2 secondes
+                        setTimeout(() => {
+                            preventMovementFilterReset = false;
+                        }, 1000);
+                    }, 1000);
                     
                     // Notification à l'utilisateur
                     console.log('Étape 7: Affichage de la notification');
@@ -5911,13 +5941,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 } else {
                     console.log('❌ Filtre de produit non trouvé');
                     showAlert('❌ Impossible de filtrer les mouvements - filtre non trouvé', 'error');
+                    // Réactiver la réinitialisation automatique
+                    preventMovementFilterReset = false;
                 }
-            }, 500); // Augmentation du délai pour être sûr
+            }, 1000); // Augmentation du délai pour être sûr
         }
         
         // Fonction pour naviguer vers les mouvements filtrés par type
         function navigateToStockMovements(movementType) {
             console.log(`🔍 Navigation vers les mouvements de type: ${movementType}`);
+            
+            // Empêcher la réinitialisation automatique des filtres
+            preventMovementFilterReset = true;
             
             // D'abord s'assurer qu'on est dans le module stocks
             showModule('stocks');
@@ -5934,14 +5969,30 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     // Définir le type de mouvement à filtrer
                     if (movementType === 'entry') {
                         typeFilter.value = 'entry';
+                        console.log('Filtre type défini à:', typeFilter.value);
                         showAlert('📥 Affichage des entrées de stock', 'success');
                     } else if (movementType === 'exit') {
                         typeFilter.value = 'exit';
+                        console.log('Filtre type défini à:', typeFilter.value);
                         showAlert('📤 Affichage des sorties de stock', 'success');
                     }
                     
                     // Appliquer les filtres
                     applyMovementFilters();
+                    
+                    // Vérifier après un délai si le filtre est toujours là
+                    setTimeout(() => {
+                        console.log('Vérification après 1 seconde - Valeur du filtre type:', typeFilter.value);
+                        if (typeFilter.value !== movementType) {
+                            console.log('⚠️ Le filtre type a été réinitialisé, on le remet');
+                            typeFilter.value = movementType;
+                            applyMovementFilters();
+                        }
+                        // Réactiver la réinitialisation automatique après 2 secondes
+                        setTimeout(() => {
+                            preventMovementFilterReset = false;
+                        }, 1000);
+                    }, 1000);
                     
                     // Scroll vers le tableau de mouvements
                     const movementsTable = document.querySelector('#movements-all .data-table');
@@ -5951,8 +6002,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 } else {
                     console.log('❌ Filtre de type non trouvé');
                     showAlert('❌ Impossible de filtrer les mouvements - filtre non trouvé', 'error');
+                    // Réactiver la réinitialisation automatique
+                    preventMovementFilterReset = false;
                 }
-            }, 500);
+            }, 1000);
         }
         
         // Fonction pour naviguer vers tous les mouvements
