@@ -334,8 +334,15 @@
         // Test de connexion Firebase
         async function testFirebaseConnection() {
             try {
-                // Test simple avec une collection vide
-                await getDocs(query(collection(db, 'test'), limit(1)));
+                // Test simple avec timeout
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Connection timeout')), 5000);
+                });
+                
+                const testPromise = getDocs(query(collection(db, 'test'), limit(1)));
+                
+                await Promise.race([testPromise, timeoutPromise]);
+                
                 isFirebaseReady = true;
                 isOnline = true;
                 console.log('✅ Firebase connecté et prêt');
@@ -348,12 +355,19 @@
                 // Activer explicitement le mode offline
                 try {
                     await disableNetwork(db);
-                    console.log('📴 Mode offline activé');
+                    console.log('📴 Mode offline activé explicitement');
                 } catch (offlineError) {
-                    console.log('Mode offline déjà actif');
+                    console.log('📴 Mode offline déjà actif ou erreur:', offlineError.message);
                 }
                 
-                showAlert('⚠️ Mode offline - Données sauvées localement', 'warning');
+                // Message adapté selon le type d'erreur
+                if (error.message.includes('net::ERR_BLOCKED_BY_CLIENT') || 
+                    error.message.includes('blocked') || 
+                    error.message.includes('timeout')) {
+                    showAlert('🛡️ Connexion bloquée par navigateur - Mode offline activé', 'warning');
+                } else {
+                    showAlert('⚠️ Mode offline - Données sauvées localement', 'warning');
+                }
             }
         }
 
@@ -362,13 +376,33 @@
             if (!isOnline) {
                 setTimeout(async () => {
                     try {
+                        console.log('🔄 Tentative de reconnexion Firebase...');
                         await enableNetwork(db);
-                        await testFirebaseConnection();
-                        if (isOnline) {
-                            showAlert('🔄 Reconnexion Firebase réussie', 'success');
-                        }
+                        
+                        // Test de connexion avec timeout réduit
+                        const timeoutPromise = new Promise((_, reject) => {
+                            setTimeout(() => reject(new Error('Reconnection timeout')), 3000);
+                        });
+                        
+                        const testPromise = getDocs(query(collection(db, 'test'), limit(1)));
+                        await Promise.race([testPromise, timeoutPromise]);
+                        
+                        isFirebaseReady = true;
+                        isOnline = true;
+                        console.log('✅ Reconnexion Firebase réussie');
+                        showAlert('🔄 Reconnexion Firebase réussie', 'success');
                     } catch (error) {
-                        console.log('🔄 Tentative de reconnexion échouée');
+                        console.log('🔄 Tentative de reconnexion échouée:', error.message);
+                        isFirebaseReady = false;
+                        isOnline = false;
+                        
+                        // Réactiver le mode offline et réessayer
+                        try {
+                            await disableNetwork(db);
+                        } catch (disableError) {
+                            console.log('Erreur désactivation réseau:', disableError.message);
+                        }
+                        
                         attemptReconnection(); // Réessayer
                     }
                 }, 30000); // Réessayer toutes les 30 secondes
