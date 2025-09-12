@@ -310,7 +310,7 @@
     <!-- Firebase Configuration -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, query, where, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
         // Configuration Firebase
         const firebaseConfig = {
@@ -327,9 +327,60 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Firebase prêt immédiatement (pas d'authentification requise avec les règles ouvertes)
-        let isFirebaseReady = true;
-        console.log('✅ Firebase initialisé (règles ouvertes)');
+        // État de connexion Firebase
+        let isFirebaseReady = false;
+        let isOnline = true;
+
+        // Test de connexion Firebase
+        async function testFirebaseConnection() {
+            try {
+                // Test simple avec une collection vide
+                await getDocs(query(collection(db, 'test'), limit(1)));
+                isFirebaseReady = true;
+                isOnline = true;
+                console.log('✅ Firebase connecté et prêt');
+                showAlert('✅ Connexion Firebase réussie', 'success');
+            } catch (error) {
+                console.warn('⚠️ Firebase en mode offline:', error.message);
+                isFirebaseReady = false;
+                isOnline = false;
+                
+                // Activer explicitement le mode offline
+                try {
+                    await disableNetwork(db);
+                    console.log('📴 Mode offline activé');
+                } catch (offlineError) {
+                    console.log('Mode offline déjà actif');
+                }
+                
+                showAlert('⚠️ Mode offline - Données sauvées localement', 'warning');
+            }
+        }
+
+        // Tenter de reconnecter périodiquement
+        function attemptReconnection() {
+            if (!isOnline) {
+                setTimeout(async () => {
+                    try {
+                        await enableNetwork(db);
+                        await testFirebaseConnection();
+                        if (isOnline) {
+                            showAlert('🔄 Reconnexion Firebase réussie', 'success');
+                        }
+                    } catch (error) {
+                        console.log('🔄 Tentative de reconnexion échouée');
+                        attemptReconnection(); // Réessayer
+                    }
+                }, 30000); // Réessayer toutes les 30 secondes
+            }
+        }
+
+        // Initialiser la connexion
+        testFirebaseConnection().then(() => {
+            if (!isOnline) {
+                attemptReconnection();
+            }
+        });
 
         // Exposer les fonctions Firebase globalement
         window.db = db;
@@ -343,6 +394,7 @@
         window.orderBy = orderBy;
         window.limit = limit;
         window.isFirebaseReady = () => isFirebaseReady;
+        window.isOnline = () => isOnline;
 
         // Variables globales
         window.stockEntriesData = [];
@@ -564,18 +616,19 @@
                 productions.push(production);
                 localStorage.setItem('productions', JSON.stringify(productions));
                 
-                // Sauvegarder sur Firebase
-                if (window.isFirebaseReady && window.isFirebaseReady()) {
+                // Sauvegarder sur Firebase (si en ligne)
+                if (window.isFirebaseReady && window.isFirebaseReady() && window.isOnline && window.isOnline()) {
                     try {
                         await addDoc(collection(db, 'productions'), production);
                         console.log('✅ Production sauvegardée sur Firebase');
+                        showAlert(`✅ Opération enregistrée et synchronisée pour ${produitFinal}`, 'success');
                     } catch (firebaseError) {
                         console.error('❌ Erreur sauvegarde Firebase:', firebaseError);
-                        showAlert('⚠️ Enregistrement local réussi, mais erreur Firebase', 'warning');
+                        showAlert('⚠️ Enregistrement local réussi, synchronisation échouée', 'warning');
                     }
                 } else {
-                    console.log('⚠️ Firebase non prêt - sauvegarde locale uniquement');
-                    showAlert('⚠️ Sauvegarde locale uniquement (Firebase non disponible)', 'warning');
+                    console.log('📴 Mode offline - sauvegarde locale uniquement');
+                    showAlert(`✅ Opération enregistrée localement pour ${produitFinal} (Mode offline)`, 'success');
                 }
                 
                 // Intégrer dans les stocks
@@ -585,7 +638,7 @@
                 // Réinitialiser le formulaire
                 resetForm();
                 
-                showAlert(`✅ Opération enregistrée avec succès pour ${produitFinal}`, 'success');
+                // Ne pas afficher de message de succès ici car c'est déjà fait au-dessus
                 
                 // Recharger les données
                 setTimeout(() => {
@@ -636,8 +689,8 @@
                     localStorage.setItem('stockEntries', JSON.stringify(stockEntries));
                     window.stockEntriesData = stockEntries;
                     
-                    // Sauvegarder sur Firebase
-                    if (window.isFirebaseReady && window.isFirebaseReady()) {
+                    // Sauvegarder sur Firebase (si en ligne)
+                    if (window.isFirebaseReady && window.isFirebaseReady() && window.isOnline && window.isOnline()) {
                         try {
                             await addDoc(collection(db, 'stockEntries'), stockEntryData);
                             console.log('✅ Entrée stock sauvegardée sur Firebase');
@@ -645,7 +698,7 @@
                             console.error('❌ Erreur sauvegarde Firebase stockEntries:', firebaseError);
                         }
                     } else {
-                        console.log('⚠️ Firebase non prêt - sauvegarde locale uniquement pour stockEntries');
+                        console.log('📴 Mode offline - stockEntries sauvé localement uniquement');
                     }
                     
                 } else {
@@ -665,8 +718,8 @@
                     localStorage.setItem('stockExits', JSON.stringify(stockExits));
                     window.stockExitsData = stockExits;
                     
-                    // Sauvegarder sur Firebase
-                    if (window.isFirebaseReady && window.isFirebaseReady()) {
+                    // Sauvegarder sur Firebase (si en ligne)
+                    if (window.isFirebaseReady && window.isFirebaseReady() && window.isOnline && window.isOnline()) {
                         try {
                             await addDoc(collection(db, 'stockExits'), stockExitData);
                             console.log('✅ Sortie stock sauvegardée sur Firebase');
@@ -674,7 +727,7 @@
                             console.error('❌ Erreur sauvegarde Firebase stockExits:', firebaseError);
                         }
                     } else {
-                        console.log('⚠️ Firebase non prêt - sauvegarde locale uniquement pour stockExits');
+                        console.log('📴 Mode offline - stockExits sauvé localement uniquement');
                     }
                 }
                 
