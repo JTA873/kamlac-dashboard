@@ -4674,6 +4674,175 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             updateAllMovementsTable(); // Revenir à l'affichage sans filtre
         }
         
+        // FONCTION DE FILTRAGE POUR L'INVENTAIRE
+        function applyInventoryFilters() {
+            console.log('🔍 Application des filtres d\'inventaire...');
+            
+            // Récupérer les valeurs des filtres
+            const productFilter = document.getElementById('inventoryProductFilter')?.value.toLowerCase() || '';
+            const brandFilter = document.getElementById('inventoryBrandFilter')?.value.toLowerCase() || '';
+            const statusFilter = document.getElementById('inventoryStatusFilter')?.value || '';
+            
+            // S'assurer que les stocks sont calculés
+            calculateCurrentStockLevels();
+            
+            // Filtrer les produits selon les critères
+            const filteredProducts = Object.keys(currentStockLevels).filter(product => {
+                const stock = currentStockLevels[product];
+                const quantity = stock.quantity;
+                
+                // Filtre par nom de produit
+                if (productFilter && !product.toLowerCase().includes(productFilter)) {
+                    return false;
+                }
+                
+                // Filtre par marque (extrait du nom du produit)
+                if (brandFilter) {
+                    const productBrand = product.split(' ')[0].toLowerCase(); // Premier mot = marque
+                    if (!productBrand.includes(brandFilter)) {
+                        return false;
+                    }
+                }
+                
+                // Filtre par statut
+                if (statusFilter) {
+                    let status;
+                    if (quantity < 0) status = 'NÉGATIF';
+                    else if (quantity === 0) status = 'OUT';
+                    else if (quantity <= 10) status = 'LOW';
+                    else status = 'OK';
+                    
+                    if (statusFilter === 'OK' && status !== 'OK') return false;
+                    if (statusFilter === 'LOW' && status !== 'LOW') return false;
+                    if (statusFilter === 'OUT' && (status !== 'OUT' && status !== 'NÉGATIF')) return false;
+                }
+                
+                return true;
+            });
+            
+            console.log(`📊 ${filteredProducts.length} produits après filtrage inventaire`);
+            
+            // Mettre à jour l'affichage avec les produits filtrés
+            updateInventoryTableWithFilteredData(filteredProducts);
+        }
+        
+        // Fonction helper pour mettre à jour le tableau avec des données filtrées
+        function updateInventoryTableWithFilteredData(filteredProducts) {
+            const inventoryTableBody = document.getElementById('inventoryTableBody');
+            if (!inventoryTableBody) return;
+            
+            // Vider le tableau
+            inventoryTableBody.innerHTML = '';
+            
+            // Statistiques pour les KPI
+            let totalProducts = filteredProducts.length;
+            let totalValue = 0;
+            let lowStockCount = 0;
+            let outOfStockCount = 0;
+            
+            // Trier les produits par stock (négatifs en premier)
+            filteredProducts.sort((a, b) => currentStockLevels[a].quantity - currentStockLevels[b].quantity);
+            
+            filteredProducts.forEach(product => {
+                const stock = currentStockLevels[product];
+                const quantity = stock.quantity;
+                
+                // Calculer les ventes totales pour ce produit
+                const totalSales = salesData
+                    .filter(sale => sale.product === product)
+                    .reduce((total, sale) => total + (parseFloat(sale.quantity) || 0), 0);
+                
+                // Calculer le CA total pour ce produit
+                const totalRevenue = salesData
+                    .filter(sale => sale.product === product)
+                    .reduce((total, sale) => total + (parseFloat(sale.valeur) || 0), 0);
+                
+                // Calculer la valeur du stock
+                const avgPrice = salesData
+                    .filter(sale => sale.product === product)
+                    .reduce((total, sale, index, array) => {
+                        const price = parseFloat(sale.prix) || 0;
+                        return index === array.length - 1 ? (total + price) / array.length : total + price;
+                    }, 0);
+                
+                if (quantity > 0) totalValue += quantity * avgPrice;
+                
+                // Compter les alertes
+                if (quantity > 0 && quantity <= 10) lowStockCount++;
+                if (quantity <= 0) outOfStockCount++;
+                
+                const row = document.createElement('tr');
+                
+                // Style selon le niveau de stock
+                let statusIcon, statusClass, statusText;
+                if (quantity < 0) {
+                    statusIcon = '🔴';
+                    statusClass = 'text-danger';
+                    statusText = 'NÉGATIF';
+                } else if (quantity === 0) {
+                    statusIcon = '⚠️';
+                    statusClass = 'text-warning';
+                    statusText = 'ZÉRO';
+                } else if (quantity <= 10) {
+                    statusIcon = '🟡';
+                    statusClass = 'text-warning';
+                    statusText = 'FAIBLE';
+                } else {
+                    statusIcon = '🟢';
+                    statusClass = 'text-success';
+                    statusText = 'OK';
+                }
+                
+                row.innerHTML = `
+                    <td style="font-weight: 500;">${product}</td>
+                    <td class="${statusClass}" style="font-weight: bold;">
+                        ${quantity.toLocaleString()}
+                    </td>
+                    <td>
+                        <span style="display: inline-flex; align-items: center; gap: 5px;">
+                            ${statusIcon} <span class="${statusClass}">${statusText}</span>
+                        </span>
+                    </td>
+                    <td style="color: #666;">${totalSales.toLocaleString()}</td>
+                    <td style="color: #666;">${totalRevenue.toLocaleString()} CFA</td>
+                    <td style="font-size: 0.8rem; color: #888;">
+                        ${stock.lastMovement ? new Date(stock.lastMovement).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td>
+                        <button onclick="showProductSheet('${product.replace(/'/g, "\\'")}')" 
+                                class="btn-icon" title="Fiche produit" style="background: #667eea; color: white; padding: 5px 10px; border-radius: 5px;">
+                            📋 Fiche
+                        </button>
+                    </td>
+                `;
+                
+                inventoryTableBody.appendChild(row);
+            });
+            
+            // Mettre à jour les KPI avec les données filtrées
+            const totalProductsElement = document.getElementById('totalProductsInStock');
+            if (totalProductsElement) {
+                totalProductsElement.textContent = totalProducts.toLocaleString();
+            }
+            
+            const totalValueElement = document.getElementById('totalStockValue');
+            if (totalValueElement) {
+                totalValueElement.textContent = `${Math.round(totalValue).toLocaleString()} CFA`;
+            }
+            
+            const lowStockElement = document.getElementById('lowStockProductsCount');
+            if (lowStockElement) {
+                lowStockElement.textContent = lowStockCount.toLocaleString();
+            }
+            
+            const outOfStockElement = document.getElementById('outOfStockProductsCount');
+            if (outOfStockElement) {
+                outOfStockElement.textContent = outOfStockCount.toLocaleString();
+            }
+            
+            console.log(`📊 KPI inventaire filtrés mis à jour: ${totalProducts} produits, ${Math.round(totalValue).toLocaleString()} CFA, ${lowStockCount} alertes, ${outOfStockCount} ruptures`);
+        }
+        
         // FONCTIONS POUR MODIFIER ET SUPPRIMER LES MOUVEMENTS
         function editMovement(source, id) {
             console.log(`✏️ Modification du mouvement ${source}:${id}`);
@@ -6297,7 +6466,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         const row = document.createElement('tr');
                         row.style.cursor = 'pointer';
                         row.setAttribute('data-product', stock.product);
-                        row.addEventListener('click', () => navigateToProductMovements(stock.product));
+                        row.addEventListener('click', () => {
+                            console.log(`🖱️ Clic détecté sur le produit (tableau négatif): ${stock.product}`);
+                            navigateToProductMovements(stock.product);
+                        });
                         row.innerHTML = `
                             <td>${stock.product}</td>
                             <td style="text-align: right; font-weight: bold; color: #dc3545;">-${stock.quantity.toLocaleString()}</td>
@@ -7516,7 +7688,55 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 reinitializeTableSorting(inventoryTable);
             }
             
-            // Mettre à jour les statistiques d'inventaire
+            // Calculer les KPI pour l'inventaire
+            const totalValueStocks = Object.keys(currentStockLevels).reduce((total, product) => {
+                const stock = currentStockLevels[product];
+                const quantity = stock.quantity;
+                
+                // Estimer la valeur en utilisant le prix de vente moyen du produit
+                const avgPrice = salesData
+                    .filter(sale => sale.product === product)
+                    .reduce((total, sale, index, array) => {
+                        const price = parseFloat(sale.prix) || 0;
+                        return index === array.length - 1 ? (total + price) / array.length : total + price;
+                    }, 0);
+                
+                return total + (quantity > 0 ? quantity * avgPrice : 0);
+            }, 0);
+            
+            const lowStockCount = Object.keys(currentStockLevels)
+                .filter(product => {
+                    const quantity = currentStockLevels[product].quantity;
+                    return quantity > 0 && quantity <= 10; // Stock bas mais pas rupture
+                }).length;
+                
+            const outOfStockCount = Object.keys(currentStockLevels)
+                .filter(product => currentStockLevels[product].quantity <= 0).length;
+            
+            // Mettre à jour les KPI de l'inventaire
+            const totalProductsElement = document.getElementById('totalProductsInStock');
+            if (totalProductsElement) {
+                totalProductsElement.textContent = totalProducts.toLocaleString();
+            }
+            
+            const totalValueElement = document.getElementById('totalStockValue');
+            if (totalValueElement) {
+                totalValueElement.textContent = `${Math.round(totalValueStocks).toLocaleString()} CFA`;
+            }
+            
+            const lowStockElement = document.getElementById('lowStockProductsCount');
+            if (lowStockElement) {
+                lowStockElement.textContent = lowStockCount.toLocaleString();
+            }
+            
+            const outOfStockElement = document.getElementById('outOfStockProductsCount');
+            if (outOfStockElement) {
+                outOfStockElement.textContent = outOfStockCount.toLocaleString();
+            }
+            
+            console.log(`📊 KPI inventaire mis à jour: ${totalProducts} produits, ${Math.round(totalValueStocks).toLocaleString()} CFA, ${lowStockCount} alertes, ${outOfStockCount} ruptures`);
+            
+            // Mettre à jour les statistiques d'inventaire (ancien code conservé pour compatibilité)
             const inventoryStats = document.getElementById('inventoryStats');
             if (inventoryStats) {
                 inventoryStats.innerHTML = `
@@ -8159,8 +8379,56 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         function updateInventory() {
             console.log('📦 Mise à jour de la section Inventaire...');
+            
+            // S'assurer que les niveaux de stock sont à jour
+            calculateCurrentStockLevels();
+            
+            // Mettre à jour les filtres de produits
+            updateStockProductFilters();
+            
+            // Mettre à jour les filtres de marques
+            updateInventoryBrandFilters();
+            
             // Rediriger vers la fonction existante
             updateInventoryTable();
+        }
+        
+        // Fonction pour mettre à jour le filtre des marques dans l'inventaire
+        function updateInventoryBrandFilters() {
+            console.log('🏷️ Mise à jour du filtre des marques...');
+            
+            const brandFilter = document.getElementById('inventoryBrandFilter');
+            if (!brandFilter) return;
+            
+            // Extraire les marques des noms de produits (premier mot)
+            const brands = new Set();
+            Object.keys(currentStockLevels).forEach(product => {
+                const brand = product.split(' ')[0]; // Premier mot = marque
+                if (brand && brand.length > 1) {
+                    brands.add(brand);
+                }
+            });
+            
+            // Trier les marques
+            const sortedBrands = Array.from(brands).sort();
+            
+            // Sauvegarder la valeur actuelle
+            const currentValue = brandFilter.value;
+            
+            // Vider et remplir le filtre
+            brandFilter.innerHTML = '<option value="">Toutes les marques</option>';
+            
+            sortedBrands.forEach(brand => {
+                const option = document.createElement('option');
+                option.value = brand;
+                option.textContent = brand;
+                if (brand === currentValue) {
+                    option.selected = true;
+                }
+                brandFilter.appendChild(option);
+            });
+            
+            console.log(`✅ ${sortedBrands.length} marques ajoutées au filtre`);
         }
         
         function updateAlertsTable() {
@@ -8864,11 +9132,6 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             `;
             
             showAlert(helpMessage, 'info');
-        }
-        
-        // Fonction d'alerte simple (version restaurée)
-        function showAlert(message, type = 'success') {
-            alert(message);
         }
         
         // Barre de progression
