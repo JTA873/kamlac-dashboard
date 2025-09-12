@@ -2173,6 +2173,13 @@
             background: linear-gradient(135deg, #fed7aa, #fab1a0);
             transition: all 0.3s ease;
         }
+        
+        /* Animation shake pour le PIN incorrect */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
     </style>
 </head>
 <body>
@@ -2195,6 +2202,7 @@
         <div class="module-nav">
             <button class="module-tab active" onclick="showModule('commercial')">💼 Module Commercial</button>
             <button class="module-tab" onclick="showModule('stocks')">📦 Module Stocks</button>
+            <button class="module-tab" onclick="showModule('admin')">🔐 Module Admin</button>
             <button class="floating-btn" id="floatingBtn" onclick="toggleFloatingMenu()" title="Accès rapide">
                 +
             </button>
@@ -2208,7 +2216,6 @@
                 <button class="nav-tab" onclick="showSection('recap')">📋 Mouvements</button>
                 <button class="nav-tab" onclick="showSection('sales')">💼 Vente</button>
                 <button class="nav-tab" onclick="showSection('payments')">💰 Encaisser</button>
-                <button class="nav-tab" onclick="showSection('chat')">🤖 Assistant IA</button>
                 <button class="nav-tab" onclick="showSection('settings')">⚙️ Param</button>
             </div>
         
@@ -3529,6 +3536,98 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         </div>
     </div>
     
+    <!-- Module Admin -->
+    <div id="adminModule" class="module">
+        <div class="card">
+            <div style="text-align: center;">
+                <div style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; padding: 40px; border-radius: 20px;">
+                    <div style="font-size: 60px; margin-bottom: 20px;">🔒</div>
+                    <h2>Module 3 - Gestion Admin</h2>
+                    <p>Cette section est protégée par un code PIN</p>
+                    
+                    <div id="adminPinPrompt">
+                        <input type="password" id="adminPinInput" placeholder="Code PIN" style="padding: 15px; font-size: 16px; border: none; border-radius: 10px; text-align: center; margin: 20px; width: 150px;" maxlength="4">
+                        <br>
+                        <button onclick="checkAdminPin()" style="background: white; color: #667eea; border: none; padding: 12px 25px; border-radius: 25px; font-weight: bold; cursor: pointer;">🔓 Déverrouiller</button>
+                        <div id="adminPinError" style="color: red; margin-top: 15px; display: none;">❌ Code PIN incorrect</div>
+                    </div>
+                    
+                    <div id="adminContent" style="display: none;">
+                        <div style="color: lightgreen; margin: 20px;">✅ Accès autorisé</div>
+                        
+                        <!-- Interface Gestion Production -->
+                        <div style="background: rgba(255,255,255,0.95); color: #333; padding: 30px; border-radius: 15px; margin: 20px 0; text-align: left;">
+                            <h3 style="color: #667eea; margin-bottom: 20px; text-align: center;">📦 Interface Mouvements Stocks</h3>
+                            
+                            <!-- Formulaire Production -->
+                            <div style="margin-bottom: 25px;">
+                                <label style="display: block; margin-bottom: 8px; font-weight: bold;">� Produit :</label>
+                                <select id="prodProduitSelect" onchange="handleProductSelection()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; background: white;">
+                                    <option value="">-- Sélectionner un produit existant --</option>
+                                    <option value="__nouveau__">✏️ Saisir un nouveau produit</option>
+                                </select>
+                                
+                                <input type="text" id="prodProduit" placeholder="Nom du nouveau produit" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; display: none;">
+                                
+                                <!-- Bouton pour rafraîchir la liste des produits -->
+                                <button onclick="chargerProduitsDisponibles()" style="width: 100%; background: #17a2b8; color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; margin-bottom: 15px; cursor: pointer;">
+                                    🔄 Actualiser liste produits Firebase
+                                </button>
+                                
+                                <label style="display: block; margin-bottom: 8px; font-weight: bold;">📊 Quantité :</label>
+                                <input type="number" id="prodQuantite" placeholder="0" min="1" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px;">
+                                
+                                <label style="display: block; margin-bottom: 8px; font-weight: bold;">📅 Date :</label>
+                                <input type="date" id="prodDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px;">
+                                
+                                <label style="display: block; margin-bottom: 8px; font-weight: bold;">📝 Type :</label>
+                                <select id="prodType" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px;">
+                                    <option value="reception_mp"> Réception Matière Première</option>
+                                    <option value="reception_pf"> Réception Produit Fini</option>
+                                    <option value="sortie_mp"> Sortie Matière Première</option>
+                                    <option value="perte">� Perte/Casse</option>
+                                    <option value="sortie_pf">� Sortie Produit Fini</option>
+                                </select>
+                                
+                                <label style="display: block; margin-bottom: 8px; font-weight: bold;">👤 Agent :</label>
+                                <input type="text" id="prodAgent" placeholder="Nom de l'agent" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px;">
+                                
+                                <label style="display: block; margin-bottom: 8px; font-weight: bold;">📝 Commentaire :</label>
+                                <textarea id="prodCommentaire" placeholder="Détails de l'opération..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; height: 60px; resize: vertical;"></textarea>
+                                
+                                <button onclick="enregistrerProduction()" style="width: 100%; background: #28a745; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">
+                                    ✅ Enregistrer Opération
+                                </button>
+                                
+                                <!-- Bouton synchronisation manuelle -->
+                                <button onclick="synchroniserStocksFirebase()" style="width: 100%; background: #17a2b8; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px;">
+                                    🔄 Synchroniser avec Firebase
+                                </button>
+                                
+                                <!-- Indicateur de synchronisation -->
+                                <div id="productionSyncStatus" style="margin-top: 10px; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; background: #f8f9fa; border: 1px solid #dee2e6;">
+                                    <span id="productionFirebaseStatus">⚠️ Statut Firebase: Non vérifié</span>
+                                    <br>
+                                    <span id="productionStockStatus">📦 Intégration stock: Active</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Liste des productions du jour -->
+                            <div style="border-top: 2px solid #eee; padding-top: 20px;">
+                                <h4 style="color: #667eea; margin-bottom: 15px;">📋 Mouvements du jour</h4>
+                                <div id="listeProductions" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 10px;">
+                                    <p style="text-align: center; color: #666; font-style: italic;">Aucun mouvement enregistré aujourd'hui</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button onclick="lockAdmin()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 10px 20px; border-radius: 20px; cursor: pointer;">🔒 Verrouiller</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Modal Produit -->
     <div id="productModal" class="product-modal">
         <div class="product-modal-content">
@@ -3744,10 +3843,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 <span>Analyse</span>
             </div>
             <div class="floating-submenu">
-                <div class="floating-menu-item" onclick="openQuickChat()">
-                    <span class="icon">🤖</span>
-                    <span>IA BOT</span>
-                </div>
                 <div class="floating-menu-item" onclick="openQuickRecap()">
                     <span class="icon">📋</span>
                     <span>Récapitulatif</span>
@@ -3895,6 +3990,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 initializeStocksModule();
             } else if (moduleId === 'commercial') {
                 initializeCommercialModule();
+            } else if (moduleId === 'admin') {
+                initializeAdminModule();
             }
         }
         
@@ -14161,6 +14258,481 @@ Date [ESPACES] Client [ESPACES] Montant
             
             console.log('🏁 === FIN DU TEST DES GRAPHIQUES ===');
         }
+
+        // ========================================
+        // FONCTIONS GESTION ADMIN
+        // ========================================
+        
+        function initializeAdminModule() {
+            console.log('🔐 Initialisation du module Admin');
+            // Toujours commencer avec l'interface verrouillée
+            lockAdmin();
+        }
+        
+        function checkAdminPin() {
+            const pinInput = document.getElementById('adminPinInput');
+            const enteredPin = pinInput.value;
+            const correctPin = '2011';
+            
+            if (enteredPin === correctPin) {
+                // PIN correct, déverrouiller
+                document.getElementById('adminPinPrompt').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                document.getElementById('adminPinError').style.display = 'none';
+                pinInput.value = '';
+                
+                // Animation de succès
+                const adminContent = document.getElementById('adminContent');
+                adminContent.style.opacity = '0';
+                adminContent.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    adminContent.style.transition = 'all 0.5s ease';
+                    adminContent.style.opacity = '1';
+                    adminContent.style.transform = 'translateY(0)';
+                }, 100);
+                
+            } else {
+                // PIN incorrect
+                document.getElementById('adminPinError').style.display = 'block';
+                pinInput.value = '';
+                
+                // Animation d'erreur
+                const pinPrompt = document.getElementById('adminPinPrompt');
+                pinPrompt.style.animation = 'shake 0.5s ease-in-out';
+                setTimeout(() => {
+                    pinPrompt.style.animation = '';
+                }, 500);
+            }
+        }
+        
+        function lockAdmin() {
+            document.getElementById('adminPinPrompt').style.display = 'block';
+            document.getElementById('adminContent').style.display = 'none';
+            document.getElementById('adminPinError').style.display = 'none';
+            document.getElementById('adminPinInput').value = '';
+        }
+        
+        // Gestion du Enter sur le champ PIN
+        document.addEventListener('DOMContentLoaded', function() {
+            const adminPinInput = document.getElementById('adminPinInput');
+            if (adminPinInput) {
+                adminPinInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        checkAdminPin();
+                    }
+                });
+            }
+            
+            // Initialiser la date du jour
+            const prodDate = document.getElementById('prodDate');
+            if (prodDate) {
+                prodDate.value = new Date().toISOString().split('T')[0];
+            }
+            
+            // Charger les productions du jour
+            chargerProductionsDuJour();
+            
+            // Charger la liste des produits disponibles
+            chargerProduitsDisponibles();
+            
+            // Initialiser le statut de synchronisation
+            setTimeout(updateProductionSyncStatus, 1000);
+        });
+
+        // ========================================
+        // FONCTIONS GESTION PRODUCTION
+        // ========================================
+        
+        function enregistrerProduction() {
+            const agent = document.getElementById('prodAgent').value.trim();
+            
+            // Récupérer le produit selon la sélection
+            const selectProduit = document.getElementById('prodProduitSelect');
+            const inputProduit = document.getElementById('prodProduit');
+            let produit = '';
+            
+            if (selectProduit.value === '__nouveau__') {
+                produit = inputProduit.value.trim();
+            } else if (selectProduit.value) {
+                produit = selectProduit.value.trim();
+            }
+            
+            const quantite = parseInt(document.getElementById('prodQuantite').value);
+            const date = document.getElementById('prodDate').value;
+            const type = document.getElementById('prodType').value;
+            const commentaire = document.getElementById('prodCommentaire').value.trim();
+            
+            // Validation
+            if (!agent || !produit || !quantite || !date) {
+                alert('❌ Veuillez remplir tous les champs obligatoires (Agent, Produit, Quantité, Date)');
+                return;
+            }
+            
+            if (quantite <= 0) {
+                alert('❌ La quantité doit être positive');
+                return;
+            }
+            
+            // Déterminer les détails selon le type
+            const typeDetails = {
+                'reception_mp': { icon: '📥', label: 'Réception MP', isEntry: true },
+                'sortie_mp': { icon: '📤', label: 'Sortie MP', isEntry: false },
+                'reception_pf': { icon: '�', label: 'Réception PF', isEntry: true },
+                'sortie_pf': { icon: '�', label: 'Sortie PF', isEntry: false }
+            };
+            
+            const detail = typeDetails[type];
+            
+            // Générer un ID unique pour éviter les doublons
+            const now = Date.now();
+            const productionId = `${now}_${Math.random().toString(36).substr(2, 5)}`;
+            
+            // Créer l'entrée de production
+            const production = {
+                id: productionId,
+                agent: agent,
+                produit: produit,
+                quantite: quantite,
+                date: date,
+                type: type,
+                typeLabel: detail.label,
+                typeIcon: detail.icon,
+                commentaire: commentaire,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Vérifier que cette production n'existe pas déjà
+            let productions = JSON.parse(localStorage.getItem('productions') || '[]');
+            const existingProduction = productions.find(p => 
+                p.agent === agent && 
+                p.produit === produit && 
+                p.quantite === quantite && 
+                p.date === date && 
+                p.type === type &&
+                Math.abs(new Date(p.timestamp).getTime() - new Date(production.timestamp).getTime()) < 5000 // 5 secondes
+            );
+            
+            if (existingProduction) {
+                console.log('⚠️ Production similaire déjà existante, ignorée');
+                showAlert('⚠️ Cette production semble déjà enregistrée', 'warning');
+                return;
+            }
+            
+            // Sauvegarder dans localStorage
+            productions.push(production);
+            localStorage.setItem('productions', JSON.stringify(productions));
+            
+            // Intégrer dans le système de stock existant
+            integrerDansStock(production, detail.isEntry);
+            
+            // Sauvegarder aussi dans Firebase
+            sauvegarderProductionFirebase(production);
+            
+            // Recalculer les niveaux de stock
+            if (typeof calculateCurrentStockLevels === 'function') {
+                calculateCurrentStockLevels();
+            }
+            
+            // Vider le formulaire
+            document.getElementById('prodAgent').value = '';
+            document.getElementById('prodProduitSelect').value = '';
+            document.getElementById('prodProduit').value = '';
+            document.getElementById('prodProduit').style.display = 'none';
+            document.getElementById('prodQuantite').value = '';
+            document.getElementById('prodCommentaire').value = '';
+            
+            // Recharger la liste
+            chargerProductionsDuJour();
+            
+            showAlert(`✅ ${detail.label} enregistrée: ${quantite} ${produit} par ${agent}`, 'success');
+        }
+        
+        function integrerDansStock(production, isEntry) {
+            try {
+                // Créer une entrée standardisée pour le système de stock principal
+                const stockEntry = {
+                    id: `prod_${production.id}`,
+                    date: production.date,
+                    product: production.produit,
+                    quantity: Math.abs(production.quantite),
+                    supplier: `Agent: ${production.agent}`,
+                    notes: `${production.typeLabel} - ${production.commentaire}`,
+                    timestamp: production.timestamp
+                };
+                
+                if (isEntry) {
+                    // Vérifier si l'entrée existe déjà
+                    let stockEntriesData = JSON.parse(localStorage.getItem('stockEntries') || '[]');
+                    const existingEntry = stockEntriesData.find(entry => entry.id === stockEntry.id);
+                    
+                    if (!existingEntry) {
+                        stockEntriesData.push(stockEntry);
+                        localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
+                        console.log('✅ Mouvement ajouté aux ENTRÉES de stock:', stockEntry);
+                        
+                        // Mettre à jour les variables globales
+                        if (typeof window.stockEntriesData !== 'undefined') {
+                            window.stockEntriesData = stockEntriesData;
+                        }
+                    } else {
+                        console.log('⚠️ Entrée déjà existante, ignorée:', stockEntry.id);
+                    }
+                } else {
+                    // Vérifier si la sortie existe déjà
+                    let stockExitsData = JSON.parse(localStorage.getItem('stockExits') || '[]');
+                    const exitEntry = {
+                        ...stockEntry,
+                        customer: `Agent: ${production.agent}`,
+                        reason: production.typeLabel
+                    };
+                    
+                    const existingExit = stockExitsData.find(exit => exit.id === exitEntry.id);
+                    
+                    if (!existingExit) {
+                        stockExitsData.push(exitEntry);
+                        localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+                        console.log('✅ Mouvement ajouté aux SORTIES de stock:', exitEntry);
+                        
+                        // Mettre à jour les variables globales
+                        if (typeof window.stockExitsData !== 'undefined') {
+                            window.stockExitsData = stockExitsData;
+                        }
+                    } else {
+                        console.log('⚠️ Sortie déjà existante, ignorée:', exitEntry.id);
+                    }
+                }
+                
+                // NE PAS appeler saveStockData() automatiquement pour éviter les doublons
+                console.log('📦 Mouvement intégré dans localStorage uniquement');
+                
+            } catch (error) {
+                console.error('❌ Erreur intégration stock:', error);
+            }
+        }
+
+        async function chargerProduitsDisponibles() {
+            const select = document.getElementById('prodProduitSelect');
+            if (!select) return;
+            
+            try {
+                console.log('🔄 Chargement des produits depuis l\'inventaire...');
+                
+                // Vider la liste (garder les options par défaut)
+                const defaultOptions = `
+                    <option value="">-- Sélectionner un produit existant --</option>
+                    <option value="__nouveau__">✏️ Saisir un nouveau produit</option>
+                `;
+                
+                // Récupérer les produits depuis l'inventaire Firebase/localStorage
+                const produitsUniques = new Set();
+                
+                // 1. Récupérer depuis currentStockLevels (source principale)
+                if (currentStockLevels && Object.keys(currentStockLevels).length > 0) {
+                    Object.keys(currentStockLevels).forEach(produit => {
+                        if (produit && produit.trim()) {
+                            produitsUniques.add(produit.trim());
+                        }
+                    });
+                    console.log(`📊 ${Object.keys(currentStockLevels).length} produits trouvés dans currentStockLevels`);
+                }
+                
+                // 2. Récupérer depuis Firebase si disponible
+                if (isFirebaseInitialized && db) {
+                    try {
+                        const inventorySnapshot = await db.collection('inventory').get();
+                        inventorySnapshot.forEach(doc => {
+                            const data = doc.data();
+                            if (data.product && data.product.trim()) {
+                                produitsUniques.add(data.product.trim());
+                            }
+                        });
+                        console.log(`🔥 Produits Firebase récupérés: ${inventorySnapshot.size}`);
+                    } catch (error) {
+                        console.log('⚠️ Erreur récupération Firebase inventaire:', error.message);
+                    }
+                }
+                
+                // 3. Fallback avec localStorage
+                const inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+                const stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+                const stockEntries = JSON.parse(localStorage.getItem('stockEntries') || '[]');
+                
+                [...inventoryData, ...stockData, ...stockEntries].forEach(item => {
+                    if (item.product && item.product.trim()) {
+                        produitsUniques.add(item.product.trim());
+                    }
+                });
+                
+                // 4. Produits par défaut si aucun trouvé
+                if (produitsUniques.size === 0) {
+                    ['Produit A', 'Produit B', 'Matière première X', 'Matière première Y'].forEach(p => {
+                        produitsUniques.add(p);
+                    });
+                    console.log('📦 Aucun produit trouvé, utilisation des produits par défaut');
+                }
+                
+                // Construire la liste des options
+                let optionsHTML = defaultOptions;
+                Array.from(produitsUniques).sort().forEach(produit => {
+                    const stockInfo = currentStockLevels[produit];
+                    const stockText = stockInfo ? ` (Stock: ${stockInfo.quantity} ${stockInfo.unit || ''})` : '';
+                    optionsHTML += `<option value="${produit}">${produit}${stockText}</option>`;
+                });
+                
+                select.innerHTML = optionsHTML;
+                console.log(`✅ ${produitsUniques.size} produits chargés dans la liste déroulante`);
+                
+            } catch (error) {
+                console.error('❌ Erreur chargement produits:', error);
+                // Fallback ultime
+                select.innerHTML = `
+                    <option value="">-- Sélectionner un produit existant --</option>
+                    <option value="__nouveau__">✏️ Saisir un nouveau produit</option>
+                    <option value="Produit A">Produit A</option>
+                    <option value="Produit B">Produit B</option>
+                    <option value="Matière première X">Matière première X</option>
+                    <option value="Matière première Y">Matière première Y</option>
+                `;
+            }
+        }
+
+        async function sauvegarderProductionFirebase(production) {
+            try {
+                // Vérifier si Firebase est initialisé
+                if (!isFirebaseInitialized || !db) {
+                    console.log('⚠️ Firebase non disponible pour la sauvegarde production');
+                    updateProductionSyncStatus();
+                    return;
+                }
+
+                // Sauvegarder dans la collection "productions"
+                await db.collection('productions').doc(production.id).set({
+                    ...production,
+                    savedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                console.log('✅ Production sauvegardée dans Firebase:', production.id);
+                updateProductionSyncStatus();
+
+            } catch (error) {
+                console.error('❌ Erreur sauvegarde Firebase production:', error);
+                updateProductionSyncStatus();
+            }
+        }
+
+        function updateProductionSyncStatus() {
+            const firebaseStatusEl = document.getElementById('productionFirebaseStatus');
+            const stockStatusEl = document.getElementById('productionStockStatus');
+            
+            if (firebaseStatusEl) {
+                const isConnected = isFirebaseInitialized && db;
+                firebaseStatusEl.innerHTML = isConnected ? 
+                    '✅ Firebase: Connecté et synchronisé' : 
+                    '❌ Firebase: Non connecté (localStorage uniquement)';
+                firebaseStatusEl.style.color = isConnected ? '#28a745' : '#dc3545';
+            }
+            
+            if (stockStatusEl) {
+                stockStatusEl.innerHTML = '✅ Intégration stock: Active';
+                stockStatusEl.style.color = '#28a745';
+            }
+        }
+
+        function handleProductSelection() {
+            const select = document.getElementById('prodProduitSelect');
+            const input = document.getElementById('prodProduit');
+            
+            if (select.value === '__nouveau__') {
+                // Afficher le champ de saisie pour nouveau produit
+                input.style.display = 'block';
+                input.focus();
+                input.value = '';
+            } else if (select.value) {
+                // Produit existant sélectionné
+                input.style.display = 'none';
+                input.value = select.value;
+            } else {
+                // Aucune sélection
+                input.style.display = 'none';
+                input.value = '';
+            }
+        }
+
+        async function synchroniserStocksFirebase() {
+            try {
+                showAlert('🔄 Synchronisation avec Firebase en cours...', 'info');
+                
+                if (typeof saveStockData === 'function') {
+                    await saveStockData();
+                    showAlert('✅ Synchronisation Firebase terminée', 'success');
+                    updateProductionSyncStatus();
+                } else {
+                    showAlert('❌ Fonction de synchronisation non disponible', 'error');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erreur synchronisation Firebase:', error);
+                showAlert('❌ Erreur lors de la synchronisation', 'error');
+            }
+        }
+        
+        function chargerProductionsDuJour() {
+            const aujourd_hui = new Date().toISOString().split('T')[0];
+            const productions = JSON.parse(localStorage.getItem('productions') || '[]');
+            const productionsDuJour = productions.filter(p => p.date === aujourd_hui);
+            
+            const liste = document.getElementById('listeProductions');
+            if (!liste) return;
+            
+            if (productionsDuJour.length === 0) {
+                liste.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">Aucune production enregistrée aujourd\'hui</p>';
+                return;
+            }
+            
+            let html = '';
+            productionsDuJour.forEach(prod => {
+                const typeIcon = prod.type === 'production' ? '📈' : '📉';
+                const typeText = prod.type === 'production' ? 'Production' : 'Perte';
+                const timeStr = new Date(prod.timestamp).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+                
+                html += `
+                    <div style="background: #f8f9fa; padding: 10px; margin-bottom: 8px; border-radius: 6px; border-left: 4px solid ${prod.type === 'production' ? '#28a745' : '#dc3545'};">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>${typeIcon} ${prod.produit}</strong><br>
+                                <small style="color: #666;">${typeText}: ${prod.quantite} unités - ${timeStr}</small>
+                            </div>
+                            <button onclick="supprimerProduction(${prod.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            liste.innerHTML = html;
+        }
+        
+        function supprimerProduction(id) {
+            if (!confirm('Supprimer cette production ?')) return;
+            
+            // Supprimer de la liste des productions
+            let productions = JSON.parse(localStorage.getItem('productions') || '[]');
+            productions = productions.filter(p => p.id !== id);
+            localStorage.setItem('productions', JSON.stringify(productions));
+            
+            // Supprimer de la liste des stocks
+            let stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+            stockData = stockData.filter(s => s.id !== id);
+            localStorage.setItem('stockData', JSON.stringify(stockData));
+            
+            // Recharger la liste
+            chargerProductionsDuJour();
+            
+            showAlert('🗑️ Production supprimée', 'info');
+        }
+
     </script>
 </body>
 </html>
