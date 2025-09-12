@@ -3533,6 +3533,14 @@
                                     💡 Diagnostiquer la connexion Firebase
                                 </small>
                             </div>
+                            
+                            <div class="form-group">
+                                <label>🗑️ Test Suppression</label>
+                                <button class="btn btn-danger" onclick="testDeleteFunction()">🧪 Test Suppression</button>
+                                <small style="color: #dc3545; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    💡 Tester si les fonctions de suppression fonctionnent
+                                </small>
+                            </div>
 
                             <div class="form-group">
                                 <label>Import en Masse - Corrections de Stock</label>
@@ -5412,6 +5420,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             forceUpdateStockKPIs();
             showAlert('✅ Sortie supprimée', 'warning');
         }
+        
+        // 🌍 EXPORT DES FONCTIONS VERS LE SCOPE GLOBAL pour les onclick
+        window.deleteMovement = deleteMovement;
+        window.deleteStockEntry = deleteStockEntry;
+        window.deleteStockExit = deleteStockExit;
+        window.testFirebaseConnection = testFirebaseConnection;
+        window.testDeleteFunction = testDeleteFunction;
+        console.log('🌍 Fonctions de suppression exportées vers le scope global');
         
         // FONCTION POUR AFFICHER LA FICHE PRODUIT
         function showProductSheet(productName) {
@@ -10139,6 +10155,49 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 console.error('❌ Erreur:', error.message);
                 console.error('❌ Stack:', error.stack);
                 showAlert(`❌ Test Firebase échoué: ${error.message}`, 'error');
+            }
+        }
+
+        // 🧪 FONCTION DE TEST SUPPRESSION
+        function testDeleteFunction() {
+            console.log('🧪 === TEST FONCTIONS DE SUPPRESSION ===');
+            
+            try {
+                // Test 1: Vérifier que les fonctions existent
+                console.log('1️⃣ Test d\'existence des fonctions...');
+                console.log(`deleteMovement: ${typeof deleteMovement}`);
+                console.log(`deleteStockEntry: ${typeof deleteStockEntry}`);
+                console.log(`deleteStockExit: ${typeof deleteStockExit}`);
+                
+                // Test 2: Vérifier les données disponibles
+                console.log('2️⃣ Test des données disponibles...');
+                console.log(`stockEntriesData: ${stockEntriesData.length} entrées`);
+                console.log(`stockExitsData: ${stockExitsData.length} sorties`);
+                
+                if (stockEntriesData.length > 0) {
+                    const firstEntry = stockEntriesData[0];
+                    console.log(`Première entrée ID: ${firstEntry.id}`);
+                    
+                    // Test 3: Appel de fonction simulé
+                    console.log('3️⃣ Test d\'appel simulé...');
+                    if (confirm('Voulez-vous vraiment tester la suppression de la première entrée ?')) {
+                        console.log('🗑️ Appel de deleteStockEntry...');
+                        deleteStockEntry(firstEntry.id);
+                    } else {
+                        console.log('⏭️ Test de suppression annulé par l\'utilisateur');
+                    }
+                } else {
+                    console.log('⚠️ Aucune entrée disponible pour le test');
+                }
+                
+                console.log('✅ === TEST SUPPRESSION TERMINÉ ===');
+                showAlert('Test de suppression terminé - vérifiez la console', 'info');
+                
+            } catch (error) {
+                console.error('❌ === TEST SUPPRESSION ÉCHOUÉ ===');
+                console.error('❌ Erreur:', error.message);
+                console.error('❌ Stack:', error.stack);
+                showAlert(`❌ Test suppression échoué: ${error.message}`, 'error');
             }
         }
 
