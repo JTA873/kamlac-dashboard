@@ -717,6 +717,28 @@
             background-color: #f8f9fa;
         }
         
+        /* Amélioration des lignes cliquables dans les tableaux */
+        .data-table tbody tr[data-product] {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .data-table tbody tr[data-product]:hover {
+            background-color: #e3f2fd !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .data-table tbody tr[data-product]:hover td {
+            color: #1976d2 !important;
+            font-weight: 500;
+        }
+        
+        .data-table tbody tr[data-product]:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -4404,6 +4426,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 tableBody.appendChild(row);
             }
             
+            // Initialiser le tri pour ce tableau
+            const allMovementsTable = document.querySelector('#allMovementsTableBody').closest('table');
+            if (allMovementsTable) {
+                reinitializeTableSorting(allMovementsTable);
+            }
+            
             console.log(`✅ ${displayMovements.length} mouvements affichés sur ${allMovements.length} total`);
         }
         
@@ -4612,6 +4640,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     </td>
                 `;
                 tableBody.appendChild(row);
+            }
+            
+            // Initialiser le tri pour ce tableau
+            const movementsTable = document.querySelector('#allMovementsTableBody').closest('table');
+            if (movementsTable) {
+                reinitializeTableSorting(movementsTable);
             }
         }
         
@@ -5527,6 +5561,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     tableBody.appendChild(row);
                 });
             
+            // Initialiser le tri pour ce tableau
+            const entriesTable = document.querySelector('#entriesMovementsTableBody').closest('table');
+            if (entriesTable) {
+                reinitializeTableSorting(entriesTable);
+            }
+            
             console.log(`✅ ${totalEntries} entrées affichées`);
         }
         
@@ -5637,7 +5677,43 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     tableBody.appendChild(row);
                 });
             
+            // Initialiser le tri pour ce tableau
+            const exitsTable = document.querySelector('#exitsMovementsTableBody').closest('table');
+            if (exitsTable) {
+                reinitializeTableSorting(exitsTable);
+            }
+            
             console.log(`✅ ${Math.min(totalExits, 100)} sorties affichées sur ${totalExits} total`);
+        }
+        
+        // NOUVELLE FONCTION: Navigation vers les mouvements d'un produit spécifique
+        function navigateToProductMovements(productName) {
+            console.log(`🔍 Navigation vers les mouvements du produit: ${productName}`);
+            
+            // Naviguer vers la section des mouvements
+            showStocksSection('stock-movements');
+            
+            // Attendre que la section soit chargée puis appliquer le filtre
+            setTimeout(() => {
+                const productFilter = document.getElementById('movementProductFilter');
+                if (productFilter) {
+                    productFilter.value = productName;
+                    
+                    // Appliquer les filtres
+                    applyMovementFilters();
+                    
+                    // Notification à l'utilisateur
+                    showAlert(`📊 Affichage des mouvements pour: ${productName}`, 'success');
+                    
+                    // Scroll vers le tableau de mouvements
+                    const movementsTable = document.querySelector('#movements-global .data-table');
+                    if (movementsTable) {
+                        movementsTable.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                } else {
+                    console.log('❌ Filtre de produit non trouvé');
+                }
+            }, 300);
         }
         
         // Fonction utilitaire pour voir les détails d'un mouvement
@@ -5913,6 +5989,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 }
                 
                 const row = document.createElement('tr');
+                row.style.cursor = 'pointer';
+                row.setAttribute('data-product', product);
+                row.addEventListener('click', () => navigateToProductMovements(product));
                 row.innerHTML = `
                     <td style="font-weight: 600;">${product}</td>
                     <td style="text-align: center; font-weight: 700; color: ${statusColor};">${quantity.toLocaleString()}</td>
@@ -6167,6 +6246,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 } else {
                     positiveStocks.forEach(stock => {
                         const row = document.createElement('tr');
+                        row.style.cursor = 'pointer';
+                        row.setAttribute('data-product', stock.product);
+                        row.addEventListener('click', () => navigateToProductMovements(stock.product));
                         row.innerHTML = `
                             <td>${stock.product}</td>
                             <td style="text-align: right; font-weight: bold; color: #28a745;">${stock.quantity.toLocaleString()}</td>
@@ -6186,6 +6268,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 } else {
                     negativeStocks.forEach(stock => {
                         const row = document.createElement('tr');
+                        row.style.cursor = 'pointer';
+                        row.setAttribute('data-product', stock.product);
+                        row.addEventListener('click', () => navigateToProductMovements(stock.product));
                         row.innerHTML = `
                             <td>${stock.product}</td>
                             <td style="text-align: right; font-weight: bold; color: #dc3545;">-${stock.quantity.toLocaleString()}</td>
@@ -6194,6 +6279,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         negativeTableBody.appendChild(row);
                     });
                 }
+            }
+            
+            // Initialiser le tri pour ces tableaux
+            const positiveTable = document.getElementById('positiveStocksTable');
+            const negativeTable = document.getElementById('negativeStocksTable');
+            if (positiveTable) {
+                reinitializeTableSorting(positiveTable);
+            }
+            if (negativeTable) {
+                reinitializeTableSorting(negativeTable);
             }
             
             // NOUVEAU: Calculer et afficher les KPI d'entrées et sorties
@@ -6592,6 +6687,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     </tr>
                 `;
             }).join('');
+            
+            // Initialiser le tri pour ce tableau
+            const stocksTable = document.getElementById('stocksTable');
+            if (stocksTable) {
+                reinitializeTableSorting(stocksTable);
+            }
         }
 
         // Mettre à jour les KPI avec les données filtrées
