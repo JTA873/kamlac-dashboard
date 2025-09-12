@@ -5357,30 +5357,37 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             console.log(`📊 Données après suppression locale: ${stockEntriesData.length} entrées`);
             
-            // ✅ Utiliser la nouvelle vérification Firebase
+            // ✅ NOUVELLE LOGIQUE: Trouver le document Firebase qui contient cet ID
             if (isFirebaseReady()) {
                 try {
                     console.log(`🗑️ Suppression Firebase de l'entrée ID: ${id}`);
                     console.log(`🔍 Firebase db disponible:`, !!db);
                     
-                    // Vérifier d'abord si le document existe
-                    const docRef = db.collection('stockEntries').doc(id.toString());
-                    const docSnap = await docRef.get();
+                    // Parcourir tous les documents pour trouver celui qui contient cet ID
+                    const snapshot = await db.collection('stockEntries').get();
+                    let docToDelete = null;
                     
-                    if (docSnap.exists) {
-                        console.log(`✅ Document ${id} trouvé dans Firebase, suppression en cours...`);
-                        await docRef.delete();
-                        console.log(`✅ Entrée ${id} supprimée de Firebase`);
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.id === id) {
+                            docToDelete = doc;
+                            console.log(`✅ Document Firebase trouvé: ${doc.id} contient l'ID ${id}`);
+                        }
+                    });
+                    
+                    if (docToDelete) {
+                        await docToDelete.ref.delete();
+                        console.log(`✅ Entrée ${id} supprimée de Firebase (document ${docToDelete.id})`);
                         
                         // Vérifier que la suppression a bien eu lieu
-                        const verifySnap = await docRef.get();
+                        const verifySnap = await docToDelete.ref.get();
                         if (!verifySnap.exists) {
                             console.log(`✅ Suppression Firebase confirmée pour ${id}`);
                         } else {
-                            console.error(`❌ ERREUR: Document ${id} existe encore après suppression!`);
+                            console.error(`❌ ERREUR: Document ${docToDelete.id} existe encore après suppression!`);
                         }
                     } else {
-                        console.warn(`⚠️ Document ${id} introuvable dans Firebase (peut-être déjà supprimé)`);
+                        console.warn(`⚠️ Document Firebase avec ID ${id} introuvable dans les données`);
                     }
                 } catch (error) {
                     console.error(`❌ Erreur suppression Firebase entrée ${id}:`, error);
@@ -5432,30 +5439,37 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             console.log(`📊 Données après suppression locale: ${stockExitsData.length} sorties`);
             
-            // ✅ Utiliser la nouvelle vérification Firebase
+            // ✅ NOUVELLE LOGIQUE: Trouver le document Firebase qui contient cet ID
             if (isFirebaseReady()) {
                 try {
                     console.log(`🗑️ Suppression Firebase de la sortie ID: ${id}`);
                     console.log(`🔍 Firebase db disponible:`, !!db);
                     
-                    // Vérifier d'abord si le document existe
-                    const docRef = db.collection('stockExits').doc(id.toString());
-                    const docSnap = await docRef.get();
+                    // Parcourir tous les documents pour trouver celui qui contient cet ID
+                    const snapshot = await db.collection('stockExits').get();
+                    let docToDelete = null;
                     
-                    if (docSnap.exists) {
-                        console.log(`✅ Document ${id} trouvé dans Firebase, suppression en cours...`);
-                        await docRef.delete();
-                        console.log(`✅ Sortie ${id} supprimée de Firebase`);
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.id === id) {
+                            docToDelete = doc;
+                            console.log(`✅ Document Firebase trouvé: ${doc.id} contient l'ID ${id}`);
+                        }
+                    });
+                    
+                    if (docToDelete) {
+                        await docToDelete.ref.delete();
+                        console.log(`✅ Sortie ${id} supprimée de Firebase (document ${docToDelete.id})`);
                         
                         // Vérifier que la suppression a bien eu lieu
-                        const verifySnap = await docRef.get();
+                        const verifySnap = await docToDelete.ref.get();
                         if (!verifySnap.exists) {
                             console.log(`✅ Suppression Firebase confirmée pour ${id}`);
                         } else {
-                            console.error(`❌ ERREUR: Document ${id} existe encore après suppression!`);
+                            console.error(`❌ ERREUR: Document ${docToDelete.id} existe encore après suppression!`);
                         }
                     } else {
-                        console.warn(`⚠️ Document ${id} introuvable dans Firebase (peut-être déjà supprimé)`);
+                        console.warn(`⚠️ Document Firebase avec ID ${id} introuvable dans les données`);
                     }
                 } catch (error) {
                     console.error(`❌ Erreur suppression Firebase sortie ${id}:`, error);
