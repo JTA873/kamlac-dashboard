@@ -727,7 +727,6 @@
                 isFirebaseReady = true;
                 isOnline = true;
                 console.log('✅ Firebase connecté et prêt');
-                showAlert('✅ Connexion Firebase réussie - Synchronisation activée', 'success');
                 
             } catch (error) {
                 console.log('📴 Firebase indisponible - Mode offline permanent');
@@ -740,8 +739,6 @@
                 } catch (offlineError) {
                     // Ignorer les erreurs de désactivation
                 }
-                
-                showAlert('Mode offline - Toutes les données sont sauvées localement', 'warning');
             }
         }
 
@@ -751,7 +748,6 @@
             console.log('🚨 Erreur initialisation Firebase, mode offline forcé');
             isFirebaseReady = false;
             isOnline = false;
-            showAlert('❌ Firebase requis - Rechargez la page', 'error');
         });
 
         // Exposer les fonctions Firebase globalement
@@ -841,8 +837,6 @@
                     clearAllCache(true); // Mode silencieux
                 }
                 
-                showToast('🔄 Chargement des données depuis Firebase...', 'info', 3000);
-                
                 await Promise.all([
                     chargerProduitsDisponibles(),
                     loadStockData(),
@@ -851,11 +845,9 @@
                 
                 hideAlert();
                 console.log('✅ Données initiales chargées depuis Firebase');
-                showToast('✅ Données chargées depuis Firebase', 'success', 2000);
             } catch (error) {
                 console.error('❌ Erreur chargement initial:', error);
                 showAlert('❌ Erreur lors du chargement des données', 'error');
-                showToast('❌ Erreur lors du chargement des données depuis Firebase', 'error', 5000);
             }
         }
 
@@ -921,12 +913,10 @@
                     } catch (firebaseError) {
                         console.log('❌ Erreur chargement Firebase produits:', firebaseError.message);
                         selectElement.innerHTML = '<option value="">❌ Erreur connexion Firebase</option>';
-                        showAlert('❌ Impossible de charger les produits - Vérifiez la connexion Firebase', 'error');
                         return;
                     }
                 } else {
                     selectElement.innerHTML = '<option value="">❌ Connexion Firebase requise</option>';
-                    showAlert('❌ Connexion Firebase requise pour charger les produits', 'error');
                     return;
                 }
                 
@@ -1065,8 +1055,6 @@
                 };
                 
                 const typeLabel = typeLabels[production.type] || 'Opération';
-                const progressMessage = `Enregistrement en cours: ${typeLabel} - ${produitFinal} (${production.quantite} unités)`;
-                showToast(progressMessage, 'info', 3000);
                 
                 // Sauvegarder sur Firebase UNIQUEMENT
                 await addDoc(collection(db, 'productions'), production);
@@ -1330,11 +1318,8 @@
         // Synchroniser avec Firebase
         async function synchroniserStocksFirebase() {
             if (!isOnline || !isFirebaseReady) {
-                showAlert('❌ Connexion Firebase requise pour la synchronisation', 'error');
                 return;
             }
-            
-            showAlert('🔄 Synchronisation en cours...', 'info');
             
             try {
                 // Recharger toutes les données depuis Firebase
@@ -1344,21 +1329,16 @@
                     loadSalesData()
                 ]);
                 
-                showAlert('✅ Synchronisation terminée', 'success');
             } catch (error) {
                 console.error('❌ Erreur synchronisation:', error);
-                showAlert('❌ Erreur lors de la synchronisation', 'error');
             }
         }
 
         // Nettoyer les doublons
         async function nettoyerDoublonsStock() {
             if (!isOnline || !isFirebaseReady) {
-                showAlert('❌ Connexion Firebase requise pour nettoyer les doublons', 'error');
                 return;
             }
-            
-            showAlert('🧹 Nettoyage en cours...', 'info');
             
             try {
                 // Nettoyer les productions sur Firebase
@@ -1381,28 +1361,17 @@
                     await deleteDoc(doc(db, 'productions', docId));
                 }
                 
-                if (duplicateIds.length > 0) {
-                    showAlert(`✅ ${duplicateIds.length} doublons supprimés`, 'success');
-                } else {
-                    showAlert('✅ Aucun doublon trouvé', 'success');
-                }
-                
             } catch (error) {
                 console.error('❌ Erreur nettoyage Firebase:', error);
-                showAlert('❌ Erreur lors du nettoyage', 'error');
             }
         }
 
         // Recharger les données
         async function rechargerDonneesStock() {
-            showAlert('♻️ Rechargement en cours...', 'info');
-            
             try {
                 await chargerDonneesInitiales();
-                showAlert('✅ Données rechargées', 'success');
             } catch (error) {
                 console.error('❌ Erreur rechargement:', error);
-                showAlert('❌ Erreur lors du rechargement', 'error');
             }
         }
 
@@ -1413,7 +1382,6 @@
             
             if (statsContainer.classList.contains('hidden')) {
                 if (!isOnline || !isFirebaseReady) {
-                    showAlert('❌ Connexion Firebase requise pour afficher les statistiques', 'error');
                     return;
                 }
                 
@@ -1464,7 +1432,6 @@
                     statsContainer.classList.remove('hidden');
                 } catch (error) {
                     console.error('❌ Erreur chargement statistiques:', error);
-                    showAlert('❌ Erreur lors du chargement des statistiques', 'error');
                 }
             } else {
                 statsContainer.classList.add('hidden');
