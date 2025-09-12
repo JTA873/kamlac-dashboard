@@ -625,6 +625,11 @@
                             🔄 Recharger la liste des produits
                         </button>
                         
+                        <!-- Bouton de nettoyage du cache -->
+                        <button type="button" onclick="forcerNettoyageCache()" class="btn-secondary" style="background: linear-gradient(135deg, var(--warning-color), #d97706); margin-left: 8px;" title="Vider le cache et redémarrer">
+                            🧹 Vider le cache
+                        </button>
+                        
                         <input type="text" id="prodProduit" placeholder="✏️ Saisir le nom du nouveau produit" class="hidden">
                     </div>
                     
@@ -778,6 +783,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Interface Agents KAMLAC initialisée');
             
+            // Nettoyer complètement le cache et localStorage
+            clearAllCache();
+            
             // Définir la date actuelle
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('prodDate').value = today;
@@ -792,10 +800,68 @@
             });
         });
 
+        // Fonction pour nettoyer complètement le cache
+        function clearAllCache() {
+            try {
+                // Vider localStorage (au cas où il y aurait des données résiduelles)
+                if (typeof(Storage) !== "undefined") {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    console.log('🧹 Cache local vidé');
+                }
+                
+                // Vider le cache du navigateur si possible
+                if ('caches' in window) {
+                    caches.keys().then(function(names) {
+                        names.forEach(function(name) {
+                            caches.delete(name);
+                        });
+                    });
+                    console.log('🧹 Cache navigateur vidé');
+                }
+                
+                // Forcer le rechargement des données Firebase
+                window.stockEntriesData = [];
+                window.stockExitsData = [];
+                window.currentStockLevels = {};
+                window.salesData = [];
+                
+                console.log('✅ Application démarrée avec un état propre - 100% Firebase');
+                
+            } catch (error) {
+                console.log('⚠️ Erreur lors du nettoyage du cache:', error);
+            }
+        }
+
+        // Fonction pour forcer le nettoyage du cache via l'interface
+        function forcerNettoyageCache() {
+            showToast('🧹 Nettoyage du cache en cours...', 'info', 2000);
+            
+            // Nettoyer le cache
+            clearAllCache();
+            
+            // Attendre un peu puis recharger les données
+            setTimeout(() => {
+                showToast('♻️ Rechargement des données depuis Firebase...', 'info', 3000);
+                chargerDonneesInitiales().then(() => {
+                    showToast('✅ Cache vidé et données rechargées avec succès!', 'success', 5000);
+                }).catch(error => {
+                    console.error('Erreur lors du rechargement:', error);
+                    showToast('❌ Erreur lors du rechargement des données', 'error', 5000);
+                });
+            }, 1000);
+        }
+
         // Charger les données initiales
         async function chargerDonneesInitiales() {
             try {
-                showAlert('🔄 Chargement des données...', 'info');
+                // Vérification: s'assurer qu'aucune donnée locale n'est utilisée
+                if (window.stockEntriesData?.length > 0 || window.stockExitsData?.length > 0 || Object.keys(window.currentStockLevels || {}).length > 0) {
+                    console.log('⚠️ Données locales détectées - Nettoyage forcé');
+                    clearAllCache();
+                }
+                
+                showToast('🔄 Chargement des données depuis Firebase...', 'info', 3000);
                 
                 await Promise.all([
                     chargerProduitsDisponibles(),
@@ -804,10 +870,12 @@
                 ]);
                 
                 hideAlert();
-                console.log('✅ Données initiales chargées');
+                console.log('✅ Données initiales chargées depuis Firebase');
+                showToast('✅ Données chargées depuis Firebase', 'success', 2000);
             } catch (error) {
                 console.error('❌ Erreur chargement initial:', error);
                 showAlert('❌ Erreur lors du chargement des données', 'error');
+                showToast('❌ Erreur lors du chargement des données depuis Firebase', 'error', 5000);
             }
         }
 
@@ -1519,6 +1587,8 @@
         // Exposer les fonctions globalement
         window.showToast = showToast;
         window.closeToast = closeToast;
+        window.clearAllCache = clearAllCache;
+        window.forcerNettoyageCache = forcerNettoyageCache;
 
         // Exposer les fonctions nécessaires
         window.chargerProduitsDisponibles = chargerProduitsDisponibles;
