@@ -3943,7 +3943,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         let charts = {};
         let db = null;
         
+        // Variables globales Firebase
         let isFirebaseInitialized = false;
+        let deletionInProgress = false;
         
         let salesLines = [];
         let editingProductId = null;
@@ -5231,6 +5233,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             if (!confirmed) return;
             
             console.log(`🗑️ Début suppression mouvement ${source}:${id}`);
+            console.log(`🔍 Firebase status: isInitialized=${isFirebaseInitialized}, db=${!!db}, firebase=${!!firebase}`);
             
             let dataArray = null;
             let index = -1;
@@ -5259,8 +5262,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const itemToDelete = dataArray[index];
             console.log('📦 Mouvement à supprimer:', itemToDelete);
             
-            // Supprimer d'abord de Firebase avec l'ID exact, puis du local
-            if (isFirebaseInitialized) {
+            // Vérifier Firebase de manière robuste
+            const firebaseReady = db && firebase && (isFirebaseInitialized || typeof db.collection === 'function');
+            console.log(`🔥 Firebase ready: ${firebaseReady}`);
+            
+            if (firebaseReady) {
                 console.log(`🔥 Suppression Firebase ${collectionName} en cours...`);
                 
                 // Utiliser l'ID exact de l'élément
@@ -5305,8 +5311,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         showAlert('⚠️ Mouvement supprimé localement (problème de synchronisation)', 'warning');
                     });
             } else {
-                // Si Firebase n'est pas initialisé, supprimer seulement en local
-                console.log('⚠️ Firebase non initialisé, suppression locale uniquement');
+                // Si Firebase n'est pas disponible, supprimer seulement en local
+                console.log('⚠️ Firebase non disponible, suppression locale uniquement');
                 dataArray.splice(index, 1);
                 saveToLocalStorage();
                 
@@ -5338,12 +5344,21 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette entrée ?');
             if (!confirmed) return;
             
+            // Éviter les suppressions simultanées
+            if (deletionInProgress) {
+                console.log('⚠️ Suppression déjà en cours, veuillez patienter...');
+                return;
+            }
+            
+            deletionInProgress = true;
             console.log(`🗑️ Début suppression entrée ID: ${id}`);
+            console.log(`🔍 Firebase status: isInitialized=${isFirebaseInitialized}, db=${!!db}, firebase=${!!firebase}`);
             
             // Trouver l'entrée dans les données locales
             const index = stockEntriesData.findIndex(e => e.id == id);
             if (index === -1) {
                 console.log('❌ Entrée non trouvée dans les données locales');
+                deletionInProgress = false;
                 alert('❌ Entrée introuvable');
                 return;
             }
@@ -5351,8 +5366,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const entryToDelete = stockEntriesData[index];
             console.log('📦 Entrée à supprimer:', entryToDelete);
             
-            // Supprimer d'abord de Firebase avec l'ID exact, puis du local
-            if (isFirebaseInitialized) {
+            // Vérifier Firebase de manière robuste
+            const firebaseReady = db && firebase && (isFirebaseInitialized || typeof db.collection === 'function');
+            console.log(`🔥 Firebase ready: ${firebaseReady}`);
+            
+            if (firebaseReady) {
                 console.log('🔥 Suppression Firebase en cours...');
                 
                 // Utiliser l'ID exact de l'entrée
@@ -5370,6 +5388,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         updateEntriesMovementsTable();
                         updateAllMovementsTable();
                         forceUpdateStockKPIs();
+                        
+                        deletionInProgress = false;
                         showAlert('✅ Entrée supprimée', 'success');
                     })
                     .catch((error) => {
@@ -5381,17 +5401,21 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         updateEntriesMovementsTable();
                         updateAllMovementsTable();
                         forceUpdateStockKPIs();
+                        
+                        deletionInProgress = false;
                         showAlert('⚠️ Entrée supprimée localement (problème de synchronisation)', 'warning');
                     });
             } else {
-                // Si Firebase n'est pas initialisé, supprimer seulement en local
-                console.log('⚠️ Firebase non initialisé, suppression locale uniquement');
+                // Si Firebase n'est pas prêt, supprimer seulement en local
+                console.log('⚠️ Firebase non disponible, suppression locale uniquement');
                 stockEntriesData.splice(index, 1);
                 saveToLocalStorage();
                 
                 updateEntriesMovementsTable();
                 updateAllMovementsTable();
                 forceUpdateStockKPIs();
+                
+                deletionInProgress = false;
                 showAlert('✅ Entrée supprimée (local uniquement)', 'success');
             }
         }
@@ -10412,6 +10436,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             
             // Écouter les changements sur les entrées de stock
             db.collection('stockEntries').onSnapshot((snapshot) => {
+                // Ignorer les changements pendant une suppression
+                if (deletionInProgress) {
+                    console.log('⏸️ Listener stockEntries en pause (suppression en cours)');
+                    return;
+                }
+                
                 updateCloudStatus('syncing', '⬇️ Sync stocks...');
                 let hasChanges = false;
                 const existingEntryIds = new Set(stockEntriesData.map(entry => entry.id));
