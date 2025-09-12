@@ -314,13 +314,13 @@
 
         // Configuration Firebase
         const firebaseConfig = {
-            apiKey: "AIzaSyDSQ0cQa7TIcBJGwmh5-BdaNaVgPFnLGGc",
-            authDomain: "kamlac-6b8ed.firebaseapp.com",
-            projectId: "kamlac-6b8ed",
-            storageBucket: "kamlac-6b8ed.firebasestorage.app",
-            messagingSenderId: "707925227562",
-            appId: "1:707925227562:web:a7b8b10c63ecf359da8b18",
-            measurementId: "G-59LPWQ2M9J"
+            apiKey: "AIzaSyBuR-B_bOyMtNn1xnSQCCsxfJWydzg9mvs",
+            authDomain: "kamlac-dashboard.firebaseapp.com",
+            projectId: "kamlac-dashboard",
+            storageBucket: "kamlac-dashboard.firebasestorage.app",
+            messagingSenderId: "220610836736",
+            appId: "1:220610836736:web:1a1cee05aef8066a725be5",
+            measurementId: "G-Q8DKW4YL0L"
         };
 
         // Initialiser Firebase
@@ -329,7 +329,7 @@
 
         // État de connexion Firebase
         let isFirebaseReady = false;
-        let isOnline = true;
+        let isOnline = false;
 
         // Test de connexion Firebase
         async function testFirebaseConnection() {
@@ -377,7 +377,7 @@
             console.log('🚨 Erreur initialisation Firebase, mode offline forcé');
             isFirebaseReady = false;
             isOnline = false;
-            showAlert('📴 Mode offline - Application prête', 'warning');
+            showAlert('❌ Firebase requis - Rechargez la page', 'error');
         });
 
         // Exposer les fonctions Firebase globalement
@@ -634,6 +634,17 @@
             console.log('📦 Données production:', production);
             
             try {
+                // Afficher le message de début d'enregistrement
+                const typeLabels = {
+                    'reception_mp': '📥 Réception Matière Première',
+                    'reception_pf': '📦 Réception Produit Fini', 
+                    'sortie_mp': '📤 Sortie Matière Première',
+                    'sortie_pf': '🚚 Sortie Produit Fini'
+                };
+                
+                const typeLabel = typeLabels[production.type] || 'Opération';
+                showAlert(`🔄 Enregistrement en cours: ${typeLabel} - ${produitFinal} (${production.quantite} unités)`, 'info');
+                
                 // Sauvegarder sur Firebase UNIQUEMENT
                 await addDoc(collection(db, 'productions'), production);
                 console.log('✅ Production sauvée sur Firebase');
@@ -643,16 +654,27 @@
                 await integrerDansStock(production, isEntry);
                 console.log('✅ Stock mis à jour');
                 
+                // Message de succès détaillé
+                const operationType = isEntry ? 'entrée' : 'sortie';
+                const stockMessage = isEntry ? 
+                    `📈 Stock augmenté de ${production.quantite} unités` : 
+                    `📉 Stock diminué de ${production.quantite} unités`;
+                
+                showAlert(`✅ ${typeLabel} enregistrée avec succès!<br>
+                          📦 Produit: ${produitFinal}<br>
+                          📊 Quantité: ${production.quantite} unités<br>
+                          👤 Agent: ${production.agent}<br>
+                          ${stockMessage}`, 'success');
+                
                 // Réinitialiser le formulaire
                 resetForm();
                 console.log('✅ Formulaire réinitialisé');
                 
-                showAlert(`✅ Opération enregistrée et synchronisée: ${produitFinal}`, 'success');
-                
-                // Recharger la liste des produits
+                // Recharger la liste des produits après un délai
                 setTimeout(() => {
                     chargerProduitsDisponibles();
-                }, 500);
+                    hideAlert(); // Masquer le message après rechargement
+                }, 3000);
                 
             } catch (error) {
                 console.error('❌ ERREUR enregistrement Firebase:', error);
@@ -714,7 +736,7 @@
                 
                 // Recharger les données de stock depuis Firebase
                 await loadStockData();
-                console.log('✅ Intégration stock terminée');
+                console.log('✅ Intégration stock terminée - Niveaux mis à jour');
                 
             } catch (error) {
                 console.error('❌ Erreur intégration stock:', error);
@@ -736,13 +758,30 @@
 
         // Réinitialiser le formulaire
         function resetForm() {
+            // Réinitialiser tous les champs du formulaire
             document.getElementById('productionForm').reset();
+            
+            // Masquer le champ de nouveau produit
             document.getElementById('prodProduit').classList.add('hidden');
+            document.getElementById('prodProduit').value = '';
+            
+            // Masquer les informations de stock
             document.getElementById('stockInfoDisplay').style.display = 'none';
+            
+            // Remettre la sélection par défaut
+            const selectElement = document.getElementById('prodProduitSelect');
+            selectElement.selectedIndex = 0;
             
             // Remettre la date actuelle
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('prodDate').value = today;
+            
+            // Remettre le focus sur le premier champ
+            setTimeout(() => {
+                selectElement.focus();
+            }, 100);
+            
+            console.log('🔄 Formulaire complètement réinitialisé');
         }
 
         // =====================================================
@@ -1017,7 +1056,11 @@
                 </div>
             `;
             
+            // Auto-masquer les messages de succès après 5 secondes
+            // et les messages d'info après 3 secondes
             if (type === 'success') {
+                setTimeout(hideAlert, 5000);
+            } else if (type === 'info') {
                 setTimeout(hideAlert, 3000);
             }
         }
