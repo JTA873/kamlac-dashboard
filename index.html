@@ -10228,13 +10228,54 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     const firstEntry = stockEntriesData[0];
                     console.log(`Première entrée ID: ${firstEntry.id}`);
                     
-                    // Test 3: Appel de fonction simulé
-                    console.log('3️⃣ Test d\'appel simulé...');
-                    if (confirm('Voulez-vous vraiment tester la suppression de la première entrée ?')) {
-                        console.log('🗑️ Appel de deleteStockEntry...');
-                        deleteStockEntry(firstEntry.id);
+                    // Test 3: NOUVEAU - Diagnostic structure Firebase
+                    if (isFirebaseReady()) {
+                        console.log('🔍 === DIAGNOSTIC STRUCTURE FIREBASE ===');
+                        
+                        // Lister tous les documents dans stockEntries
+                        db.collection('stockEntries').get().then(snapshot => {
+                            console.log(`📄 Nombre de documents dans stockEntries: ${snapshot.size}`);
+                            
+                            snapshot.forEach(doc => {
+                                console.log(`📄 Document Firebase: ${doc.id}`);
+                                const data = doc.data();
+                                if (data.entries && Array.isArray(data.entries)) {
+                                    console.log(`  ↳ Contient un array 'entries' avec ${data.entries.length} éléments`);
+                                    data.entries.slice(0, 2).forEach(entry => {
+                                        console.log(`    - ID: ${entry.id}`);
+                                    });
+                                } else {
+                                    console.log(`  ↳ Document individuel - ID dans data: ${data.id || 'pas d\'ID'}`);
+                                }
+                            });
+                            
+                            console.log('🔍 === RECHERCHE DOCUMENT SPÉCIFIQUE ===');
+                            // Rechercher le document spécifique qu'on veut supprimer
+                            const targetId = firstEntry.id;
+                            return db.collection('stockEntries').doc(targetId.toString()).get();
+                        }).then(docSnap => {
+                            const targetId = firstEntry.id;
+                            console.log(`🎯 Recherche document ${targetId}:`);
+                            console.log(`   Existe: ${docSnap.exists}`);
+                            if (docSnap.exists) {
+                                console.log(`   Données:`, docSnap.data());
+                            }
+                            
+                            console.log('✅ === DIAGNOSTIC TERMINÉ ===');
+                        }).catch(error => {
+                            console.error('❌ Erreur diagnostic Firebase:', error);
+                        });
                     } else {
-                        console.log('⏭️ Test de suppression annulé par l\'utilisateur');
+                        console.log('⚠️ Firebase non disponible pour diagnostic');
+                        
+                        // Test 4: Appel de fonction simulé (si pas de Firebase)
+                        console.log('3️⃣ Test d\'appel simulé...');
+                        if (confirm('Voulez-vous vraiment tester la suppression de la première entrée ?')) {
+                            console.log('🗑️ Appel de deleteStockEntry...');
+                            deleteStockEntry(firstEntry.id);
+                        } else {
+                            console.log('⏭️ Test de suppression annulé par l\'utilisateur');
+                        }
                     }
                 } else {
                     console.log('⚠️ Aucune entrée disponible pour le test');
