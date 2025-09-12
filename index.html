@@ -10448,18 +10448,18 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 }
             }
             
-            // Calculer les entrées et sorties de stock (hors ventes)
+            // Calculer les entrées et sorties de stock correctement
             const stockEntries = stockEntriesData ? stockEntriesData.length : 0;
-            const stockExits = stockExitsData ? stockExitsData.length : 0;
+            const stockExits = (salesData ? salesData.length : 0) + (stockExitsData ? stockExitsData.length : 0); // Ventes + autres sorties
             
             // Debug pour vérifier les valeurs
             console.log('📊 Données pour le message de synthèse:', {
                 ventes: salesData.length,
                 encaissements: paymentsData.length,
-                entrees: stockEntries,
-                sorties: stockExits,
-                stockEntriesData: stockEntriesData,
-                stockExitsData: stockExitsData
+                entrees_stock: stockEntriesData.length,
+                autres_sorties: stockExitsData.length,
+                total_sorties: stockExits,
+                note: 'Les sorties incluent ventes + autres sorties pour cohérence avec les tableaux'
             });
             
             // Message simple et efficace
