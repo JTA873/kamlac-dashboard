@@ -5232,6 +5232,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce mouvement ?');
             if (!confirmed) return;
             
+            // Éviter les suppressions simultanées
+            if (deletionInProgress) {
+                console.log('⚠️ Suppression déjà en cours, veuillez patienter...');
+                return;
+            }
+            
+            deletionInProgress = true;
             console.log(`🗑️ Début suppression mouvement ${source}:${id}`);
             console.log(`🔍 Firebase status: isInitialized=${isFirebaseInitialized}, db=${!!db}, firebase=${!!firebase}`);
             
@@ -5255,6 +5262,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             if (index === -1) {
                 console.log(`❌ Mouvement ${source}:${id} non trouvé`);
+                deletionInProgress = false;
                 alert('❌ Mouvement introuvable');
                 return;
             }
@@ -5290,6 +5298,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         // Mettre à jour les stocks
                         forceUpdateStockKPIs();
                         
+                        deletionInProgress = false;
                         showAlert('✅ Mouvement supprimé', 'success');
                     })
                     .catch((error) => {
@@ -5308,6 +5317,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         // Mettre à jour les stocks
                         forceUpdateStockKPIs();
                         
+                        deletionInProgress = false;
                         showAlert('⚠️ Mouvement supprimé localement (problème de synchronisation)', 'warning');
                     });
             } else {
@@ -5326,6 +5336,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // Mettre à jour les stocks
                 forceUpdateStockKPIs();
                 
+                deletionInProgress = false;
                 showAlert('✅ Mouvement supprimé (local uniquement)', 'success');
             }
         }
@@ -5442,45 +5453,133 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette sortie ?');
             if (!confirmed) return;
             
+            // Éviter les suppressions simultanées
+            if (deletionInProgress) {
+                console.log('⚠️ Suppression déjà en cours, veuillez patienter...');
+                return;
+            }
+            
+            deletionInProgress = true;
+            console.log(`🗑️ Début suppression sortie ${source}:${id}`);
+            console.log(`🔍 Firebase status: isInitialized=${isFirebaseInitialized}, db=${!!db}, firebase=${!!firebase}`);
+            
             if (source === 'sales') {
                 const index = salesData.findIndex(s => s.id == id);
-                if (index > -1) {
+                if (index === -1) {
+                    console.log(`❌ Vente ${id} non trouvée`);
+                    deletionInProgress = false;
+                    alert('❌ Vente introuvable');
+                    return;
+                }
+                
+                const saleToDelete = salesData[index];
+                console.log('📦 Vente à supprimer:', saleToDelete);
+                
+                // Vérifier Firebase de manière robuste
+                const firebaseReady = db && firebase && (isFirebaseInitialized || typeof db.collection === 'function');
+                console.log(`🔥 Firebase ready: ${firebaseReady}`);
+                
+                if (firebaseReady) {
+                    console.log('🔥 Suppression Firebase vente en cours...');
+                    const firebaseId = saleToDelete.id.toString();
+                    console.log(`🎯 ID Firebase utilisé: "${firebaseId}"`);
+                    
+                    db.collection('sales').doc(firebaseId).delete()
+                        .then(() => {
+                            console.log('✅ Suppression Firebase vente réussie');
+                            salesData.splice(index, 1);
+                            saveToLocalStorage();
+                            
+                            updateExitsMovementsTable();
+                            updateAllMovementsTable();
+                            forceUpdateStockKPIs();
+                            
+                            deletionInProgress = false;
+                            showAlert('✅ Vente supprimée', 'success');
+                        })
+                        .catch((error) => {
+                            console.error('❌ Erreur suppression vente Firebase:', error);
+                            salesData.splice(index, 1);
+                            saveToLocalStorage();
+                            
+                            updateExitsMovementsTable();
+                            updateAllMovementsTable();
+                            forceUpdateStockKPIs();
+                            
+                            deletionInProgress = false;
+                            showAlert('⚠️ Vente supprimée localement (problème de synchronisation)', 'warning');
+                        });
+                } else {
+                    console.log('⚠️ Firebase non disponible, suppression locale vente uniquement');
                     salesData.splice(index, 1);
                     saveToLocalStorage();
                     
-                    // Sync Firebase - supprimer de Firebase aussi
-                    if (isFirebaseInitialized) {
-                        try {
-                            db.collection('sales').doc(id.toString()).delete();
-                        } catch (error) {
-                            console.error('Erreur suppression vente Firebase:', error);
-                        }
-                    }
+                    updateExitsMovementsTable();
+                    updateAllMovementsTable();
+                    forceUpdateStockKPIs();
                     
-                    alert('✅ Vente supprimée');
+                    deletionInProgress = false;
+                    showAlert('✅ Vente supprimée (local uniquement)', 'success');
                 }
             } else {
                 const index = stockExitsData.findIndex(e => e.id == id);
-                if (index > -1) {
+                if (index === -1) {
+                    console.log(`❌ Sortie ${id} non trouvée`);
+                    deletionInProgress = false;
+                    alert('❌ Sortie introuvable');
+                    return;
+                }
+                
+                const exitToDelete = stockExitsData[index];
+                console.log('📦 Sortie à supprimer:', exitToDelete);
+                
+                // Vérifier Firebase de manière robuste
+                const firebaseReady = db && firebase && (isFirebaseInitialized || typeof db.collection === 'function');
+                console.log(`🔥 Firebase ready: ${firebaseReady}`);
+                
+                if (firebaseReady) {
+                    console.log('🔥 Suppression Firebase sortie en cours...');
+                    const firebaseId = exitToDelete.id.toString();
+                    console.log(`🎯 ID Firebase utilisé: "${firebaseId}"`);
+                    
+                    db.collection('stockExits').doc(firebaseId).delete()
+                        .then(() => {
+                            console.log('✅ Suppression Firebase sortie réussie');
+                            stockExitsData.splice(index, 1);
+                            saveToLocalStorage();
+                            
+                            updateExitsMovementsTable();
+                            updateAllMovementsTable();
+                            forceUpdateStockKPIs();
+                            
+                            deletionInProgress = false;
+                            showAlert('✅ Sortie supprimée', 'success');
+                        })
+                        .catch((error) => {
+                            console.error('❌ Erreur suppression sortie Firebase:', error);
+                            stockExitsData.splice(index, 1);
+                            saveToLocalStorage();
+                            
+                            updateExitsMovementsTable();
+                            updateAllMovementsTable();
+                            forceUpdateStockKPIs();
+                            
+                            deletionInProgress = false;
+                            showAlert('⚠️ Sortie supprimée localement (problème de synchronisation)', 'warning');
+                        });
+                } else {
+                    console.log('⚠️ Firebase non disponible, suppression locale sortie uniquement');
                     stockExitsData.splice(index, 1);
                     saveToLocalStorage();
                     
-                    // Sync Firebase - supprimer de Firebase aussi
-                    if (isFirebaseInitialized) {
-                        try {
-                            db.collection('stockExits').doc(id.toString()).delete();
-                        } catch (error) {
-                            console.error('Erreur suppression sortie Firebase:', error);
-                        }
-                    }
+                    updateExitsMovementsTable();
+                    updateAllMovementsTable();
+                    forceUpdateStockKPIs();
                     
-                    alert('✅ Sortie supprimée');
+                    deletionInProgress = false;
+                    showAlert('✅ Sortie supprimée (local uniquement)', 'success');
                 }
             }
-            
-            updateExitsMovementsTable();
-            updateAllMovementsTable();
-            forceUpdateStockKPIs();
         }
         
         // FONCTION POUR AFFICHER LA FICHE PRODUIT
@@ -10497,6 +10596,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             
             // Écouter les changements sur les sorties de stock
             db.collection('stockExits').onSnapshot((snapshot) => {
+                // Ignorer les changements pendant une suppression
+                if (deletionInProgress) {
+                    console.log('⏸️ Listener stockExits en pause (suppression en cours)');
+                    return;
+                }
+                
                 let hasChanges = false;
                 const existingExitIds = new Set(stockExitsData.map(exit => exit.id));
                 
