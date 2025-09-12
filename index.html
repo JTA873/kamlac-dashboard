@@ -3597,10 +3597,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                     ✅ Enregistrer Opération
                                 </button>
                                 
-                                <!-- Bouton synchronisation manuelle -->
-                                <button onclick="synchroniserStocksFirebase()" style="width: 100%; background: #17a2b8; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px;">
-                                    🔄 Synchroniser avec Firebase
-                                </button>
+                                <!-- Boutons utilitaires -->
+                                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                    <button onclick="synchroniserStocksFirebase()" style="flex: 1; background: #17a2b8; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+                                        🔄 Sync Firebase
+                                    </button>
+                                    <button onclick="nettoyerDoublonsStock()" style="flex: 1; background: #6c757d; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+                                        🧹 Nettoyer Doublons
+                                    </button>
+                                </div>
                                 
                                 <!-- Indicateur de synchronisation -->
                                 <div id="productionSyncStatus" style="margin-top: 10px; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; background: #f8f9fa; border: 1px solid #dee2e6;">
@@ -8889,9 +8894,123 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
         });
+        
+        // Nettoyage automatique du cache avant fermeture de la page
+        window.addEventListener('beforeunload', function() {
+            // Nettoyage rapide sans attendre les promesses pour ne pas ralentir la fermeture
+            try {
+                const tempKeys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && (key.includes('temp') || key.includes('cache') || key.startsWith('_session'))) {
+                        tempKeys.push(key);
+                    }
+                }
+                tempKeys.forEach(key => localStorage.removeItem(key));
+                console.log('🧹 Cache temporaire nettoyé avant fermeture');
+            } catch (error) {
+                // Ignorer les erreurs pour ne pas bloquer la fermeture
+            }
+        });
+        
+        // Nettoyage automatique lors de la visibilité de la page
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                // Page redevient visible - nettoyage léger
+                setTimeout(async () => {
+                    try {
+                        if ('caches' in window) {
+                            const cacheNames = await caches.keys();
+                            if (cacheNames.length > 5) { // Si trop de caches
+                                await Promise.all(cacheNames.slice(0, -2).map(name => caches.delete(name)));
+                                console.log('🧹 Caches excédentaires supprimés');
+                            }
+                        }
+                    } catch (error) {
+                        // Ignorer les erreurs
+                    }
+                }, 1000);
+            }
+        });
+
+        // Fonction pour effacer automatiquement le cache de manière transparente
+        async function effacerCacheAutomatique() {
+            try {
+                console.log('🧹 Nettoyage automatique du cache en cours...');
+                
+                // Effacer le cache du navigateur si possible
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames.map(cacheName => caches.delete(cacheName))
+                    );
+                    console.log('✅ Cache navigateur vidé');
+                }
+                
+                // Effacer les données temporaires localStorage (sauf les données importantes)
+                const keysToPreserve = [
+                    'salesData', 'inventoryData', 'stockData', 'stockEntries', 'stockExits',
+                    'customerData', 'supplierData', 'notesData', 'stockAlerts',
+                    'currentStockLevels', 'productions', 'firebaseLastSync'
+                ];
+                
+                // Identifier les clés à supprimer
+                const keysToDelete = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && !keysToPreserve.includes(key)) {
+                        // Supprimer les clés temporaires ou de cache
+                        if (key.includes('cache') || key.includes('temp') || key.includes('session') || 
+                            key.startsWith('_') || key.includes('timestamp') || key.includes('lastUpdate')) {
+                            keysToDelete.push(key);
+                        }
+                    }
+                }
+                
+                // Supprimer les clés identifiées
+                keysToDelete.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+                
+                if (keysToDelete.length > 0) {
+                    console.log(`✅ ${keysToDelete.length} éléments de cache supprimés:`, keysToDelete);
+                } else {
+                    console.log('✅ Aucun élément de cache temporaire à supprimer');
+                }
+                
+                // Forcer la collecte de déchets JavaScript si disponible
+                if (window.gc) {
+                    window.gc();
+                }
+                
+                // Effacer les données de session temporaires
+                if (typeof sessionStorage !== 'undefined') {
+                    const sessionKeysToDelete = [];
+                    for (let i = 0; i < sessionStorage.length; i++) {
+                        const key = sessionStorage.key(i);
+                        if (key && (key.includes('temp') || key.includes('cache') || key.startsWith('_'))) {
+                            sessionKeysToDelete.push(key);
+                        }
+                    }
+                    sessionKeysToDelete.forEach(key => sessionStorage.removeItem(key));
+                    if (sessionKeysToDelete.length > 0) {
+                        console.log(`✅ ${sessionKeysToDelete.length} éléments de session supprimés`);
+                    }
+                }
+                
+                console.log('🎯 Nettoyage automatique du cache terminé avec succès');
+                
+            } catch (error) {
+                console.log('⚠️ Erreur lors du nettoyage automatique du cache:', error.message);
+                // Ne pas bloquer l'application en cas d'erreur
+            }
+        }
 
         async function initializeApp() {
             console.log('Initialisation de l\'application...');
+            
+            // NOUVEAU: Effacement automatique et transparent du cache à chaque connexion
+            await effacerCacheAutomatique();
             
             // Initialiser le thème
             // Afficher la version
@@ -8939,7 +9058,21 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             setTimeout(() => {
                 showToast('Nouvelles fonctionnalités: Module Stocks 📦, Gestion modulaire 🔧, Analyses avancées 📊', 'info');
             }, 2000);
+            
+            // NOUVEAU: Démarrer le nettoyage automatique périodique du cache (toutes les 30 minutes)
+            demarrerNettoyagePeriodique();
         }, 1000);
+        }
+        
+        // Fonction pour démarrer un nettoyage périodique automatique du cache
+        function demarrerNettoyagePeriodique() {
+            // Nettoyage toutes les 30 minutes (1800000 ms)
+            setInterval(async () => {
+                console.log('🔄 Nettoyage périodique automatique du cache...');
+                await effacerCacheAutomatique();
+            }, 1800000);
+            
+            console.log('✅ Nettoyage périodique du cache démarré (toutes les 30 minutes)');
         }
 
         function loadFromLocalStorage() {
@@ -14450,6 +14583,13 @@ Date [ESPACES] Client [ESPACES] Montant
             updateEntriesMovementsTable();
             updateExitsMovementsTable();
             
+            // NOUVEAU: Nettoyage préventif des doublons après chaque ajout
+            setTimeout(() => {
+                const stockEntriesCount = JSON.parse(localStorage.getItem('stockEntries') || '[]').length;
+                const stockExitsCount = JSON.parse(localStorage.getItem('stockExits') || '[]').length;
+                console.log(`📊 Vérification stock: ${stockEntriesCount} entrées, ${stockExitsCount} sorties`);
+            }, 500);
+            
             // Vider le formulaire
             document.getElementById('prodAgent').value = '';
             document.getElementById('prodProduitSelect').value = '';
@@ -14495,9 +14635,18 @@ Date [ESPACES] Client [ESPACES] Montant
                 ajouterProduitSiNouveauDansInventaire(production.produit);
                 
                 if (isEntry) {
-                    // Vérifier si l'entrée existe déjà
+                    // Vérifier si l'entrée existe déjà avec une vérification plus stricte
                     let stockEntriesData = JSON.parse(localStorage.getItem('stockEntries') || '[]');
-                    const existingEntry = stockEntriesData.find(entry => entry.id === stockEntry.id);
+                    
+                    // Vérification multiple pour éviter les doublons
+                    const existingEntry = stockEntriesData.find(entry => 
+                        entry.id === stockEntry.id || 
+                        (entry.product === stockEntry.product && 
+                         entry.date === stockEntry.date && 
+                         entry.quantity === stockEntry.quantity && 
+                         entry.supplier === stockEntry.supplier &&
+                         Math.abs(new Date(entry.timestamp || 0).getTime() - new Date(stockEntry.timestamp).getTime()) < 30000) // 30 secondes
+                    );
                     
                     if (!existingEntry) {
                         stockEntriesData.push(stockEntry);
@@ -14507,10 +14656,10 @@ Date [ESPACES] Client [ESPACES] Montant
                         // IMPORTANT: Mettre à jour les variables globales immédiatement
                         window.stockEntriesData = stockEntriesData;
                     } else {
-                        console.log('⚠️ Entrée déjà existante, ignorée:', stockEntry.id);
+                        console.log('⚠️ Entrée déjà existante, ignorée:', existingEntry.id || 'ID manquant');
                     }
                 } else {
-                    // Vérifier si la sortie existe déjà
+                    // Vérifier si la sortie existe déjà avec une vérification plus stricte
                     let stockExitsData = JSON.parse(localStorage.getItem('stockExits') || '[]');
                     const exitEntry = {
                         ...stockEntry,
@@ -14519,7 +14668,15 @@ Date [ESPACES] Client [ESPACES] Montant
                         reason: production.typeLabel
                     };
                     
-                    const existingExit = stockExitsData.find(exit => exit.id === exitEntry.id);
+                    // Vérification multiple pour éviter les doublons
+                    const existingExit = stockExitsData.find(exit => 
+                        exit.id === exitEntry.id || 
+                        (exit.product === exitEntry.product && 
+                         exit.date === exitEntry.date && 
+                         exit.quantity === exitEntry.quantity && 
+                         exit.customer === exitEntry.customer &&
+                         Math.abs(new Date(exit.timestamp || 0).getTime() - new Date(exitEntry.timestamp).getTime()) < 30000) // 30 secondes
+                    );
                     
                     if (!existingExit) {
                         stockExitsData.push(exitEntry);
@@ -14529,7 +14686,7 @@ Date [ESPACES] Client [ESPACES] Montant
                         // IMPORTANT: Mettre à jour les variables globales immédiatement
                         window.stockExitsData = stockExitsData;
                     } else {
-                        console.log('⚠️ Sortie déjà existante, ignorée:', exitEntry.id);
+                        console.log('⚠️ Sortie déjà existante, ignorée:', existingExit.id || 'ID manquant');
                     }
                 }
                 
@@ -14550,6 +14707,74 @@ Date [ESPACES] Client [ESPACES] Montant
             };
             
             return typeMap[productionType] || (isEntry ? 'Autre' : 'Autre');
+        }
+        
+        // Fonction utilitaire pour nettoyer les doublons dans stockEntries et stockExits
+        function nettoyerDoublonsStock() {
+            try {
+                console.log('🧹 Nettoyage des doublons dans les stocks...');
+                
+                // Nettoyer stockEntries
+                let stockEntriesData = JSON.parse(localStorage.getItem('stockEntries') || '[]');
+                const stockEntriesUniques = [];
+                const seenEntries = new Set();
+                
+                stockEntriesData.forEach(entry => {
+                    // Créer une clé unique basée sur les propriétés principales
+                    const key = `${entry.product}_${entry.date}_${entry.quantity}_${entry.supplier || ''}`;
+                    
+                    if (!seenEntries.has(key) && !seenEntries.has(entry.id)) {
+                        stockEntriesUniques.push(entry);
+                        seenEntries.add(key);
+                        if (entry.id) seenEntries.add(entry.id);
+                    }
+                });
+                
+                // Nettoyer stockExits
+                let stockExitsData = JSON.parse(localStorage.getItem('stockExits') || '[]');
+                const stockExitsUniques = [];
+                const seenExits = new Set();
+                
+                stockExitsData.forEach(exit => {
+                    // Créer une clé unique basée sur les propriétés principales
+                    const key = `${exit.product}_${exit.date}_${exit.quantity}_${exit.customer || exit.supplier || ''}`;
+                    
+                    if (!seenExits.has(key) && !seenExits.has(exit.id)) {
+                        stockExitsUniques.push(exit);
+                        seenExits.add(key);
+                        if (exit.id) seenExits.add(exit.id);
+                    }
+                });
+                
+                // Sauvegarder les données nettoyées
+                if (stockEntriesData.length !== stockEntriesUniques.length) {
+                    localStorage.setItem('stockEntries', JSON.stringify(stockEntriesUniques));
+                    window.stockEntriesData = stockEntriesUniques;
+                    console.log(`✅ ${stockEntriesData.length - stockEntriesUniques.length} doublons supprimés des entrées`);
+                }
+                
+                if (stockExitsData.length !== stockExitsUniques.length) {
+                    localStorage.setItem('stockExits', JSON.stringify(stockExitsUniques));
+                    window.stockExitsData = stockExitsUniques;
+                    console.log(`✅ ${stockExitsData.length - stockExitsUniques.length} doublons supprimés des sorties`);
+                }
+                
+                // Mettre à jour les affichages
+                updateAllMovementsTable();
+                updateEntriesMovementsTable();
+                updateExitsMovementsTable();
+                
+                const totalDoublons = (stockEntriesData.length - stockEntriesUniques.length) + (stockExitsData.length - stockExitsUniques.length);
+                if (totalDoublons > 0) {
+                    showAlert(`🧹 ${totalDoublons} doublons supprimés avec succès`, 'success');
+                } else {
+                    console.log('✅ Aucun doublon détecté');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erreur nettoyage doublons:', error);
+                showAlert('❌ Erreur lors du nettoyage des doublons', 'error');
+            }
         }
         
         // Nouvelle fonction pour ajouter automatiquement les nouveaux produits
