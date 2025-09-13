@@ -5288,22 +5288,46 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce mouvement ?')) return;
             
-            // Logique copiée du module commercial - simple et efficace
+            console.log(`🔍 DÉBUT suppression mouvement - source: ${source}, ID: ${id}`);
+            
+            // Logique simplifiée et robuste
             if (source === 'entries') {
+                console.log(`📊 Données entrées avant suppression: ${stockEntriesData.length}`);
                 stockEntriesData = stockEntriesData.filter(e => e.id != id);
                 saveToLocalStorage();
+                console.log(`📊 Données entrées après suppression: ${stockEntriesData.length}`);
                 
-                // ✅ Utiliser la nouvelle vérification Firebase
+                // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
                 if (isFirebaseReady()) {
                     try {
                         console.log(`🗑️ Suppression Firebase de l'entrée ID: ${id}`);
+                        
+                        // Essayer d'abord la suppression directe avec l'ID
                         await db.collection('stockEntries').doc(id.toString()).delete();
-                        console.log(`✅ Entrée ${id} supprimée de Firebase`);
+                        console.log(`✅ Entrée ${id} supprimée de Firebase (suppression directe)`);
+                        
                     } catch (error) {
-                        console.error(`❌ Erreur suppression Firebase entrée ${id}:`, error);
+                        console.warn(`⚠️ Suppression directe échouée pour entrée ${id}, recherche...`);
+                        
+                        try {
+                            const snapshot = await db.collection('stockEntries').get();
+                            let docToDelete = null;
+                            
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
+                                if (data.id == id || data.id === id.toString()) {
+                                    docToDelete = doc;
+                                }
+                            });
+                            
+                            if (docToDelete) {
+                                await docToDelete.ref.delete();
+                                console.log(`✅ Entrée ${id} supprimée de Firebase (recherche)`);
+                            }
+                        } catch (searchError) {
+                            console.error(`❌ Erreur suppression Firebase entrée ${id}:`, searchError);
+                        }
                     }
-                } else {
-                    console.log(`⚠️ Firebase indisponible - entrée ${id} supprimée seulement en local`);
                 }
                 
                 updateEntriesMovementsTable();
@@ -5312,20 +5336,42 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 showAlert('✅ Entrée supprimée', 'warning');
                 
             } else if (source === 'exits') {
+                console.log(`📊 Données sorties avant suppression: ${stockExitsData.length}`);
                 stockExitsData = stockExitsData.filter(e => e.id != id);
                 saveToLocalStorage();
+                console.log(`📊 Données sorties après suppression: ${stockExitsData.length}`);
                 
-                // ✅ Utiliser la nouvelle vérification Firebase
+                // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
                 if (isFirebaseReady()) {
                     try {
                         console.log(`🗑️ Suppression Firebase de la sortie ID: ${id}`);
+                        
+                        // Essayer d'abord la suppression directe avec l'ID
                         await db.collection('stockExits').doc(id.toString()).delete();
-                        console.log(`✅ Sortie ${id} supprimée de Firebase`);
+                        console.log(`✅ Sortie ${id} supprimée de Firebase (suppression directe)`);
+                        
                     } catch (error) {
-                        console.error(`❌ Erreur suppression Firebase sortie ${id}:`, error);
+                        console.warn(`⚠️ Suppression directe échouée pour sortie ${id}, recherche...`);
+                        
+                        try {
+                            const snapshot = await db.collection('stockExits').get();
+                            let docToDelete = null;
+                            
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
+                                if (data.id == id || data.id === id.toString()) {
+                                    docToDelete = doc;
+                                }
+                            });
+                            
+                            if (docToDelete) {
+                                await docToDelete.ref.delete();
+                                console.log(`✅ Sortie ${id} supprimée de Firebase (recherche)`);
+                            }
+                        } catch (searchError) {
+                            console.error(`❌ Erreur suppression Firebase sortie ${id}:`, searchError);
+                        }
                     }
-                } else {
-                    console.log(`⚠️ Firebase indisponible - sortie ${id} supprimée seulement en local`);
                 }
                 
                 updateExitsMovementsTable();
@@ -5351,47 +5397,46 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             console.log(`🔍 DÉBUT suppression entrée ID: ${id}`);
             console.log(`📊 Données avant suppression: ${stockEntriesData.length} entrées`);
             
-            // Logique copiée du module commercial - simple et efficace
+            // Logique simplifiée et robuste
             stockEntriesData = stockEntriesData.filter(e => e.id != id);
             saveToLocalStorage();
             
             console.log(`📊 Données après suppression locale: ${stockEntriesData.length} entrées`);
             
-            // ✅ NOUVELLE LOGIQUE: Trouver le document Firebase qui contient cet ID
+            // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
             if (isFirebaseReady()) {
                 try {
                     console.log(`🗑️ Suppression Firebase de l'entrée ID: ${id}`);
-                    console.log(`🔍 Firebase db disponible:`, !!db);
                     
-                    // Parcourir tous les documents pour trouver celui qui contient cet ID
-                    const snapshot = await db.collection('stockEntries').get();
-                    let docToDelete = null;
+                    // Essayer d'abord la suppression directe avec l'ID
+                    await db.collection('stockEntries').doc(id.toString()).delete();
+                    console.log(`✅ Entrée ${id} supprimée de Firebase (suppression directe)`);
                     
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        if (data.id === id) {
-                            docToDelete = doc;
-                            console.log(`✅ Document Firebase trouvé: ${doc.id} contient l'ID ${id}`);
-                        }
-                    });
-                    
-                    if (docToDelete) {
-                        await docToDelete.ref.delete();
-                        console.log(`✅ Entrée ${id} supprimée de Firebase (document ${docToDelete.id})`);
-                        
-                        // Vérifier que la suppression a bien eu lieu
-                        const verifySnap = await docToDelete.ref.get();
-                        if (!verifySnap.exists) {
-                            console.log(`✅ Suppression Firebase confirmée pour ${id}`);
-                        } else {
-                            console.error(`❌ ERREUR: Document ${docToDelete.id} existe encore après suppression!`);
-                        }
-                    } else {
-                        console.warn(`⚠️ Document Firebase avec ID ${id} introuvable dans les données`);
-                    }
                 } catch (error) {
-                    console.error(`❌ Erreur suppression Firebase entrée ${id}:`, error);
-                    console.error(`❌ Stack trace:`, error.stack);
+                    console.warn(`⚠️ Suppression directe échouée, recherche dans les documents...`);
+                    
+                    try {
+                        // Si la suppression directe échoue, chercher le document
+                        const snapshot = await db.collection('stockEntries').get();
+                        let docToDelete = null;
+                        
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            if (data.id == id || data.id === id.toString()) {
+                                docToDelete = doc;
+                                console.log(`✅ Document Firebase trouvé: ${doc.id} contient l'ID ${id}`);
+                            }
+                        });
+                        
+                        if (docToDelete) {
+                            await docToDelete.ref.delete();
+                            console.log(`✅ Entrée ${id} supprimée de Firebase (recherche)`);
+                        } else {
+                            console.warn(`⚠️ Document Firebase avec ID ${id} introuvable`);
+                        }
+                    } catch (searchError) {
+                        console.error(`❌ Erreur suppression Firebase entrée ${id}:`, searchError);
+                    }
                 }
             } else {
                 console.log(`⚠️ Firebase indisponible - entrée ${id} supprimée seulement en local`);
@@ -5430,68 +5475,254 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette sortie ?')) return;
             
-            console.log(`🔍 DÉBUT suppression sortie ID: ${id}, source: ${source}`);
+            console.log(`🔍 DÉBUT suppression sortie ID: ${id}, source: ${source}, type: ${typeof id}`);
             console.log(`📊 Données avant suppression: ${stockExitsData.length} sorties`);
             
-            // Logique copiée du module commercial - simple et efficace
-            stockExitsData = stockExitsData.filter(e => e.id != id);
+            // Recherche de l'élément à supprimer pour diagnostic
+            const exitToDelete = stockExitsData.find(e => e.id == id || e.id === id.toString());
+            if (exitToDelete) {
+                console.log(`🎯 Sortie trouvée en local:`, exitToDelete);
+            } else {
+                console.warn(`⚠️ Sortie ${id} introuvable en local !`);
+                console.log(`📋 IDs disponibles:`, stockExitsData.map(e => ({ id: e.id, type: typeof e.id })));
+            }
+            
+            // Suppression locale avec nettoyage robuste
+            const initialLength = stockExitsData.length;
+            stockExitsData = stockExitsData.filter(e => e.id != id && e.id !== id.toString());
+            const finalLength = stockExitsData.length;
+            
+            console.log(`📊 Suppression locale: ${initialLength} → ${finalLength} sorties (${initialLength - finalLength} supprimée(s))`);
+            
+            if (initialLength === finalLength) {
+                console.error(`❌ AUCUNE SUPPRESSION LOCALE ! ID ${id} non trouvé`);
+                showAlert('❌ Erreur: Sortie non trouvée pour suppression', 'error');
+                return;
+            }
+            
             saveToLocalStorage();
             
-            console.log(`📊 Données après suppression locale: ${stockExitsData.length} sorties`);
-            
-            // ✅ NOUVELLE LOGIQUE: Trouver le document Firebase qui contient cet ID
+            // ✅ SUPPRESSION FIREBASE AMÉLIORÉE
             if (isFirebaseReady()) {
                 try {
-                    console.log(`🗑️ Suppression Firebase de la sortie ID: ${id}`);
-                    console.log(`🔍 Firebase db disponible:`, !!db);
+                    const idStr = id.toString();
+                    console.log(`🗑️ Suppression Firebase de la sortie ID: ${idStr}`);
                     
-                    // Parcourir tous les documents pour trouver celui qui contient cet ID
-                    const snapshot = await db.collection('stockExits').get();
-                    let docToDelete = null;
+                    // Vérifier d'abord si le document existe
+                    const docRef = db.collection('stockExits').doc(idStr);
+                    const docSnapshot = await docRef.get();
                     
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        if (data.id === id) {
-                            docToDelete = doc;
-                            console.log(`✅ Document Firebase trouvé: ${doc.id} contient l'ID ${id}`);
-                        }
-                    });
-                    
-                    if (docToDelete) {
-                        await docToDelete.ref.delete();
-                        console.log(`✅ Sortie ${id} supprimée de Firebase (document ${docToDelete.id})`);
-                        
-                        // Vérifier que la suppression a bien eu lieu
-                        const verifySnap = await docToDelete.ref.get();
-                        if (!verifySnap.exists) {
-                            console.log(`✅ Suppression Firebase confirmée pour ${id}`);
-                        } else {
-                            console.error(`❌ ERREUR: Document ${docToDelete.id} existe encore après suppression!`);
-                        }
+                    if (docSnapshot.exists) {
+                        await docRef.delete();
+                        console.log(`✅ Sortie ${idStr} supprimée de Firebase (suppression directe)`);
                     } else {
-                        console.warn(`⚠️ Document Firebase avec ID ${id} introuvable dans les données`);
+                        console.warn(`⚠️ Document ${idStr} n'existe pas, recherche alternative...`);
+                        
+                        // Recherche alternative dans tous les documents
+                        const snapshot = await db.collection('stockExits').get();
+                        let docToDelete = null;
+                        let foundCount = 0;
+                        
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            console.log(`🔍 Document Firebase: ${doc.id} contient ID: ${data.id} (type: ${typeof data.id})`);
+                            
+                            if (data.id == id || data.id === idStr || doc.id === idStr) {
+                                docToDelete = doc;
+                                foundCount++;
+                                console.log(`✅ Document Firebase trouvé pour suppression: ${doc.id} → ID: ${data.id}`);
+                            }
+                        });
+                        
+                        if (docToDelete) {
+                            await docToDelete.ref.delete();
+                            console.log(`✅ Sortie ${id} supprimée de Firebase (recherche - ${foundCount} correspondance(s))`);
+                        } else {
+                            console.error(`❌ AUCUN DOCUMENT Firebase trouvé pour l'ID: ${id}`);
+                            console.log(`📋 Documents Firebase disponibles:`, snapshot.docs.map(doc => ({ docId: doc.id, dataId: doc.data().id })));
+                        }
                     }
+                    
                 } catch (error) {
                     console.error(`❌ Erreur suppression Firebase sortie ${id}:`, error);
-                    console.error(`❌ Stack trace:`, error.stack);
+                    showAlert(`⚠️ Erreur Firebase: ${error.message}`, 'warning');
                 }
             } else {
                 console.log(`⚠️ Firebase indisponible - sortie ${id} supprimée seulement en local`);
             }
             
+            // Mise à jour de l'interface
             updateExitsMovementsTable();
             updateAllMovementsTable();
             forceUpdateStockKPIs();
-            showAlert('✅ Sortie supprimée', 'warning');
+            calculateCurrentStockLevels(); // Recalculer les stocks après suppression
+            showAlert('✅ Sortie supprimée avec succès', 'success');
         }
         
         // 🌍 EXPORT DES FONCTIONS VERS LE SCOPE GLOBAL pour les onclick
         window.deleteMovement = deleteMovement;
         window.deleteStockEntry = deleteStockEntry;
         window.deleteStockExit = deleteStockExit;
+        
+        // 🔬 FONCTION DE DIAGNOSTIC SPÉCIFIQUE POUR LES SORTIES DE STOCK
+        async function diagnosticStockExits() {
+            console.log('🔬 === DIAGNOSTIC SORTIES DE STOCK ===');
+            
+            console.log(`📊 Données locales: ${stockExitsData.length} sorties`);
+            stockExitsData.forEach((exit, index) => {
+                console.log(`  ${index + 1}. ID: ${exit.id} (${typeof exit.id}) - Produit: ${exit.product} - Date: ${exit.date}`);
+            });
+            
+            if (isFirebaseReady()) {
+                try {
+                    const snapshot = await db.collection('stockExits').get();
+                    console.log(`🔥 Documents Firebase: ${snapshot.size} documents`);
+                    
+                    snapshot.forEach((doc, index) => {
+                        const data = doc.data();
+                        console.log(`  ${index + 1}. Doc ID: ${doc.id} → Data ID: ${data.id} (${typeof data.id}) - Produit: ${data.product || 'N/A'}`);
+                    });
+                    
+                    // Vérifier la correspondance
+                    let matched = 0;
+                    let unmatched = [];
+                    
+                    stockExitsData.forEach(localExit => {
+                        let found = false;
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            if (data.id == localExit.id || data.id === localExit.id.toString() || doc.id === localExit.id.toString()) {
+                                found = true;
+                            }
+                        });
+                        
+                        if (found) {
+                            matched++;
+                        } else {
+                            unmatched.push(localExit.id);
+                        }
+                    });
+                    
+                    console.log(`🎯 Correspondances: ${matched}/${stockExitsData.length} locales trouvées dans Firebase`);
+                    if (unmatched.length > 0) {
+                        console.warn(`⚠️ IDs locaux sans correspondance Firebase:`, unmatched);
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Erreur diagnostic Firebase:', error);
+                }
+            } else {
+                console.warn('⚠️ Firebase non disponible pour le diagnostic');
+            }
+            
+            console.log('🏁 === FIN DIAGNOSTIC SORTIES ===');
+        }
+        
+        // 🧪 FONCTION DE TEST DE SUPPRESSION SÉCURISÉE
+        async function testDeleteStockExit(id) {
+            if (!id) {
+                console.error('❌ ID requis pour le test');
+                return;
+            }
+            
+            console.log(`🧪 TEST SUPPRESSION SORTIE: ${id}`);
+            
+            // Vérifier existence locale
+            const localExit = stockExitsData.find(e => e.id == id || e.id === id.toString());
+            if (!localExit) {
+                console.error(`❌ Sortie ${id} introuvable en local`);
+                return;
+            }
+            
+            console.log(`✅ Sortie trouvée en local:`, localExit);
+            
+            // Vérifier existence Firebase
+            if (isFirebaseReady()) {
+                try {
+                    const docRef = db.collection('stockExits').doc(id.toString());
+                    const docSnapshot = await docRef.get();
+                    
+                    if (docSnapshot.exists) {
+                        console.log(`✅ Document Firebase trouvé:`, docSnapshot.data());
+                        console.log(`💡 Prêt pour suppression sécurisée du document: ${docRef.id}`);
+                    } else {
+                        console.warn(`⚠️ Document Firebase ${id} n'existe pas, recherche alternative...`);
+                        
+                        const snapshot = await db.collection('stockExits').get();
+                        let found = false;
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            if (data.id == id || data.id === id.toString()) {
+                                console.log(`✅ Document alternatif trouvé: ${doc.id} → ${data.id}`);
+                                found = true;
+                            }
+                        });
+                        
+                        if (!found) {
+                            console.error(`❌ AUCUN document Firebase trouvé pour ${id}`);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`❌ Erreur vérification Firebase:`, error);
+                }
+            }
+            
+            console.log(`🧪 Fin du test - Utilisez deleteStockExit(${id}) pour supprimer réellement`);
+        }
+        
+        // Export des fonctions de diagnostic
+        window.diagnosticStockExits = diagnosticStockExits;
+        window.testDeleteStockExit = testDeleteStockExit;
         window.testFirebaseConnection = testFirebaseConnection;
         window.testDeleteFunction = testDeleteFunction;
+        window.diagnosticStockIds = diagnosticStockIds; // Nouvelle fonction de diagnostic
         console.log('🌍 Fonctions de suppression exportées vers le scope global');
+        
+        // NOUVELLE FONCTION DE DIAGNOSTIC POUR LES IDS
+        function diagnosticStockIds() {
+            console.log('🔍 === DIAGNOSTIC DES IDs DE STOCK ===');
+            
+            console.log(`📊 Entrées de stock (${stockEntriesData.length} éléments):`);
+            stockEntriesData.forEach((entry, index) => {
+                console.log(`  [${index}] ID: "${entry.id}" (type: ${typeof entry.id}) - Produit: ${entry.product}`);
+            });
+            
+            console.log(`📊 Sorties de stock (${stockExitsData.length} éléments):`);
+            stockExitsData.forEach((exit, index) => {
+                console.log(`  [${index}] ID: "${exit.id}" (type: ${typeof exit.id}) - Produit: ${exit.product} - Source: ${exit.source || 'N/A'}`);
+            });
+            
+            // Vérifier les boutons dans les tableaux
+            console.log('🔍 Vérification des boutons de suppression dans le DOM...');
+            
+            const entryButtons = document.querySelectorAll('[onclick*="deleteStockEntry"]');
+            console.log(`📊 Boutons deleteStockEntry trouvés: ${entryButtons.length}`);
+            entryButtons.forEach((button, index) => {
+                console.log(`  [${index}] onclick: ${button.getAttribute('onclick')}`);
+            });
+            
+            const exitButtons = document.querySelectorAll('[onclick*="deleteStockExit"]');
+            console.log(`📊 Boutons deleteStockExit trouvés: ${exitButtons.length}`);
+            exitButtons.forEach((button, index) => {
+                console.log(`  [${index}] onclick: ${button.getAttribute('onclick')}`);
+            });
+            
+            const movementButtons = document.querySelectorAll('[onclick*="deleteMovement"]');
+            console.log(`📊 Boutons deleteMovement trouvés: ${movementButtons.length}`);
+            movementButtons.forEach((button, index) => {
+                console.log(`  [${index}] onclick: ${button.getAttribute('onclick')}`);
+            });
+            
+            console.log('🔍 === FIN DU DIAGNOSTIC ===');
+            
+            return {
+                entriesCount: stockEntriesData.length,
+                exitsCount: stockExitsData.length,
+                entryButtonsCount: entryButtons.length,
+                exitButtonsCount: exitButtons.length,
+                movementButtonsCount: movementButtons.length
+            };
+        }
         
         // FONCTION POUR AFFICHER LA FICHE PRODUIT
         function showProductSheet(productName) {
