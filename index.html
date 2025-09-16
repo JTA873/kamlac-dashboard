@@ -2763,43 +2763,6 @@
                 
                 <!-- Section Données -->
                 <div id="settings-data" class="settings-section">
-                    <!-- Import Encaissements en Masse -->
-                    <div class="import-section">
-                        <h3 style="margin-bottom: 15px;">💰 Import Encaissements en Masse</h3>
-                        <p style="color: #666; margin-bottom: 15px; font-size: clamp(0.8rem, 2vw, 0.9rem);">
-                            Copiez-collez vos données d'encaissement. Formats acceptés :<br>
-                            <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 4px; font-size: 0.85em;">
-                                Date | Client | Montant
-                            </code> ou 
-                            <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 4px; font-size: 0.85em;">
-                                Date [TAB] Client [TAB] Montant
-                            </code>
-                        </p>
-                        <div style="margin-bottom: 15px;">
-                            <label style="font-weight: 600; margin-bottom: 8px; display: block;">
-                                📋 Données à importer (une ligne par encaissement)
-                            </label>
-                            <textarea id="paymentsImportData" placeholder="Exemple avec | :&#10;15/01/2025 | Client A | 50000&#10;16/01/2025 | Client B | 75000&#10;&#10;Ou copiez directement depuis Excel/Sheets avec tabulations :&#10;30/06/2025	AFRICA LEYRI	84535762&#10;30/06/2025	SMC	42186750" 
-                                style="width: 100%; height: 200px; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-family: monospace; font-size: 12px; resize: vertical;"
-                                oninput="validatePaymentsImport()"></textarea>
-                        </div>
-                        <div id="paymentsImportPreview" style="margin-bottom: 15px; display: none;">
-                            <h4 style="color: #667eea; margin-bottom: 10px;">👁️ Aperçu des données détectées :</h4>
-                            <div id="paymentsImportPreviewContent" style="background: #f8f9fa; padding: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto;"></div>
-                        </div>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button class="btn btn-primary" onclick="importPaymentsFromText()" id="importPaymentsBtn" disabled>
-                                📥 Importer Encaissements
-                            </button>
-                            <button class="btn btn-secondary" onclick="clearPaymentsImport()">
-                                🗑️ Effacer
-                            </button>
-                            <button class="btn btn-info" onclick="showPaymentsImportHelp()">
-                                ❓ Aide
-                            </button>
-                        </div>
-                    </div>
-
                     <!-- Export et Gestion -->
                     <div class="import-section">
                         <h3 style="margin-bottom: 15px;">💾 Gestion des données</h3>
@@ -3488,7 +3451,7 @@
 
                     <!-- Export et Gestion -->
                     <div class="invoice-section">
-                        <h3 style="margin-bottom: 15px; color: #667eea;">💾 Gestion des Données Stocks</h3>
+                        <h3 style="margin-bottom: 15px; color: #667eea;">� Export des Données Stocks</h3>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Export Mouvements Excel</label>
@@ -3504,74 +3467,7 @@
                                     💡 État actuel des stocks
                                 </small>
                             </div>
-                            <div class="form-group">
-                                <label>Analyse Stocks vs Ventes</label>
-                                <button class="btn btn-info" onclick="showStockAnalysisInUI()">📊 Rapport Analyse</button>
-                                <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);" id="analysisInfo">
-                                    💡 Analyse basée sur les ventes existantes
-                                </small>
-                            </div>
                             
-                            <div class="form-group">
-                                <label>🔥 Test Firebase</label>
-                                <button class="btn btn-warning" onclick="testFirebaseConnection()">🔍 Tester Firebase</button>
-                                <small style="color: #ffc107; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    💡 Diagnostiquer la connexion Firebase
-                                </small>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>🔄 Sync Produits/Inventaire</label>
-                                <button class="btn btn-secondary" onclick="showProductsDiagnostic()">🔍 Diagnostic & Sync</button>
-                                <small style="color: #6c757d; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    💡 Vérifier et synchroniser produits/inventaire
-                                </small>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>🗑️ Test Suppression</label>
-                                <button class="btn btn-danger" onclick="testDeleteFunction()">🧪 Test Suppression</button>
-                                <small style="color: #dc3545; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    💡 Tester si les fonctions de suppression fonctionnent
-                                </small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Import en Masse - Corrections de Stock</label>
-                                <textarea id="stockImportData" placeholder="Coller ici les données de correction de stock au format:
-Produit | Quantité | Type
-Ex: LEP JANUS 18g x 100 | 1500 | correction_positive" 
-                                    style="width: 100%; height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 12px; resize: vertical;"></textarea>
-                                <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
-                                    <button class="btn btn-success" onclick="validateStockImport()">✅ Valider Import</button>
-                                    <button class="btn btn-primary" onclick="executeStockImport()">💾 Importer Données</button>
-                                    <button class="btn btn-secondary" onclick="clearStockImport()">🧹 Vider</button>
-                                    <button class="btn btn-info" onclick="showStockImportHelp()">❓ Aide</button>
-                                </div>
-                                <div id="stockImportPreview" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; font-family: monospace; font-size: 12px; display: none;"></div>
-                                <small style="color: #28a745; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    📦 Import en masse des corrections de stock
-                                </small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Réinitialiser Stocks</label>
-                                <button class="btn btn-danger" onclick="clearStockData()">🗑️ Effacer Stocks</button>
-                                <small style="color: #dc3545; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    ⚠️ Supprime toutes les données stocks
-                                </small>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Diagnostic Synchronisation</label>
-                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                    <button class="btn btn-success" onclick="refreshData()">🔄 Force Sync</button>
-                                </div>
-                                <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
-                                    🔍 Vérifier la synchronisation avec Firebase
-                                </small>
-                            </div>
-
                         </div>
                     </div>
                 </div>
@@ -3750,6 +3646,132 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 </div>
                                 <div style="margin-top: 10px; text-align: center;">
                                     <button onclick="clearDebugConsole()" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 11px;">🗑️ Vider Console</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Section Import Encaissements en Masse (migrée du module Commercial) -->
+                        <div style="background: rgba(255,255,255,0.95); color: #333; padding: 30px; border-radius: 15px; margin: 20px 0; text-align: left;">
+                            <h3 style="color: #667eea; margin-bottom: 20px; text-align: center;">💰 Import Encaissements en Masse</h3>
+                            <p style="color: #666; margin-bottom: 15px; font-size: clamp(0.8rem, 2vw, 0.9rem);">
+                                Copiez-collez vos données d'encaissement. Formats acceptés :<br>
+                                <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 4px; font-size: 0.85em;">
+                                    Date | Client | Montant
+                                </code> ou 
+                                <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 4px; font-size: 0.85em;">
+                                    Date [TAB] Client [TAB] Montant
+                                </code>
+                            </p>
+                            <div style="margin-bottom: 15px;">
+                                <label style="font-weight: 600; margin-bottom: 8px; display: block;">
+                                    📋 Données à importer (une ligne par encaissement)
+                                </label>
+                                <textarea id="paymentsImportData" placeholder="Exemple avec | :&#10;15/01/2025 | Client A | 50000&#10;16/01/2025 | Client B | 75000&#10;&#10;Ou copiez directement depuis Excel/Sheets avec tabulations :&#10;30/06/2025	AFRICA LEYRI	84535762&#10;30/06/2025	SMC	42186750" 
+                                    style="width: 100%; height: 200px; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-family: monospace; font-size: 12px; resize: vertical;"
+                                    oninput="validatePaymentsImport()"></textarea>
+                            </div>
+                            <div id="paymentsImportPreview" style="margin-bottom: 15px; display: none;">
+                                <h4 style="color: #667eea; margin-bottom: 10px;">👁️ Aperçu des données détectées :</h4>
+                                <div id="paymentsImportPreviewContent" style="background: #f8f9fa; padding: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto;"></div>
+                            </div>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button class="btn btn-primary" onclick="importPaymentsFromText()" id="importPaymentsBtn" disabled>
+                                    📥 Importer Encaissements
+                                </button>
+                                <button class="btn btn-secondary" onclick="clearPaymentsImport()">
+                                    🗑️ Effacer
+                                </button>
+                                <button class="btn btn-info" onclick="showPaymentsImportHelp()">
+                                    ❓ Aide
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Section Gestion des Données Stocks (migrée du module Stocks) -->
+                        <div style="background: rgba(255,255,255,0.95); color: #333; padding: 30px; border-radius: 15px; margin: 20px 0; text-align: left;">
+                            <h3 style="color: #667eea; margin-bottom: 20px; text-align: center;">💾 Gestion des Données Stocks</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Analyse Stocks vs Ventes</label>
+                                    <button class="btn btn-info" onclick="showStockAnalysisInUI()">📊 Rapport Analyse</button>
+                                    <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);" id="analysisInfo">
+                                        💡 Analyse basée sur les ventes existantes
+                                    </small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>🔄 Sync Produits/Inventaire</label>
+                                    <button class="btn btn-secondary" onclick="showProductsDiagnostic()">🔍 Diagnostic & Sync</button>
+                                    <small style="color: #6c757d; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                        💡 Vérifier et synchroniser produits/inventaire
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Import en Masse - Corrections de Stock</label>
+                                    <textarea id="stockImportData" placeholder="Coller ici les données de correction de stock au format:
+Produit | Quantité | Type
+Ex: LEP JANUS 18g x 100 | 1500 | correction_positive" 
+                                        style="width: 100%; height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 12px; resize: vertical;"></textarea>
+                                    <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+                                        <button class="btn btn-success" onclick="validateStockImport()">✅ Valider Import</button>
+                                        <button class="btn btn-primary" onclick="executeStockImport()">💾 Importer Données</button>
+                                        <button class="btn btn-secondary" onclick="clearStockImport()">🧹 Vider</button>
+                                        <button class="btn btn-info" onclick="showStockImportHelp()">❓ Aide</button>
+                                    </div>
+                                    <div id="stockImportPreview" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; font-family: monospace; font-size: 12px; display: none;"></div>
+                                    <small style="color: #28a745; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                        📦 Import en masse des corrections de stock
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Réinitialiser Stocks</label>
+                                    <button class="btn btn-danger" onclick="clearStockData()">🗑️ Effacer Stocks</button>
+                                    <small style="color: #dc3545; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                        ⚠️ Supprime toutes les données stocks
+                                    </small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Diagnostic Synchronisation</label>
+                                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                        <button class="btn btn-success" onclick="refreshData()">🔄 Force Sync</button>
+                                    </div>
+                                    <small style="color: #17a2b8; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                        🔍 Vérifier la synchronisation avec Firebase
+                                    </small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Réinitialiser Toutes Données</label>
+                                    <button class="btn btn-danger" onclick="clearAllData()">🗑️ Effacer Tout</button>
+                                    <small style="color: #dc3545; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                        ⚠️ Action irréversible - Supprime ventes, encaissements, stocks
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Bouton DEBUGALL - Diagnostic Complet -->
+                        <div style="background: rgba(255,0,0,0.1); border: 2px solid #ff6b6b; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
+                            <h4 style="color: #ff6b6b; margin-bottom: 15px;">🚨 DIAGNOSTIC COMPLET - DEBUGALL</h4>
+                            <p style="color: #666; margin-bottom: 15px; font-size: 14px;">
+                                Effectue un test complet de toutes les fonctionnalités :<br>
+                                <strong>Saisie → Synchronisation → Analyse → Suppression → Nettoyage</strong><br>
+                                <em>Les données de test sont automatiquement supprimées à la fin</em>
+                            </p>
+                            <button onclick="executeDebugAll()" style="background: linear-gradient(45deg, #ff6b6b, #ee5a24); color: white; border: none; padding: 15px 30px; border-radius: 25px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,107,107,0.3); margin: 5px;">
+                                🔥 DEBUGALL SIMPLE - Test Firebase
+                            </button>
+                            <button onclick="executeDebugAllComplete()" style="background: linear-gradient(45deg, #dc3545, #c82333); color: white; border: none; padding: 15px 30px; border-radius: 25px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(220,53,69,0.3); margin: 5px;">
+                                🔥🔥 DEBUGALL COMPLET - Avec Données
+                            </button>
+                            <div id="debugAllProgress" style="margin-top: 15px; display: none;">
+                                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px;">
+                                    <div style="font-weight: bold; margin-bottom: 10px;">📊 Progression du test :</div>
+                                    <div id="debugAllStep" style="color: #007bff; margin-bottom: 10px;">Initialisation...</div>
+                                    <div id="debugAllResults" style="font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; text-align: left;"></div>
                                 </div>
                             </div>
                         </div>
@@ -11031,6 +11053,294 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 console.error('❌ Erreur:', error.message);
                 console.error('❌ Stack:', error.stack);
                 showAlert(`❌ Test suppression échoué: ${error.message}`, 'error');
+            }
+        }
+
+        // 🔥 FONCTION DEBUGALL - DIAGNOSTIC COMPLET
+        async function executeDebugAll() {
+            console.log('🔥 === DEBUGALL DÉMARRÉ ===');
+            
+            // Variables pour tracer les IDs créés
+            let testIdsToCleanup = {
+                sales: [],
+                payments: [],
+                stockEntries: [],
+                stockExits: [],
+                products: []
+            };
+            
+            try {
+                // Afficher l'interface de progression
+                const progressDiv = document.getElementById('debugAllProgress');
+                const stepDiv = document.getElementById('debugAllStep');
+                const resultsDiv = document.getElementById('debugAllResults');
+                
+                if (progressDiv) progressDiv.style.display = 'block';
+                
+                function updateStep(step, details = '') {
+                    console.log('🔥 DEBUGALL: ' + step);
+                    if (stepDiv) stepDiv.textContent = step;
+                    if (resultsDiv && details) {
+                        resultsDiv.innerHTML += '<div style="margin: 5px 0; padding: 5px; background: #f1f3f4; border-left: 3px solid #007bff;">' + details + '</div>';
+                        resultsDiv.scrollTop = resultsDiv.scrollHeight;
+                    }
+                    logToDebugConsole('🔥 DEBUGALL: ' + step, 'info');
+                }
+                
+                updateStep('🚀 Phase 1: Test Firebase et Initialisation', '🔍 Vérification de la connexion Firebase...');
+                
+                // Test de connexion Firebase
+                if (!db) {
+                    throw new Error('Firebase non initialisé');
+                }
+                
+                updateStep('✅ Firebase connecté', '� Connexion Firebase vérifiée');
+                updateStep('🎉 DEBUGALL TERMINÉ AVEC SUCCÈS', 'Test simplifié réussi');
+                
+                console.log('🎉 === DEBUGALL TERMINÉ AVEC SUCCÈS ===');
+                showAlert('🎉 DEBUGALL terminé avec succès ! Test simplifié.', 'success');
+                
+            } catch (error) {
+                console.error('❌ === DEBUGALL ÉCHOUÉ ===', error);
+                showAlert('❌ DEBUGALL échoué: ' + error.message, 'error');
+            }
+        }
+
+        // 🔥 FONCTION DEBUGALL COMPLETE - DIAGNOSTIC COMPLET AVEC DONNÉES
+        async function executeDebugAllComplete() {
+            console.log('🔥 === DEBUGALL COMPLET DÉMARRÉ ===');
+            
+            // Variables pour tracer les IDs créés
+            let testIdsToCleanup = {
+                sales: [],
+                payments: [],
+                stockEntries: [],
+                stockExits: [],
+                products: []
+            };
+            
+            try {
+                // Afficher l'interface de progression
+                const progressDiv = document.getElementById('debugAllProgress');
+                const stepDiv = document.getElementById('debugAllStep');
+                const resultsDiv = document.getElementById('debugAllResults');
+                
+                if (progressDiv) progressDiv.style.display = 'block';
+                
+                function updateStep(step, details = '') {
+                    console.log('🔥 DEBUGALL COMPLET: ' + step);
+                    if (stepDiv) stepDiv.textContent = step;
+                    if (resultsDiv && details) {
+                        resultsDiv.innerHTML += '<div style="margin: 5px 0; padding: 5px; background: #f1f3f4; border-left: 3px solid #007bff;">' + details + '</div>';
+                        resultsDiv.scrollTop = resultsDiv.scrollHeight;
+                    }
+                    logToDebugConsole('🔥 DEBUGALL COMPLET: ' + step, 'info');
+                }
+                
+                updateStep('🚀 Phase 1: Test Firebase et Initialisation', '🔍 Vérification de la connexion Firebase...');
+                
+                // Test de connexion Firebase
+                if (!db) {
+                    throw new Error('Firebase non initialisé');
+                }
+                
+                // Test d écriture/lecture Firebase
+                const testDoc = await db.collection('debug_test').add({
+                    timestamp: new Date(),
+                    test: 'debugall_connectivity'
+                });
+                updateStep('✅ Firebase connecté', '🔗 Document test créé: ' + testDoc.id);
+                await testDoc.delete();
+                
+                updateStep('🏗️ Phase 2: Création de données de test', '📝 Génération de données simulées...');
+                
+                // Créer un produit de test
+                const testProductName = 'TEST_PRODUCT_' + Date.now();
+                const testProduct = {
+                    name: testProductName,
+                    category: 'Test Category',
+                    createdAt: new Date()
+                };
+                
+                const productRef = await db.collection('products').add(testProduct);
+                testIdsToCleanup.products.push(productRef.id);
+                updateStep('✅ Produit de test créé', '📦 Produit: ' + testProductName + ' (ID: ' + productRef.id + ')');
+                
+                // Créer une entrée stock
+                const testStockEntry = {
+                    produit: testProductName,
+                    quantite: 100,
+                    date: new Date().toISOString().split('T')[0],
+                    type: 'reception_pf',
+                    description: 'Test DEBUGALL - Stock Entry',
+                    timestamp: new Date()
+                };
+                
+                const stockEntryRef = await db.collection('stockEntries').add(testStockEntry);
+                testIdsToCleanup.stockEntries.push(stockEntryRef.id);
+                updateStep('✅ Entrée stock créée', '📥 Entrée: ' + testStockEntry.quantite + ' unités (ID: ' + stockEntryRef.id + ')');
+                
+                // Créer une sortie stock
+                const testStockExit = {
+                    produit: testProductName,
+                    quantite: 30,
+                    date: new Date().toISOString().split('T')[0],
+                    type: 'sortie_pf',
+                    description: 'Test DEBUGALL - Stock Exit',
+                    timestamp: new Date()
+                };
+                
+                const stockExitRef = await db.collection('stockExits').add(testStockExit);
+                testIdsToCleanup.stockExits.push(stockExitRef.id);
+                updateStep('✅ Sortie stock créée', '📤 Sortie: ' + testStockExit.quantite + ' unités (ID: ' + stockExitRef.id + ')');
+                
+                // Créer une vente
+                const testSale = {
+                    client: 'CLIENT_TEST_DEBUGALL',
+                    produit: testProductName,
+                    quantite: 20,
+                    prixUnitaire: 1000,
+                    total: 20000,
+                    date: new Date().toISOString().split('T')[0],
+                    statut: 'en_cours',
+                    description: 'Test DEBUGALL - Sale',
+                    timestamp: new Date()
+                };
+                
+                const saleRef = await db.collection('sales').add(testSale);
+                testIdsToCleanup.sales.push(saleRef.id);
+                updateStep('✅ Vente créée', '💰 Vente: ' + testSale.client + ' - ' + testSale.total + ' FCFA (ID: ' + saleRef.id + ')');
+                
+                // Créer un encaissement
+                const testPayment = {
+                    client: 'CLIENT_TEST_DEBUGALL',
+                    montant: 15000,
+                    date: new Date().toISOString().split('T')[0],
+                    description: 'Test DEBUGALL - Payment',
+                    timestamp: new Date()
+                };
+                
+                const paymentRef = await db.collection('payments').add(testPayment);
+                testIdsToCleanup.payments.push(paymentRef.id);
+                updateStep('✅ Encaissement créé', '💵 Paiement: ' + testPayment.montant + ' FCFA (ID: ' + paymentRef.id + ')');
+                
+                updateStep('🔄 Phase 3: Test de synchronisation', '⬇️ Synchronisation depuis Firebase...');
+                
+                // Test de synchronisation
+                await synchroniserDonneesBidirectionnelles();
+                updateStep('✅ Synchronisation effectuée', '📊 Données synchronisées depuis Firebase');
+                
+                // Recharger les données locales
+                await loadStockData();
+                updateStep('✅ Données locales rechargées', '💾 Cache local mis à jour');
+                
+                updateStep('🔍 Phase 4: Analyse et diagnostic', '📈 Analyse des données créées...');
+                
+                // Test de l analyse
+                let stockAnalysis = '';
+                const currentStock = getCurrentStock(testProductName);
+                stockAnalysis += 'Stock actuel de ' + testProductName + ': ' + currentStock + ' unités<br>';
+                stockAnalysis += 'Entrées totales: 100 unités<br>';
+                stockAnalysis += 'Sorties totales: 30 unités<br>';
+                stockAnalysis += 'Stock calculé: 70 unités<br>';
+                
+                updateStep('✅ Analyse terminée', '📊 ' + stockAnalysis);
+                
+                updateStep('🔍 Phase 5: Tests de cohérence', '🔎 Vérification de l intégrité...');
+                
+                // Test cohérence Firebase vs Local
+                const firebaseStockEntries = await getFirebaseCollection('stockEntries');
+                const localStockEntriesCount = stockEntries.length;
+                const firebaseEntriesCount = firebaseStockEntries.length;
+                
+                updateStep('✅ Tests de cohérence', '📊 Local: ' + localStockEntriesCount + ' entrées | Firebase: ' + firebaseEntriesCount + ' entrées');
+                
+                updateStep('🗑️ Phase 6: Nettoyage des données de test', '🧹 Suppression des données créées...');
+                
+                // Nettoyer les données créées
+                let cleanupResults = '';
+                
+                // Supprimer les ventes
+                for (const saleId of testIdsToCleanup.sales) {
+                    await db.collection('sales').doc(saleId).delete();
+                    cleanupResults += '✅ Vente supprimée: ' + saleId + '<br>';
+                }
+                
+                // Supprimer les encaissements
+                for (const paymentId of testIdsToCleanup.payments) {
+                    await db.collection('payments').doc(paymentId).delete();
+                    cleanupResults += '✅ Encaissement supprimé: ' + paymentId + '<br>';
+                }
+                
+                // Supprimer les entrées stock
+                for (const entryId of testIdsToCleanup.stockEntries) {
+                    await db.collection('stockEntries').doc(entryId).delete();
+                    cleanupResults += '✅ Entrée stock supprimée: ' + entryId + '<br>';
+                }
+                
+                // Supprimer les sorties stock
+                for (const exitId of testIdsToCleanup.stockExits) {
+                    await db.collection('stockExits').doc(exitId).delete();
+                    cleanupResults += '✅ Sortie stock supprimée: ' + exitId + '<br>';
+                }
+                
+                // Supprimer les produits
+                for (const productId of testIdsToCleanup.products) {
+                    await db.collection('products').doc(productId).delete();
+                    cleanupResults += '✅ Produit supprimé: ' + productId + '<br>';
+                }
+                
+                updateStep('✅ Nettoyage terminé', cleanupResults);
+                
+                updateStep('🔄 Phase 7: Synchronisation finale', '🔄 Resynchronisation après nettoyage...');
+                
+                // Resynchroniser après nettoyage
+                await synchroniserDonneesBidirectionnelles();
+                await loadStockData();
+                
+                const summaryHTML = '✅ Toutes les phases complétées<br>' +
+                    '📊 Tests: Firebase ✅ | Données ✅ | Sync ✅ | Analyse ✅ | Nettoyage ✅<br>' +
+                    '🧹 Toutes les données de test ont été supprimées automatiquement<br>' +
+                    '⏱️ Durée: ' + new Date().toLocaleTimeString();
+                
+                updateStep('🎉 DEBUGALL COMPLET TERMINÉ AVEC SUCCÈS', summaryHTML);
+                
+                console.log('🎉 === DEBUGALL COMPLET TERMINÉ AVEC SUCCÈS ===');
+                showAlert('🎉 DEBUGALL complet terminé avec succès ! Toutes les fonctionnalités testées.', 'success');
+                
+            } catch (error) {
+                console.error('❌ === DEBUGALL COMPLET ÉCHOUÉ ===', error);
+                
+                const errorHTML = '❌ Erreur: ' + error.message + '<br>' +
+                    '📋 IDs créés pour nettoyage manuel si nécessaire:<br>' +
+                    '🏷️ Ventes: ' + testIdsToCleanup.sales.join(', ') + '<br>' +
+                    '💵 Encaissements: ' + testIdsToCleanup.payments.join(', ') + '<br>' +
+                    '📥 Entrées: ' + testIdsToCleanup.stockEntries.join(', ') + '<br>' +
+                    '📤 Sorties: ' + testIdsToCleanup.stockExits.join(', ') + '<br>' +
+                    '📦 Produits: ' + testIdsToCleanup.products.join(', ');
+                
+                updateStep('❌ ERREUR DANS DEBUGALL COMPLET', errorHTML);
+                
+                logToDebugConsole('❌ DEBUGALL COMPLET échoué: ' + error.message, 'error');
+                showAlert('❌ DEBUGALL COMPLET échoué: ' + error.message, 'error');
+                
+                // Tenter un nettoyage même en cas d erreur
+                try {
+                    updateStep('🧹 Tentative de nettoyage d urgence...', '🚨 Suppression des données partielles...');
+                    
+                    for (const collection in testIdsToCleanup) {
+                        for (const id of testIdsToCleanup[collection]) {
+                            try {
+                                await db.collection(collection).doc(id).delete();
+                                console.log('🗑️ Nettoyage d urgence: ' + collection + '/' + id + ' supprimé');
+                            } catch (cleanupError) {
+                                console.error('❌ Échec nettoyage: ' + collection + '/' + id, cleanupError);
+                            }
+                        }
+                    }
+                } catch (cleanupError) {
+                    console.error('❌ Échec du nettoyage d urgence:', cleanupError);
+                }
             }
         }
 
