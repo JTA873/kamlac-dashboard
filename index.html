@@ -5310,7 +5310,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce mouvement ?')) return;
             
-            console.log(`🔍 DÉBUT suppression mouvement - source: ${source}, ID: ${id}`);
+            console.log(`�️ Suppression mouvement: ${source}/${id}`);
+            
+            // ✅ BLOQUER les listeners Firebase pendant la suppression
+            deletionInProgress = true;
             
             // Logique simplifiée et robuste
             if (source === 'entries') {
@@ -5322,16 +5325,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
                 if (isFirebaseReady()) {
                     try {
-                        console.log(`🗑️ Suppression Firebase de l'entrée ID: ${id}`);
-                        
                         // Essayer d'abord la suppression directe avec l'ID
                         await db.collection('stockEntries').doc(id.toString()).delete();
-                        console.log(`✅ Entrée ${id} supprimée de Firebase (suppression directe)`);
+                        console.log(`✅ Entrée supprimée Firebase: ${id}`);
                         
                     } catch (error) {
-                        console.warn(`⚠️ Suppression directe échouée pour entrée ${id}, recherche...`);
+                        console.warn(`⚠️ Recherche document Firebase...`);
                         
                         try {
+                            // Si la suppression directe échoue, chercher le document
                             const snapshot = await db.collection('stockEntries').get();
                             let docToDelete = null;
                             
@@ -5344,18 +5346,31 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             
                             if (docToDelete) {
                                 await docToDelete.ref.delete();
-                                console.log(`✅ Entrée ${id} supprimée de Firebase (recherche)`);
+                                console.log(`✅ Entrée trouvée et supprimée: ${id}`);
+                            } else {
+                                console.warn(`⚠️ Document Firebase introuvable: ${id}`);
                             }
                         } catch (searchError) {
-                            console.error(`❌ Erreur suppression Firebase entrée ${id}:`, searchError);
+                            console.error(`❌ Erreur suppression Firebase: ${searchError.message}`);
                         }
                     }
+                } else {
+                    console.log(`⚠️ Firebase offline`);
                 }
                 
+                // ✅ DÉBLOQUER les listeners Firebase après suppression
+                deletionInProgress = false;
+                
+                // Recalculer les niveaux de stock après suppression
+                calculateCurrentStockLevels();
+                
+                // Mettre à jour toutes les interfaces
                 updateEntriesMovementsTable();
                 updateAllMovementsTable();
+                updateInventoryTable(); // ✅ AJOUT CRUCIAL
                 forceUpdateStockKPIs();
-                showAlert('✅ Entrée supprimée', 'warning');
+                
+                showAlert('✅ Entrée supprimée - Inventaire mis à jour', 'success');
                 
             } else if (source === 'exits') {
                 console.log(`📊 Données sorties avant suppression: ${stockExitsData.length}`);
@@ -5366,16 +5381,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
                 if (isFirebaseReady()) {
                     try {
-                        console.log(`🗑️ Suppression Firebase de la sortie ID: ${id}`);
-                        
                         // Essayer d'abord la suppression directe avec l'ID
                         await db.collection('stockExits').doc(id.toString()).delete();
-                        console.log(`✅ Sortie ${id} supprimée de Firebase (suppression directe)`);
+                        console.log(`✅ Sortie supprimée Firebase: ${id}`);
                         
                     } catch (error) {
-                        console.warn(`⚠️ Suppression directe échouée pour sortie ${id}, recherche...`);
+                        console.warn(`⚠️ Recherche document Firebase...`);
                         
                         try {
+                            // Si la suppression directe échoue, chercher le document
                             const snapshot = await db.collection('stockExits').get();
                             let docToDelete = null;
                             
@@ -5388,18 +5402,31 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             
                             if (docToDelete) {
                                 await docToDelete.ref.delete();
-                                console.log(`✅ Sortie ${id} supprimée de Firebase (recherche)`);
+                                console.log(`✅ Sortie trouvée et supprimée: ${id}`);
+                            } else {
+                                console.warn(`⚠️ Document Firebase introuvable: ${id}`);
                             }
                         } catch (searchError) {
-                            console.error(`❌ Erreur suppression Firebase sortie ${id}:`, searchError);
+                            console.error(`❌ Erreur suppression Firebase: ${searchError.message}`);
                         }
                     }
+                } else {
+                    console.log(`⚠️ Firebase offline`);
                 }
                 
+                // ✅ DÉBLOQUER les listeners Firebase après suppression
+                deletionInProgress = false;
+                
+                // Recalculer les niveaux de stock après suppression
+                calculateCurrentStockLevels();
+                
+                // Mettre à jour toutes les interfaces
                 updateExitsMovementsTable();
                 updateAllMovementsTable();
+                updateInventoryTable(); // ✅ AJOUT CRUCIAL
                 forceUpdateStockKPIs();
-                showAlert('✅ Sortie supprimée', 'warning');
+                
+                showAlert('✅ Sortie supprimée - Inventaire mis à jour', 'success');
             }
         }
         
