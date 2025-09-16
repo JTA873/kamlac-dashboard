@@ -8206,6 +8206,96 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Ajouter à la liste locale
             stockEntriesData.push(entry);
             
+            // NOUVEAU: Créer automatiquement le nouveau produit s'il n'existe pas
+            if (product && product.trim()) {
+                const productName = product.trim();
+                
+                // Vérifier si le produit existe dans productsData (module commercial)
+                const existingProduct = productsData.find(p => 
+                    p.reference && p.reference.trim().toLowerCase() === productName.toLowerCase()
+                );
+                
+                if (!existingProduct) {
+                    // Créer un nouveau produit avec un prix par défaut basé sur le coût d'achat
+                    const estimatedSalePrice = unitCost > 0 ? Math.round(unitCost * 1.3) : 0; // Marge de 30% par défaut
+                    
+                    const newProduct = {
+                        id: Date.now() + Math.random(),
+                        reference: productName,
+                        price: estimatedSalePrice,
+                        format: 'À définir',
+                        margin: '30%',
+                        brand: 'Nouveau produit',
+                        addedBy: 'Entrée de stock',
+                        addedAt: new Date().toISOString()
+                    };
+                    
+                    productsData.push(newProduct);
+                    console.log(`✅ Nouveau produit créé automatiquement: ${productName} à ${estimatedSalePrice} CFA (basé sur coût ${unitCost})`);
+                    
+                    // Sauvegarder dans Firebase (collection products)
+                    if (isFirebaseReady()) {
+                        try {
+                            await db.collection('products').doc(newProduct.id.toString()).set({
+                                ...newProduct,
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            console.log(`✅ Nouveau produit ${productName} sauvegardé dans Firebase products`);
+                        } catch (error) {
+                            console.log('⚠️ Erreur Firebase products:', error.message);
+                        }
+                    }
+                }
+                
+                // Ajouter aussi au système d'inventaire s'il n'existe pas déjà
+                let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+                const existingInInventory = inventoryData.find(item => 
+                    item.product && item.product.trim().toLowerCase() === productName.toLowerCase()
+                );
+                
+                if (!existingInInventory) {
+                    const newInventoryItem = {
+                        id: `entry_${entry.id}`,
+                        product: productName,
+                        quantity: 0, // Sera calculé par calculateCurrentStockLevels()
+                        unit: unit || 'Cartons',
+                        minLevel: 5,
+                        category: 'Entrée de stock',
+                        supplier: supplier || 'À définir',
+                        addedBy: 'Entrée de stock',
+                        addedAt: new Date().toISOString()
+                    };
+                    
+                    inventoryData.push(newInventoryItem);
+                    localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+                    
+                    // Ajouter à currentStockLevels
+                    if (!currentStockLevels) currentStockLevels = {};
+                    currentStockLevels[productName] = {
+                        quantity: 0,
+                        unit: unit || 'Cartons',
+                        minLevel: 5
+                    };
+                    
+                    // Sauvegarder dans Firebase inventaire
+                    if (isFirebaseReady()) {
+                        try {
+                            await db.collection('inventory').doc(newInventoryItem.id).set(newInventoryItem);
+                            console.log(`✅ Produit ajouté à l'inventaire Firebase: ${productName}`);
+                        } catch (error) {
+                            console.log('⚠️ Erreur Firebase inventory:', error.message);
+                        }
+                    }
+                    
+                    console.log(`✅ Produit ajouté à l'inventaire: ${productName}`);
+                }
+                
+                // Mettre à jour les listes
+                updateProductsList(); // Module commercial
+                updateProductsDisplay(); // Affichage produits
+                populateRecapFilters(); // Filtres
+            }
+            
             // Sauvegarder en local
             saveToLocalStorage();
             
@@ -13628,6 +13718,102 @@ Date [ESPACES] Client [ESPACES] Montant
                 
                 salesData.push(...newSales);
                 saveToLocalStorage();
+                
+                // NOUVEAU: Créer automatiquement les nouveaux produits
+                const newProductsToAdd = [];
+                validLines.forEach(line => {
+                    // Si c'est un produit saisi manuellement (pas d'ID produit) et pas encore dans productsData
+                    if (!line.productId && line.product && line.product.trim()) {
+                        const productName = line.product.trim();
+                        const existingProduct = productsData.find(p => 
+                            p.reference && p.reference.trim().toLowerCase() === productName.toLowerCase()
+                        );
+                        
+                        if (!existingProduct) {
+                            // Créer un nouveau produit avec le prix de la vente
+                            const newProduct = {
+                                id: Date.now() + Math.random(),
+                                reference: productName,
+                                price: line.unitPrice || 0,
+                                format: 'À définir',
+                                margin: '',
+                                brand: 'Nouveau produit',
+                                addedBy: 'Vente automatique',
+                                addedAt: new Date().toISOString()
+                            };
+                            
+                            productsData.push(newProduct);
+                            newProductsToAdd.push(newProduct);
+                            console.log(`✅ Nouveau produit créé automatiquement: ${productName} à ${line.unitPrice} CFA`);
+                            
+                            // Ajouter aussi au module stocks (inventaire)
+                            let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+                            const existingInInventory = inventoryData.find(item => 
+                                item.product && item.product.trim().toLowerCase() === productName.toLowerCase()
+                            );
+                            
+                            if (!existingInInventory) {
+                                const newInventoryItem = {
+                                    id: `vente_${newProduct.id}`,
+                                    product: productName,
+                                    quantity: 0, // On part de 0, les ventes vont créer du stock négatif
+                                    unit: 'Cartons',
+                                    minLevel: 5,
+                                    category: 'Vente automatique',
+                                    supplier: 'À définir',
+                                    addedBy: 'Vente automatique',
+                                    addedAt: new Date().toISOString()
+                                };
+                                
+                                inventoryData.push(newInventoryItem);
+                                localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+                                
+                                // Ajouter à currentStockLevels
+                                if (!currentStockLevels) currentStockLevels = {};
+                                currentStockLevels[productName] = {
+                                    quantity: 0,
+                                    unit: 'Cartons',
+                                    minLevel: 5
+                                };
+                                
+                                console.log(`✅ Produit ajouté à l'inventaire: ${productName}`);
+                            }
+                        }
+                    }
+                });
+                
+                // Sauvegarder les nouveaux produits dans Firebase
+                if (isFirebaseInitialized && newProductsToAdd.length > 0) {
+                    const productBatch = db.batch();
+                    newProductsToAdd.forEach(product => {
+                        const docRef = db.collection('products').doc(product.id.toString());
+                        productBatch.set(docRef, {
+                            ...product,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+                    
+                    // Sauvegarder aussi l'inventaire dans Firebase
+                    newProductsToAdd.forEach(product => {
+                        const inventoryItem = {
+                            id: `vente_${product.id}`,
+                            product: product.reference,
+                            quantity: 0,
+                            unit: 'Cartons',
+                            minLevel: 5,
+                            category: 'Vente automatique',
+                            supplier: 'À définir',
+                            addedBy: 'Vente automatique',
+                            addedAt: new Date().toISOString()
+                        };
+                        
+                        const inventoryDocRef = db.collection('inventory').doc(inventoryItem.id);
+                        productBatch.set(inventoryDocRef, inventoryItem);
+                    });
+                    
+                    await productBatch.commit();
+                    console.log(`✅ ${newProductsToAdd.length} nouveaux produits sauvegardés dans Firebase`);
+                }
                 
                 if (isFirebaseInitialized) {
                     const batch = db.batch();
