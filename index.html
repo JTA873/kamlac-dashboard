@@ -4112,6 +4112,113 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             console.groupEnd();
         }
         
+        // 🧹 FONCTION NETTOYAGE COMPLET DES DONNÉES LOCALES 🧹
+        function debugLocalDataCleanup(type, id, description) {
+            console.group(`🧹 NETTOYAGE DONNÉES LOCALES - ${description}`);
+            console.log(`🆔 ID à supprimer: "${id}" (${typeof id})`);
+            
+            if (type === 'entries') {
+                // Nettoyer toutes les sources possibles pour les entrées
+                console.log(`📦 Avant nettoyage:`);
+                console.log(`   stockEntriesData: ${stockEntriesData.length} éléments`);
+                console.log(`   localStorage stockEntries: ${(JSON.parse(localStorage.getItem('stockEntries') || '[]')).length} éléments`);
+                
+                // 1. Nettoyer stockEntriesData
+                const beforeGlobal = stockEntriesData.length;
+                stockEntriesData = stockEntriesData.filter(e => e.id != id && e.id !== id.toString());
+                console.log(`   ✅ stockEntriesData: ${beforeGlobal} → ${stockEntriesData.length}`);
+                
+                // 2. Nettoyer localStorage directement
+                let localData = JSON.parse(localStorage.getItem('stockEntries') || '[]');
+                const beforeLocal = localData.length;
+                localData = localData.filter(e => e.id != id && e.id !== id.toString());
+                localStorage.setItem('stockEntries', JSON.stringify(localData));
+                console.log(`   ✅ localStorage: ${beforeLocal} → ${localData.length}`);
+                
+                // 3. Vérifier d'autres caches possibles
+                if (window.stockEntriesCache) {
+                    window.stockEntriesCache = window.stockEntriesCache.filter(e => e.id != id && e.id !== id.toString());
+                    console.log(`   ✅ Cache global nettoyé`);
+                }
+                
+            } else if (type === 'exits') {
+                console.log(`� Avant nettoyage:`);
+                console.log(`   stockExitsData: ${stockExitsData.length} éléments`);
+                console.log(`   localStorage stockExits: ${(JSON.parse(localStorage.getItem('stockExits') || '[]')).length} éléments`);
+                
+                // 1. Nettoyer stockExitsData
+                const beforeGlobal = stockExitsData.length;
+                stockExitsData = stockExitsData.filter(e => e.id != id && e.id !== id.toString());
+                console.log(`   ✅ stockExitsData: ${beforeGlobal} → ${stockExitsData.length}`);
+                
+                // 2. Nettoyer localStorage directement
+                let localData = JSON.parse(localStorage.getItem('stockExits') || '[]');
+                const beforeLocal = localData.length;
+                localData = localData.filter(e => e.id != id && e.id !== id.toString());
+                localStorage.setItem('stockExits', JSON.stringify(localData));
+                console.log(`   ✅ localStorage: ${beforeLocal} → ${localData.length}`);
+                
+                // 3. Vérifier d'autres caches possibles
+                if (window.stockExitsCache) {
+                    window.stockExitsCache = window.stockExitsCache.filter(e => e.id != id && e.id !== id.toString());
+                    console.log(`   ✅ Cache global nettoyé`);
+                }
+            }
+            
+            console.log(`🔄 Sauvegarde forcée des données...`);
+            saveToLocalStorage();
+            console.log(`✅ Nettoyage complet terminé`);
+            console.groupEnd();
+        }
+        
+        // � FONCTION RECHARGEMENT FIREBASE UNIQUEMENT 🔥
+        async function reloadFromFirebaseOnly() {
+            console.group(`🔥 RECHARGEMENT FIREBASE UNIQUEMENT`);
+            
+            if (!isFirebaseReady()) {
+                console.warn(`❌ Firebase non disponible`);
+                console.groupEnd();
+                return false;
+            }
+            
+            try {
+                // 1. Recharger les entrées depuis Firebase
+                console.log(`📥 Rechargement stockEntries...`);
+                const entriesSnapshot = await db.collection('stockEntries').get();
+                stockEntriesData = [];
+                entriesSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data && data.id) {
+                        stockEntriesData.push(data);
+                    }
+                });
+                console.log(`✅ ${stockEntriesData.length} entrées rechargées depuis Firebase`);
+                
+                // 2. Recharger les sorties depuis Firebase
+                console.log(`📤 Rechargement stockExits...`);
+                const exitsSnapshot = await db.collection('stockExits').get();
+                stockExitsData = [];
+                exitsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data && data.id) {
+                        stockExitsData.push(data);
+                    }
+                });
+                console.log(`✅ ${stockExitsData.length} sorties rechargées depuis Firebase`);
+                
+                // 🚫 PAS DE SAUVEGARDE localStorage - Mode Firebase pur
+                console.log(`🚫 Mode Firebase pur - Pas de sauvegarde localStorage`);
+                
+                console.groupEnd();
+                return true;
+                
+            } catch (error) {
+                console.error(`❌ Erreur lors du rechargement Firebase:`, error);
+                console.groupEnd();
+                return false;
+            }
+        }
+        
         // 📊 FONCTION APERÇU COLLECTION FIREBASE 📊
         async function debugFirebaseCollectionOverview(collection) {
             if (!isFirebaseReady()) {
@@ -5492,8 +5599,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 await debugFirebaseDelete('stockEntries', id, 'SUPPRESSION ENTRÉE');
                 
                 console.log(`📊 Données entrées avant suppression: ${stockEntriesData.length}`);
-                stockEntriesData = stockEntriesData.filter(e => e.id != id);
-                saveToLocalStorage();
+                
+                // 🔥 SUPPRESSION FIREBASE UNIQUEMENT (pas de localStorage)
+                console.log(`🚫 Mode Firebase pur - Pas de gestion localStorage`);
+                
                 console.log(`📊 Données entrées après suppression: ${stockEntriesData.length}`);
                 
                 // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
@@ -5547,6 +5656,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // ✅ DÉBLOQUER les listeners Firebase après suppression
                 deletionInProgress = false;
                 
+                // 🔄 RECHARGEMENT COMPLET DEPUIS FIREBASE
+                console.log(`🔄 Rechargement des données depuis Firebase...`);
+                await reloadFromFirebaseOnly(); // Recharge uniquement depuis Firebase
+                
                 // Recalculer les niveaux de stock après suppression
                 calculateCurrentStockLevels();
                 
@@ -5556,14 +5669,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 updateInventoryTable(); // ✅ AJOUT CRUCIAL
                 forceUpdateStockKPIs();
                 
-                showAlert('✅ Entrée supprimée - Inventaire mis à jour', 'success');
+                showAlert('✅ Entrée supprimée de Firebase - Données rechargées', 'success');
                 
             } else if (source === 'exits') {
                 await debugFirebaseDelete('stockExits', id, 'SUPPRESSION SORTIE');
                 
                 console.log(`📊 Données sorties avant suppression: ${stockExitsData.length}`);
-                stockExitsData = stockExitsData.filter(e => e.id != id);
-                saveToLocalStorage();
+                
+                // 🔥 SUPPRESSION FIREBASE UNIQUEMENT (pas de localStorage)
+                console.log(`🚫 Mode Firebase pur - Pas de gestion localStorage`);
+                
                 console.log(`📊 Données sorties après suppression: ${stockExitsData.length}`);
                 
                 // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
@@ -5617,6 +5732,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // ✅ DÉBLOQUER les listeners Firebase après suppression
                 deletionInProgress = false;
                 
+                // 🔄 RECHARGEMENT COMPLET DEPUIS FIREBASE
+                console.log(`🔄 Rechargement des données depuis Firebase...`);
+                await reloadFromFirebaseOnly(); // Recharge uniquement depuis Firebase
+                
                 // Recalculer les niveaux de stock après suppression
                 calculateCurrentStockLevels();
                 
@@ -5626,7 +5745,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 updateInventoryTable(); // ✅ AJOUT CRUCIAL
                 forceUpdateStockKPIs();
                 
-                showAlert('✅ Sortie supprimée - Inventaire mis à jour', 'success');
+                showAlert('✅ Sortie supprimée de Firebase - Données rechargées', 'success');
             }
         }
         
