@@ -11226,8 +11226,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 
                 updateStep('🔄 Phase 3: Test de synchronisation', '⬇️ Synchronisation depuis Firebase...');
                 
-                // Test de synchronisation
-                await synchroniserDonneesBidirectionnelles();
+                // Test de synchronisation avec la fonction disponible
+                await loadStockData();
                 updateStep('✅ Synchronisation effectuée', '📊 Données synchronisées depuis Firebase');
                 
                 // Recharger les données locales
@@ -11295,7 +11295,6 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 updateStep('🔄 Phase 7: Synchronisation finale', '🔄 Resynchronisation après nettoyage...');
                 
                 // Resynchroniser après nettoyage
-                await synchroniserDonneesBidirectionnelles();
                 await loadStockData();
                 
                 const summaryHTML = '✅ Toutes les phases complétées<br>' +
