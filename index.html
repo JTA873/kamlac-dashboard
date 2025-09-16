@@ -5308,19 +5308,36 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 saveToLocalStorage();
                 console.log(`📊 Données entrées après suppression: ${stockEntriesData.length}`);
                 
-                // SUPPRESSION FIREBASE SIMPLIFIÉE - Utiliser l'ID local comme ID de document
+                // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
                 if (isFirebaseReady()) {
                     try {
                         console.log(`🗑️ Suppression Firebase de l'entrée ID: ${id}`);
                         
-                        // Suppression directe avec l'ID local comme ID de document Firebase
+                        // Essayer d'abord la suppression directe avec l'ID
                         await db.collection('stockEntries').doc(id.toString()).delete();
                         console.log(`✅ Entrée ${id} supprimée de Firebase (suppression directe)`);
                         
                     } catch (error) {
-                        console.error(`❌ Erreur suppression Firebase entrée ${id}:`, error);
-                        // En cas d'erreur, on continue car la suppression locale a réussi
-                        showAlert(`⚠️ Suppression locale réussie, erreur Firebase: ${error.message}`, 'warning');
+                        console.warn(`⚠️ Suppression directe échouée pour entrée ${id}, recherche...`);
+                        
+                        try {
+                            const snapshot = await db.collection('stockEntries').get();
+                            let docToDelete = null;
+                            
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
+                                if (data.id == id || data.id === id.toString()) {
+                                    docToDelete = doc;
+                                }
+                            });
+                            
+                            if (docToDelete) {
+                                await docToDelete.ref.delete();
+                                console.log(`✅ Entrée ${id} supprimée de Firebase (recherche)`);
+                            }
+                        } catch (searchError) {
+                            console.error(`❌ Erreur suppression Firebase entrée ${id}:`, searchError);
+                        }
                     }
                 }
                 
@@ -5335,19 +5352,36 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 saveToLocalStorage();
                 console.log(`📊 Données sorties après suppression: ${stockExitsData.length}`);
                 
-                // SUPPRESSION FIREBASE SIMPLIFIÉE - Utiliser l'ID local comme ID de document
+                // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
                 if (isFirebaseReady()) {
                     try {
                         console.log(`🗑️ Suppression Firebase de la sortie ID: ${id}`);
                         
-                        // Suppression directe avec l'ID local comme ID de document Firebase
+                        // Essayer d'abord la suppression directe avec l'ID
                         await db.collection('stockExits').doc(id.toString()).delete();
                         console.log(`✅ Sortie ${id} supprimée de Firebase (suppression directe)`);
                         
                     } catch (error) {
-                        console.error(`❌ Erreur suppression Firebase sortie ${id}:`, error);
-                        // En cas d'erreur, on continue car la suppression locale a réussi
-                        showAlert(`⚠️ Suppression locale réussie, erreur Firebase: ${error.message}`, 'warning');
+                        console.warn(`⚠️ Suppression directe échouée pour sortie ${id}, recherche...`);
+                        
+                        try {
+                            const snapshot = await db.collection('stockExits').get();
+                            let docToDelete = null;
+                            
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
+                                if (data.id == id || data.id === id.toString()) {
+                                    docToDelete = doc;
+                                }
+                            });
+                            
+                            if (docToDelete) {
+                                await docToDelete.ref.delete();
+                                console.log(`✅ Sortie ${id} supprimée de Firebase (recherche)`);
+                            }
+                        } catch (searchError) {
+                            console.error(`❌ Erreur suppression Firebase sortie ${id}:`, searchError);
+                        }
                     }
                 }
                 
@@ -5380,19 +5414,40 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             console.log(`📊 Données après suppression locale: ${stockEntriesData.length} entrées`);
             
-            // SUPPRESSION FIREBASE SIMPLIFIÉE - Utiliser l'ID local comme ID de document
+            // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
             if (isFirebaseReady()) {
                 try {
                     console.log(`🗑️ Suppression Firebase de l'entrée ID: ${id}`);
                     
-                    // Suppression directe avec l'ID local comme ID de document Firebase
+                    // Essayer d'abord la suppression directe avec l'ID
                     await db.collection('stockEntries').doc(id.toString()).delete();
                     console.log(`✅ Entrée ${id} supprimée de Firebase (suppression directe)`);
                     
                 } catch (error) {
-                    console.error(`❌ Erreur suppression Firebase entrée ${id}:`, error);
-                    // En cas d'erreur, on continue car la suppression locale a réussi
-                    showAlert(`⚠️ Suppression locale réussie, erreur Firebase: ${error.message}`, 'warning');
+                    console.warn(`⚠️ Suppression directe échouée, recherche dans les documents...`);
+                    
+                    try {
+                        // Si la suppression directe échoue, chercher le document
+                        const snapshot = await db.collection('stockEntries').get();
+                        let docToDelete = null;
+                        
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            if (data.id == id || data.id === id.toString()) {
+                                docToDelete = doc;
+                                console.log(`✅ Document Firebase trouvé: ${doc.id} contient l'ID ${id}`);
+                            }
+                        });
+                        
+                        if (docToDelete) {
+                            await docToDelete.ref.delete();
+                            console.log(`✅ Entrée ${id} supprimée de Firebase (recherche)`);
+                        } else {
+                            console.warn(`⚠️ Document Firebase avec ID ${id} introuvable`);
+                        }
+                    } catch (searchError) {
+                        console.error(`❌ Erreur suppression Firebase entrée ${id}:`, searchError);
+                    }
                 }
             } else {
                 console.log(`⚠️ Firebase indisponible - entrée ${id} supprimée seulement en local`);
@@ -5458,23 +5513,17 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             saveToLocalStorage();
             
-            // SUPPRESSION FIREBASE SIMPLIFIÉE - Utiliser l'ID local comme ID de document
+            // ✅ SUPPRESSION FIREBASE CORRIGÉE - RECHERCHE PAR CHAMP ID
             if (isFirebaseReady()) {
                 try {
-                    console.log(`🗑️ Suppression Firebase de la sortie ID: ${id}`);
+                    const idStr = id.toString();
+                    console.log(`🗑️ Suppression Firebase de la sortie avec ID: ${idStr}`);
                     
-                    // Suppression directe avec l'ID local comme ID de document Firebase
-                    await db.collection('stockExits').doc(id.toString()).delete();
-                    console.log(`✅ Sortie ${id} supprimée de Firebase (suppression directe)`);
+                    // CORRECTION: Dans votre Firebase, les documents utilisent des IDs générés automatiquement
+                    // et l'ID réel est stocké dans le champ "id" du document
+                    // Il faut donc chercher le document qui contient cet ID dans ses données
                     
-                } catch (error) {
-                    console.error(`❌ Erreur suppression Firebase sortie ${id}:`, error);
-                    // En cas d'erreur, on continue car la suppression locale a réussi
-                    showAlert(`⚠️ Suppression locale réussie, erreur Firebase: ${error.message}`, 'warning');
-                }
-            } else {
-                console.log(`⚠️ Firebase indisponible - sortie ${id} supprimée seulement en local`);
-            }
+                    const snapshot = await db.collection('stockExits').where('id', '==', idStr).get();
                     
                     if (!snapshot.empty) {
                         // Supprimer tous les documents correspondants (normalement il n'y en a qu'un)
@@ -5517,6 +5566,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 dataType: typeof doc.data().id 
                             })));
                         }
+                    }
+                    
+                } catch (error) {
+                    console.error(`❌ Erreur suppression Firebase sortie ${id}:`, error);
+                    showAlert(`⚠️ Erreur Firebase: ${error.message}`, 'warning');
+                }
+            } else {
+                console.log(`⚠️ Firebase indisponible - sortie ${id} supprimée seulement en local`);
+            }
+            
             // Mise à jour de l'interface
             updateExitsMovementsTable();
             updateAllMovementsTable();
@@ -8465,18 +8524,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Sauvegarder en local
             saveToLocalStorage();
             
-            // Sync Firebase - utiliser l'ID local comme ID de document Firebase
+            // Sync Firebase - utilisation d'IDs auto-générés pour cohérence
             if (isFirebaseReady()) {
                 try {
                     console.log(`💾 Sauvegarde Firebase de la sortie ID: ${exit.id}`);
                     
-                    // CORRECTION: Utiliser l'ID local comme ID de document Firebase pour cohérence
-                    await db.collection('stockExits').doc(exit.id.toString()).set({
+                    // CORRECTION: Utiliser add() pour générer un ID Firebase automatique
+                    // L'ID réel est stocké dans le champ "id" du document
+                    const docRef = await db.collection('stockExits').add({
                         ...exit,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     
-                    console.log(`✅ Sortie ${exit.id} sauvegardée dans Firebase avec document ID: ${exit.id}`);
+                    console.log(`✅ Sortie ${exit.id} sauvegardée dans Firebase avec document ID: ${docRef.id}`);
                 } catch (error) {
                     console.error(`❌ Erreur sauvegarde Firebase sortie ${exit.id}:`, error);
                 }
