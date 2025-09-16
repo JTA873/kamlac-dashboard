@@ -5637,7 +5637,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 // 🔄 RECHARGEMENT COMPLET DEPUIS FIREBASE
                 console.log(`🔄 Rechargement des données depuis Firebase...`);
-                await loadFromFirebase(); // Recharge des données Firebase
+                await reloadFromFirebaseOnly(); // Recharge des données Firebase
                 
                 // Recalculer les niveaux de stock après suppression
                 calculateCurrentStockLevels();
@@ -5692,7 +5692,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 // 🔄 RECHARGEMENT COMPLET DEPUIS FIREBASE
                 console.log(`🔄 Rechargement des données depuis Firebase...`);
-                await loadFromFirebase(); // Recharge des données Firebase
+                await reloadFromFirebaseOnly(); // Recharge des données Firebase
                 
                 // Recalculer les niveaux de stock après suppression
                 calculateCurrentStockLevels();
