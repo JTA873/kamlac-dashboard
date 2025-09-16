@@ -4070,8 +4070,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         function initializeCommercialModule() {
+            console.log('🏪 Initialisation du module Commercial...');
+            
             // Réinitialiser l'affichage du module commercial
             showSection('dashboard');
+            
+            // Mettre à jour la liste des produits (pour récupérer ceux créés dans le module stocks)
+            updateProductsList();
+            
+            // Mettre à jour les dropdowns clients et produits
+            updateClientsList();
+            updateAllClientDropdowns();
+            
+            console.log(`📦 Module Commercial: ${productsData.length} produits disponibles`);
         }
         
         function initializeStocksModule() {
@@ -5297,36 +5308,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 saveToLocalStorage();
                 console.log(`📊 Données entrées après suppression: ${stockEntriesData.length}`);
                 
-                // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
+                // SUPPRESSION FIREBASE SIMPLIFIÉE - Utiliser l'ID local comme ID de document
                 if (isFirebaseReady()) {
                     try {
                         console.log(`🗑️ Suppression Firebase de l'entrée ID: ${id}`);
                         
-                        // Essayer d'abord la suppression directe avec l'ID
+                        // Suppression directe avec l'ID local comme ID de document Firebase
                         await db.collection('stockEntries').doc(id.toString()).delete();
                         console.log(`✅ Entrée ${id} supprimée de Firebase (suppression directe)`);
                         
                     } catch (error) {
-                        console.warn(`⚠️ Suppression directe échouée pour entrée ${id}, recherche...`);
-                        
-                        try {
-                            const snapshot = await db.collection('stockEntries').get();
-                            let docToDelete = null;
-                            
-                            snapshot.forEach(doc => {
-                                const data = doc.data();
-                                if (data.id == id || data.id === id.toString()) {
-                                    docToDelete = doc;
-                                }
-                            });
-                            
-                            if (docToDelete) {
-                                await docToDelete.ref.delete();
-                                console.log(`✅ Entrée ${id} supprimée de Firebase (recherche)`);
-                            }
-                        } catch (searchError) {
-                            console.error(`❌ Erreur suppression Firebase entrée ${id}:`, searchError);
-                        }
+                        console.error(`❌ Erreur suppression Firebase entrée ${id}:`, error);
+                        // En cas d'erreur, on continue car la suppression locale a réussi
+                        showAlert(`⚠️ Suppression locale réussie, erreur Firebase: ${error.message}`, 'warning');
                     }
                 }
                 
@@ -5341,36 +5335,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 saveToLocalStorage();
                 console.log(`📊 Données sorties après suppression: ${stockExitsData.length}`);
                 
-                // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
+                // SUPPRESSION FIREBASE SIMPLIFIÉE - Utiliser l'ID local comme ID de document
                 if (isFirebaseReady()) {
                     try {
                         console.log(`🗑️ Suppression Firebase de la sortie ID: ${id}`);
                         
-                        // Essayer d'abord la suppression directe avec l'ID
+                        // Suppression directe avec l'ID local comme ID de document Firebase
                         await db.collection('stockExits').doc(id.toString()).delete();
                         console.log(`✅ Sortie ${id} supprimée de Firebase (suppression directe)`);
                         
                     } catch (error) {
-                        console.warn(`⚠️ Suppression directe échouée pour sortie ${id}, recherche...`);
-                        
-                        try {
-                            const snapshot = await db.collection('stockExits').get();
-                            let docToDelete = null;
-                            
-                            snapshot.forEach(doc => {
-                                const data = doc.data();
-                                if (data.id == id || data.id === id.toString()) {
-                                    docToDelete = doc;
-                                }
-                            });
-                            
-                            if (docToDelete) {
-                                await docToDelete.ref.delete();
-                                console.log(`✅ Sortie ${id} supprimée de Firebase (recherche)`);
-                            }
-                        } catch (searchError) {
-                            console.error(`❌ Erreur suppression Firebase sortie ${id}:`, searchError);
-                        }
+                        console.error(`❌ Erreur suppression Firebase sortie ${id}:`, error);
+                        // En cas d'erreur, on continue car la suppression locale a réussi
+                        showAlert(`⚠️ Suppression locale réussie, erreur Firebase: ${error.message}`, 'warning');
                     }
                 }
                 
@@ -5403,40 +5380,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             console.log(`📊 Données après suppression locale: ${stockEntriesData.length} entrées`);
             
-            // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
+            // SUPPRESSION FIREBASE SIMPLIFIÉE - Utiliser l'ID local comme ID de document
             if (isFirebaseReady()) {
                 try {
                     console.log(`🗑️ Suppression Firebase de l'entrée ID: ${id}`);
                     
-                    // Essayer d'abord la suppression directe avec l'ID
+                    // Suppression directe avec l'ID local comme ID de document Firebase
                     await db.collection('stockEntries').doc(id.toString()).delete();
                     console.log(`✅ Entrée ${id} supprimée de Firebase (suppression directe)`);
                     
                 } catch (error) {
-                    console.warn(`⚠️ Suppression directe échouée, recherche dans les documents...`);
-                    
-                    try {
-                        // Si la suppression directe échoue, chercher le document
-                        const snapshot = await db.collection('stockEntries').get();
-                        let docToDelete = null;
-                        
-                        snapshot.forEach(doc => {
-                            const data = doc.data();
-                            if (data.id == id || data.id === id.toString()) {
-                                docToDelete = doc;
-                                console.log(`✅ Document Firebase trouvé: ${doc.id} contient l'ID ${id}`);
-                            }
-                        });
-                        
-                        if (docToDelete) {
-                            await docToDelete.ref.delete();
-                            console.log(`✅ Entrée ${id} supprimée de Firebase (recherche)`);
-                        } else {
-                            console.warn(`⚠️ Document Firebase avec ID ${id} introuvable`);
-                        }
-                    } catch (searchError) {
-                        console.error(`❌ Erreur suppression Firebase entrée ${id}:`, searchError);
-                    }
+                    console.error(`❌ Erreur suppression Firebase entrée ${id}:`, error);
+                    // En cas d'erreur, on continue car la suppression locale a réussi
+                    showAlert(`⚠️ Suppression locale réussie, erreur Firebase: ${error.message}`, 'warning');
                 }
             } else {
                 console.log(`⚠️ Firebase indisponible - entrée ${id} supprimée seulement en local`);
@@ -5502,17 +5458,23 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             saveToLocalStorage();
             
-            // ✅ SUPPRESSION FIREBASE CORRIGÉE - RECHERCHE PAR CHAMP ID
+            // SUPPRESSION FIREBASE SIMPLIFIÉE - Utiliser l'ID local comme ID de document
             if (isFirebaseReady()) {
                 try {
-                    const idStr = id.toString();
-                    console.log(`🗑️ Suppression Firebase de la sortie avec ID: ${idStr}`);
+                    console.log(`🗑️ Suppression Firebase de la sortie ID: ${id}`);
                     
-                    // CORRECTION: Dans votre Firebase, les documents utilisent des IDs générés automatiquement
-                    // et l'ID réel est stocké dans le champ "id" du document
-                    // Il faut donc chercher le document qui contient cet ID dans ses données
+                    // Suppression directe avec l'ID local comme ID de document Firebase
+                    await db.collection('stockExits').doc(id.toString()).delete();
+                    console.log(`✅ Sortie ${id} supprimée de Firebase (suppression directe)`);
                     
-                    const snapshot = await db.collection('stockExits').where('id', '==', idStr).get();
+                } catch (error) {
+                    console.error(`❌ Erreur suppression Firebase sortie ${id}:`, error);
+                    // En cas d'erreur, on continue car la suppression locale a réussi
+                    showAlert(`⚠️ Suppression locale réussie, erreur Firebase: ${error.message}`, 'warning');
+                }
+            } else {
+                console.log(`⚠️ Firebase indisponible - sortie ${id} supprimée seulement en local`);
+            }
                     
                     if (!snapshot.empty) {
                         // Supprimer tous les documents correspondants (normalement il n'y en a qu'un)
@@ -5555,16 +5517,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 dataType: typeof doc.data().id 
                             })));
                         }
-                    }
-                    
-                } catch (error) {
-                    console.error(`❌ Erreur suppression Firebase sortie ${id}:`, error);
-                    showAlert(`⚠️ Erreur Firebase: ${error.message}`, 'warning');
-                }
-            } else {
-                console.log(`⚠️ Firebase indisponible - sortie ${id} supprimée seulement en local`);
-            }
-            
             // Mise à jour de l'interface
             updateExitsMovementsTable();
             updateAllMovementsTable();
@@ -8513,19 +8465,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Sauvegarder en local
             saveToLocalStorage();
             
-            // Sync Firebase - utilisation d'IDs auto-générés pour cohérence
+            // Sync Firebase - utiliser l'ID local comme ID de document Firebase
             if (isFirebaseReady()) {
                 try {
                     console.log(`💾 Sauvegarde Firebase de la sortie ID: ${exit.id}`);
                     
-                    // CORRECTION: Utiliser add() pour générer un ID Firebase automatique
-                    // L'ID réel est stocké dans le champ "id" du document
-                    const docRef = await db.collection('stockExits').add({
+                    // CORRECTION: Utiliser l'ID local comme ID de document Firebase pour cohérence
+                    await db.collection('stockExits').doc(exit.id.toString()).set({
                         ...exit,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     
-                    console.log(`✅ Sortie ${exit.id} sauvegardée dans Firebase avec document ID: ${docRef.id}`);
+                    console.log(`✅ Sortie ${exit.id} sauvegardée dans Firebase avec document ID: ${exit.id}`);
                 } catch (error) {
                     console.error(`❌ Erreur sauvegarde Firebase sortie ${exit.id}:`, error);
                 }
@@ -13102,6 +13053,47 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 }
             } else {
                 productsData.push(product);
+                
+                // NOUVEAU: Ajouter aussi au module stocks (synchronisation bidirectionnelle)
+                // Vérifier si le produit existe déjà dans l'inventaire
+                let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+                const existingInInventory = inventoryData.find(item => 
+                    item.product && item.product.trim() === reference
+                );
+                
+                if (!existingInInventory && reference) {
+                    const newInventoryItem = {
+                        id: `commercial_${product.id}`,
+                        product: reference,
+                        quantity: 0,
+                        unit: 'Cartons',
+                        minLevel: 5,
+                        category: 'Module Commercial',
+                        supplier: 'À définir',
+                        addedBy: 'Module Commercial',
+                        addedAt: new Date().toISOString()
+                    };
+                    
+                    inventoryData.push(newInventoryItem);
+                    localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+                    
+                    // Ajouter à currentStockLevels
+                    if (!currentStockLevels) currentStockLevels = {};
+                    currentStockLevels[reference] = {
+                        quantity: 0,
+                        unit: 'Cartons',
+                        minLevel: 5
+                    };
+                    
+                    // Sauvegarder dans Firebase inventaire
+                    if (isFirebaseInitialized && db) {
+                        db.collection('inventory').doc(newInventoryItem.id).set(newInventoryItem)
+                            .then(() => console.log(`✅ Produit ${reference} ajouté à Firebase inventory depuis module commercial`))
+                            .catch(error => console.log('⚠️ Erreur Firebase inventory depuis commercial:', error.message));
+                    }
+                    
+                    console.log(`✅ Produit ${reference} synchronisé vers le module stocks`);
+                }
             }
             
             saveToLocalStorage();
@@ -16502,6 +16494,16 @@ Date [ESPACES] Client [ESPACES] Montant
                     return;
                 }
                 
+                // Vérifier si le produit existe déjà dans productsData (module commercial)
+                const existingInProducts = productsData.find(item => 
+                    item.reference && item.reference.trim() === produit
+                );
+                
+                if (existingInProducts) {
+                    console.log(`📦 Produit ${produit} déjà dans productsData (module commercial)`);
+                    // Mais on continue pour l'ajouter à l'inventaire si pas déjà présent
+                }
+                
                 // Nouveau produit - l'ajouter à l'inventaire
                 const newInventoryItem = {
                     id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -16519,6 +16521,34 @@ Date [ESPACES] Client [ESPACES] Montant
                 inventoryData.push(newInventoryItem);
                 localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
                 
+                // NOUVEAU : Ajouter aussi au module commercial (productsData)
+                if (!existingInProducts) {
+                    const newProduct = {
+                        id: Date.now() + Math.random(),
+                        reference: produit,
+                        price: 0,
+                        format: 'À définir',
+                        margin: '',
+                        brand: 'Nouveau produit',
+                        addedBy: 'Module Stocks',
+                        addedAt: new Date().toISOString()
+                    };
+                    
+                    productsData.push(newProduct);
+                    
+                    // Sauvegarder dans Firebase (collection products)
+                    if (isFirebaseInitialized && db) {
+                        db.collection('products').doc(newProduct.id.toString()).set({
+                            ...newProduct,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        })
+                        .then(() => console.log(`✅ Nouveau produit ${produit} ajouté à Firebase products`))
+                        .catch(error => console.log('⚠️ Erreur Firebase products:', error.message));
+                    }
+                    
+                    console.log(`✅ Nouveau produit ajouté au module commercial: ${produit}`);
+                }
+                
                 // Ajouter à currentStockLevels
                 if (!currentStockLevels) currentStockLevels = {};
                 currentStockLevels[produit] = {
@@ -16527,14 +16557,22 @@ Date [ESPACES] Client [ESPACES] Montant
                     minLevel: 5
                 };
                 
-                // Sauvegarder dans Firebase si disponible
+                // Sauvegarder dans Firebase inventaire
                 if (isFirebaseInitialized && db) {
                     db.collection('inventory').doc(newInventoryItem.id).set(newInventoryItem)
-                        .then(() => console.log(`✅ Nouveau produit ${produit} ajouté à Firebase`))
-                        .catch(error => console.log('⚠️ Erreur Firebase nouveau produit:', error.message));
+                        .then(() => console.log(`✅ Nouveau produit ${produit} ajouté à Firebase inventory`))
+                        .catch(error => console.log('⚠️ Erreur Firebase inventory:', error.message));
                 }
                 
-                console.log(`✅ Nouveau produit ajouté à l'inventaire: ${produit}`);
+                // Sauvegarder les données locales
+                saveToLocalStorage();
+                
+                // Mettre à jour les listes des modules
+                updateProductsList(); // Module commercial
+                updateProductsDisplay(); // Affichage produits
+                populateRecapFilters(); // Filtres
+                
+                console.log(`✅ Nouveau produit ajouté à l'inventaire ET au module commercial: ${produit}`);
                 
                 // Actualiser la liste des produits après ajout
                 setTimeout(() => {
