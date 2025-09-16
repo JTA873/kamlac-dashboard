@@ -4066,6 +4066,79 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             return ready;
         }
         
+        // 🔥 FONCTION DEBUG FIREBASE SUPPRESSION 🔥
+        async function debugFirebaseDelete(collection, localId, action = "SUPPRESSION") {
+            console.group(`🔥 FIREBASE ${action} DEBUG - Collection: ${collection}`);
+            console.log(`📝 ID Local à supprimer: "${localId}" (Type: ${typeof localId})`);
+            console.log(`🔥 Firebase Ready: ${isFirebaseReady()}`);
+            console.log(`📅 Timestamp: ${new Date().toISOString()}`);
+            
+            if (isFirebaseReady()) {
+                console.log(`📍 Document Path: ${collection}/${localId.toString()}`);
+                console.log(`🎯 Document ID pour Firebase: "${localId.toString()}"`);
+                
+                // Afficher un aperçu de la collection avant suppression
+                await debugFirebaseCollectionOverview(collection);
+            }
+            
+            console.groupEnd();
+        }
+        
+        // 🎯 FONCTION DEBUG RECHERCHE DOCUMENTS FIREBASE 🎯  
+        function debugFirebaseSearch(doc, localId, index) {
+            const data = doc.data();
+            console.log(`🔍 Document ${index + 1}:`, {
+                firebaseDocId: doc.id,
+                dataId: data.id,
+                dataIdType: typeof data.id,
+                localId: localId,
+                localIdType: typeof localId,
+                match_strict: data.id === localId,
+                match_loose: data.id == localId,
+                match_string: data.id === localId.toString(),
+                match_any: data.id == localId || data.id === localId.toString()
+            });
+        }
+        
+        // 📋 FONCTION RÉSUMÉ SUPPRESSION FIREBASE 📋
+        function debugFirebaseDeleteSummary(success, firebaseDocId, localId, collection, method = 'direct') {
+            console.group(`📋 RÉSUMÉ SUPPRESSION FIREBASE`);
+            console.log(`✅ Succès: ${success ? 'OUI' : 'NON'}`);
+            console.log(`📁 Collection: ${collection}`);
+            console.log(`🆔 ID Local: "${localId}" (${typeof localId})`);
+            console.log(`🔥 Firebase Doc ID: "${firebaseDocId || 'N/A'}"`);
+            console.log(`🔧 Méthode: ${method} (${method === 'direct' ? 'suppression directe' : 'recherche puis suppression'})`);
+            console.log(`⏰ Heure: ${new Date().toLocaleTimeString()}`);
+            console.groupEnd();
+        }
+        
+        // 📊 FONCTION APERÇU COLLECTION FIREBASE 📊
+        async function debugFirebaseCollectionOverview(collection) {
+            if (!isFirebaseReady()) {
+                console.warn(`❌ Firebase non disponible pour l'aperçu de ${collection}`);
+                return;
+            }
+            
+            try {
+                console.group(`📊 APERÇU COLLECTION FIREBASE: ${collection}`);
+                const snapshot = await db.collection(collection).get();
+                console.log(`📝 Nombre total de documents: ${snapshot.size}`);
+                
+                if (snapshot.size > 0) {
+                    console.log(`📋 Liste des documents:`);
+                    snapshot.forEach((doc, index) => {
+                        const data = doc.data();
+                        console.log(`   ${index + 1}. Firebase ID: "${doc.id}" → Data ID: "${data.id}" (${typeof data.id})`);
+                    });
+                } else {
+                    console.log(`📭 Collection vide`);
+                }
+                console.groupEnd();
+            } catch (error) {
+                console.error(`❌ Erreur lors de l'aperçu de ${collection}:`, error.message);
+            }
+        }
+        
         let salesLines = [];
         let entryLines = [];
         let exitLines = [];
@@ -5416,6 +5489,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // Logique simplifiée et robuste
             if (source === 'entries') {
+                await debugFirebaseDelete('stockEntries', id, 'SUPPRESSION ENTRÉE');
+                
                 console.log(`📊 Données entrées avant suppression: ${stockEntriesData.length}`);
                 stockEntriesData = stockEntriesData.filter(e => e.id != id);
                 saveToLocalStorage();
@@ -5425,29 +5500,41 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 if (isFirebaseReady()) {
                     try {
                         // Essayer d'abord la suppression directe avec l'ID
+                        console.log(`🔥 FIREBASE SUPPRESSION ENTRÉE - Tentative suppression directe avec ID: "${id.toString()}"`);
+                        console.log(`🔥 FIREBASE SUPPRESSION ENTRÉE - Collection: "stockEntries", Document ID: "${id.toString()}"`);
+                        
                         await db.collection('stockEntries').doc(id.toString()).delete();
-                        console.log(`✅ Entrée supprimée Firebase: ${id}`);
+                        console.log(`✅ SUCCÈS FIREBASE - Entrée supprimée directement avec ID: ${id}`);
+                        debugFirebaseDeleteSummary(true, id.toString(), id, 'stockEntries', 'direct');
                         
                     } catch (error) {
-                        console.warn(`⚠️ Recherche document Firebase...`);
+                        console.warn(`⚠️ ÉCHEC suppression directe Firebase, recherche du document...`);
+                        console.log(`🔍 FIREBASE RECHERCHE - Erreur lors de la suppression directe:`, error.message);
                         
                         try {
                             // Si la suppression directe échoue, chercher le document
+                            console.log(`🔍 FIREBASE RECHERCHE - Parcours de tous les documents stockEntries...`);
                             const snapshot = await db.collection('stockEntries').get();
                             let docToDelete = null;
                             
-                            snapshot.forEach(doc => {
+                            snapshot.forEach((doc, index) => {
                                 const data = doc.data();
+                                debugFirebaseSearch(doc, id, index);
+                                
                                 if (data.id == id || data.id === id.toString()) {
                                     docToDelete = doc;
+                                    console.log(`🎯 FIREBASE RECHERCHE - DOCUMENT CIBLE TROUVÉ! Firebase Doc ID: "${doc.id}"`);
                                 }
                             });
                             
                             if (docToDelete) {
+                                console.log(`🔥 FIREBASE SUPPRESSION ENTRÉE - Suppression du document Firebase ID: "${docToDelete.id}"`);
                                 await docToDelete.ref.delete();
-                                console.log(`✅ Entrée trouvée et supprimée: ${id}`);
+                                console.log(`✅ SUCCÈS FIREBASE - Entrée trouvée et supprimée, Firebase Doc ID: "${docToDelete.id}", Data ID: ${id}`);
+                                debugFirebaseDeleteSummary(true, docToDelete.id, id, 'stockEntries', 'search');
                             } else {
-                                console.warn(`⚠️ Document Firebase introuvable: ${id}`);
+                                console.warn(`❌ ÉCHEC FIREBASE - Document introuvable avec ID: ${id}`);
+                                debugFirebaseDeleteSummary(false, null, id, 'stockEntries', 'search');
                             }
                         } catch (searchError) {
                             console.error(`❌ Erreur suppression Firebase: ${searchError.message}`);
@@ -5472,6 +5559,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 showAlert('✅ Entrée supprimée - Inventaire mis à jour', 'success');
                 
             } else if (source === 'exits') {
+                await debugFirebaseDelete('stockExits', id, 'SUPPRESSION SORTIE');
+                
                 console.log(`📊 Données sorties avant suppression: ${stockExitsData.length}`);
                 stockExitsData = stockExitsData.filter(e => e.id != id);
                 saveToLocalStorage();
@@ -5481,29 +5570,41 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 if (isFirebaseReady()) {
                     try {
                         // Essayer d'abord la suppression directe avec l'ID
+                        console.log(`🔥 FIREBASE SUPPRESSION SORTIE - Tentative suppression directe avec ID: "${id.toString()}"`);
+                        console.log(`🔥 FIREBASE SUPPRESSION SORTIE - Collection: "stockExits", Document ID: "${id.toString()}"`);
+                        
                         await db.collection('stockExits').doc(id.toString()).delete();
-                        console.log(`✅ Sortie supprimée Firebase: ${id}`);
+                        console.log(`✅ SUCCÈS FIREBASE - Sortie supprimée directement avec ID: ${id}`);
+                        debugFirebaseDeleteSummary(true, id.toString(), id, 'stockExits', 'direct');
                         
                     } catch (error) {
-                        console.warn(`⚠️ Recherche document Firebase...`);
+                        console.warn(`⚠️ ÉCHEC suppression directe Firebase, recherche du document...`);
+                        console.log(`🔍 FIREBASE RECHERCHE - Erreur lors de la suppression directe:`, error.message);
                         
                         try {
                             // Si la suppression directe échoue, chercher le document
+                            console.log(`🔍 FIREBASE RECHERCHE - Parcours de tous les documents stockExits...`);
                             const snapshot = await db.collection('stockExits').get();
                             let docToDelete = null;
                             
-                            snapshot.forEach(doc => {
+                            snapshot.forEach((doc, index) => {
                                 const data = doc.data();
+                                debugFirebaseSearch(doc, id, index);
+                                
                                 if (data.id == id || data.id === id.toString()) {
                                     docToDelete = doc;
+                                    console.log(`🎯 FIREBASE RECHERCHE - DOCUMENT CIBLE TROUVÉ! Firebase Doc ID: "${doc.id}"`);
                                 }
                             });
                             
                             if (docToDelete) {
+                                console.log(`🔥 FIREBASE SUPPRESSION SORTIE - Suppression du document Firebase ID: "${docToDelete.id}"`);
                                 await docToDelete.ref.delete();
-                                console.log(`✅ Sortie trouvée et supprimée: ${id}`);
+                                console.log(`✅ SUCCÈS FIREBASE - Sortie trouvée et supprimée, Firebase Doc ID: "${docToDelete.id}", Data ID: ${id}`);
+                                debugFirebaseDeleteSummary(true, docToDelete.id, id, 'stockExits', 'search');
                             } else {
-                                console.warn(`⚠️ Document Firebase introuvable: ${id}`);
+                                console.warn(`❌ ÉCHEC FIREBASE - Document introuvable avec ID: ${id}`);
+                                debugFirebaseDeleteSummary(false, null, id, 'stockExits', 'search');
                             }
                         } catch (searchError) {
                             console.error(`❌ Erreur suppression Firebase: ${searchError.message}`);
