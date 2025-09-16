@@ -4059,6 +4059,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         // Fonction utilitaire pour vérifier Firebase
         function isFirebaseReady() {
             const ready = isFirebaseInitialized && db !== null && typeof db.collection === 'function';
+            if (!ready) {
+                console.warn('⚠️ Firebase non disponible - opération ignorée');
+                console.log(`🔍 État: isFirebaseInitialized=${isFirebaseInitialized}, db=${!!db}, typeof db=${typeof db}`);
+            }
             return ready;
         }
         
@@ -4341,13 +4345,26 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         function initializeCommercialModule() {
+            console.log('🏪 Initialisation du module Commercial...');
+            
+            // Réinitialiser l'affichage du module commercial
             showSection('dashboard');
+            
+            // Mettre à jour la liste des produits (pour récupérer ceux créés dans le module stocks)
             updateProductsList();
+            
+            // Mettre à jour les dropdowns clients et produits
             updateClientsList();
             updateAllClientDropdowns();
+            
+            console.log(`📦 Module Commercial: ${productsData.length} produits disponibles`);
         }
         
         function initializeStocksModule() {
+            console.log('Initialisation du module Stocks avec données locales uniquement...');
+            
+            // Charger SEULEMENT depuis localStorage
+            // loadStockData(); // 🚫 DÉSACTIVÉ pour éviter les conflits
             const savedEntries = localStorage.getItem('stockEntries');
             const savedExits = localStorage.getItem('stockExits');
             const savedAlerts = localStorage.getItem('stockAlerts');
@@ -4355,6 +4372,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             if (savedEntries) stockEntriesData = JSON.parse(savedEntries);
             if (savedExits) stockExitsData = JSON.parse(savedExits);
             if (savedAlerts) stockAlertsData = JSON.parse(savedAlerts);
+            
+            console.log(`📦 Données chargées: ${stockEntriesData.length} entrées, ${stockExitsData.length} sorties`);
             
             // Initialiser les lignes par défaut pour les formulaires multi-lignes
             if (entryLines.length === 0) {
@@ -4755,6 +4774,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         // FONCTIONS DE FILTRAGE POUR LES MOUVEMENTS
         function applyMovementFilters() {
+            console.log('🔍 Application des filtres de mouvements...');
+            
             const productFilter = document.getElementById('movementProductFilter')?.value || '';
             const directionFilter = document.getElementById('movementDirectionFilter')?.value || '';
             const typeFilter = document.getElementById('movementTypeFilter')?.value || '';
@@ -4876,6 +4897,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // Mettre à jour le tableau avec les données filtrées
             updateMovementsTableWithData(filteredMovements);
+            
+            console.log(`🔍 ${filteredMovements.length} mouvements après filtrage`);
         }
         
         function updateMovementsTableWithData(movements) {
@@ -5001,10 +5024,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         // FONCTION DE FILTRAGE POUR L'INVENTAIRE
         function applyInventoryFilters() {
+            console.log('🔍 Application des filtres d\'inventaire...');
+            
+            // Récupérer les valeurs des filtres
             const productFilter = document.getElementById('inventoryProductFilter')?.value.toLowerCase() || '';
             const brandFilter = document.getElementById('inventoryBrandFilter')?.value.toLowerCase() || '';
             const statusFilter = document.getElementById('inventoryStatusFilter')?.value || '';
             
+            // S'assurer que les stocks sont calculés
             calculateCurrentStockLevels();
             
             // Filtrer les produits selon les critères
@@ -5041,6 +5068,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 return true;
             });
             
+            console.log(`📊 ${filteredProducts.length} produits après filtrage inventaire`);
+            
+            // Mettre à jour l'affichage avec les produits filtrés
             updateInventoryTableWithFilteredData(filteredProducts);
         }
         
@@ -5163,10 +5193,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         // FONCTIONS POUR MODIFIER ET SUPPRIMER LES MOUVEMENTS
         function editMovement(source, id) {
+            // 🚫 Empêcher la modification des ventes depuis le module stocks
             if (source === 'sales') {
-                alert('❌ Les ventes ne peuvent être modifiées que depuis le module Commercial !');
+                alert('❌ Les ventes ne peuvent être modifiées que depuis le module Commercial !\n\nPour modifier cette vente, allez dans :\nModule Commercial > Récapitulatif des ventes');
                 return;
             }
+            
+            console.log(`✏️ Modification du mouvement ${source}:${id}`);
             
             let movement = null;
             let dataArray = null;
@@ -5699,17 +5732,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
             if (isFirebaseReady()) {
                 try {
+                    // CORRECTION: Utiliser where() au lieu de doc()
                     const idStr = id.toString();
-                    console.log(`� Firebase: Suppression entrée ID ${idStr}`);
+                    console.log(`🗑️ Suppression Firebase entrée ID: ${idStr}`);
                     
                     const snapshot = await db.collection('stockEntries').where('id', '==', idStr).get();
                     
                     if (!snapshot.empty) {
                         const deletePromises = [];
                         snapshot.forEach(doc => {
-                            console.log(`🔥 Firebase doc: ${doc.id} -> ID: ${doc.data().id}`);
+                            console.log(`🎯 Document trouvé: ${doc.id} avec ID: ${doc.data().id}`);
                             deletePromises.push(doc.ref.delete());
-                        });;
+                        });
                         await Promise.all(deletePromises);
                         console.log(`✅ ${deletePromises.length} document(s) supprimé(s)`);
                     } else {
@@ -5758,8 +5792,31 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette sortie ?')) return;
             
-            // Suppression locale
+            console.log(`🔍 DÉBUT suppression sortie ID: ${id}, source: ${source}, type: ${typeof id}`);
+            console.log(`📊 Données avant suppression: ${stockExitsData.length} sorties`);
+            
+            // Recherche de l'élément à supprimer pour diagnostic
+            const exitToDelete = stockExitsData.find(e => e.id == id || e.id === id.toString());
+            if (exitToDelete) {
+                console.log(`🎯 Sortie trouvée en local:`, exitToDelete);
+            } else {
+                console.warn(`⚠️ Sortie ${id} introuvable en local !`);
+                console.log(`📋 IDs disponibles:`, stockExitsData.map(e => ({ id: e.id, type: typeof e.id })));
+            }
+            
+            // Suppression locale avec nettoyage robuste
+            const initialLength = stockExitsData.length;
             stockExitsData = stockExitsData.filter(e => e.id != id && e.id !== id.toString());
+            const finalLength = stockExitsData.length;
+            
+            console.log(`📊 Suppression locale: ${initialLength - finalLength} sorties`);
+            
+            if (initialLength === finalLength) {
+                console.error(`❌ AUCUNE SUPPRESSION LOCALE ! ID ${id} non trouvé`);
+                showAlert('❌ Erreur: Sortie non trouvée pour suppression', 'error');
+                return;
+            }
+            
             saveToLocalStorage();
             
             // ✅ SUPPRESSION FIREBASE CORRIGÉE - RECHERCHE PAR CHAMP ID
