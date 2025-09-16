@@ -14142,22 +14142,98 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         async function deleteProduct(productId) {
-            if (confirm('Supprimer ce produit ?')) {
-                productsData = productsData.filter(p => p.id !== productId);
-                saveToLocalStorage();
-                
-                if (isFirebaseInitialized) {
-                    try {
-                        await db.collection('products').doc(productId.toString()).delete();
-                    } catch (error) {
-                        console.error('Erreur suppression produit:', error);
-                    }
+            if (confirm('Supprimer ce produit et TOUTES ses données liées (ventes, entrées, sorties) définitivement ?')) {
+                // 1. Trouver le produit à supprimer pour récupérer son nom
+                const productToDelete = productsData.find(p => p.id === productId);
+                if (!productToDelete) {
+                    showAlert('Produit non trouvé', 'error');
+                    return;
                 }
                 
+                const productName = productToDelete.reference || productToDelete.name;
+                
+                // 2. Supprimer de la mémoire locale
+                productsData = productsData.filter(p => p.id !== productId);
+                
+                // Supprimer aussi des données locales liées
+                salesData = salesData.filter(sale => sale.product !== productName);
+                stockEntriesData = stockEntriesData.filter(entry => entry.product !== productName);
+                stockExitsData = stockExitsData.filter(exit => exit.product !== productName);
+                
+                saveToLocalStorage();
+                
+                // 3. Supprimer de Firebase (products, inventory, sales, stockEntries, stockExits)
+                if (isFirebaseInitialized) {
+                    try {
+                        console.log(`🗑️ Suppression définitive du produit et données liées: ${productName}`);
+                        
+                        // Créer un batch pour toutes les suppressions
+                        const batch = db.batch();
+                        let totalDeleted = 0;
+                        
+                        // Supprimer de la collection products
+                        const productRef = db.collection('products').doc(productId.toString());
+                        batch.delete(productRef);
+                        totalDeleted++;
+                        console.log(`✅ Produit marqué pour suppression de 'products'`);
+                        
+                        // Supprimer de la collection inventory
+                        const inventorySnapshot = await db.collection('inventory').where('product', '==', productName).get();
+                        inventorySnapshot.forEach(doc => {
+                            batch.delete(doc.ref);
+                            totalDeleted++;
+                            console.log(`✅ Inventaire marqué pour suppression: ${doc.id}`);
+                        });
+                        
+                        // Supprimer de la collection sales (ventes)
+                        const salesSnapshot = await db.collection('sales').where('product', '==', productName).get();
+                        salesSnapshot.forEach(doc => {
+                            batch.delete(doc.ref);
+                            totalDeleted++;
+                            console.log(`✅ Vente marquée pour suppression: ${doc.id}`);
+                        });
+                        
+                        // Supprimer de la collection stockEntries (entrées)
+                        const entriesSnapshot = await db.collection('stockEntries').where('product', '==', productName).get();
+                        entriesSnapshot.forEach(doc => {
+                            batch.delete(doc.ref);
+                            totalDeleted++;
+                            console.log(`✅ Entrée de stock marquée pour suppression: ${doc.id}`);
+                        });
+                        
+                        // Supprimer de la collection stockExits (sorties)
+                        const exitsSnapshot = await db.collection('stockExits').where('product', '==', productName).get();
+                        exitsSnapshot.forEach(doc => {
+                            batch.delete(doc.ref);
+                            totalDeleted++;
+                            console.log(`✅ Sortie de stock marquée pour suppression: ${doc.id}`);
+                        });
+                        
+                        // Exécuter toutes les suppressions en une fois
+                        if (totalDeleted > 0) {
+                            await batch.commit();
+                            console.log(`✅ ${totalDeleted} élément(s) supprimé(s) au total`);
+                            showAlert(`Produit "${productName}" et ${totalDeleted} élément(s) liés supprimés définitivement`, 'success');
+                        } else {
+                            console.log(`⚠️ Aucun élément trouvé pour la suppression`);
+                            showAlert(`Produit "${productName}" supprimé (aucune donnée liée trouvée)`, 'success');
+                        }
+                        
+                    } catch (error) {
+                        console.error('Erreur suppression produit et données liées:', error);
+                        showAlert('Erreur lors de la suppression: ' + error.message, 'error');
+                    }
+                } else {
+                    showAlert('Produit supprimé localement (Firebase non disponible)', 'warning');
+                }
+                
+                // Mettre à jour toutes les interfaces
                 updateProductsDisplay();
                 updateProductsList();
+                updateStocksTables();
                 populateRecapFilters();
-                showAlert('Produit supprimé', 'success');
+                applyFilters();
+                applyRecapFilters();
             }
         }
 
