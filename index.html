@@ -14250,7 +14250,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 // Mettre à jour toutes les interfaces
                 updateProductsDisplay();
                 updateProductsList();
-                updateStocksTables();
+                updateStockDashboard();
+                updateSimpleStocksTable();
                 populateRecapFilters();
                 applyFilters();
                 applyRecapFilters();
@@ -18652,8 +18653,11 @@ Date [ESPACES] Client [ESPACES] Montant
                     if (typeof updateProductsDisplay === 'function') {
                         updateProductsDisplay();
                     }
-                    if (typeof updateStocksTables === 'function') {
-                        updateStocksTables();
+                    if (typeof updateStockDashboard === 'function') {
+                        updateStockDashboard();
+                    }
+                    if (typeof updateSimpleStocksTable === 'function') {
+                        updateSimpleStocksTable();
                     }
                     
                     showAlert(`🔄 ${synced} produit(s) synchronisé(s) automatiquement`, 'success');
@@ -18932,8 +18936,11 @@ Date [ESPACES] Client [ESPACES] Montant
                     if (typeof updateProductsList === 'function') {
                         updateProductsList();
                     }
-                    if (typeof updateStocksTables === 'function') {
-                        updateStocksTables();
+                    if (typeof updateStockDashboard === 'function') {
+                        updateStockDashboard();
+                    }
+                    if (typeof updateSimpleStocksTable === 'function') {
+                        updateSimpleStocksTable();
                     }
                     
                     showAlert('✅ Synchronisation réussie ! ' + result.added + ' produits ajoutés au module Commercial', 'success');
