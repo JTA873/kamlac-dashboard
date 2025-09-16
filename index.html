@@ -3521,6 +3521,14 @@
                             </div>
                             
                             <div class="form-group">
+                                <label>🔄 Sync Produits/Inventaire</label>
+                                <button class="btn btn-secondary" onclick="showProductsDiagnostic()">🔍 Diagnostic & Sync</button>
+                                <small style="color: #6c757d; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
+                                    💡 Vérifier et synchroniser produits/inventaire
+                                </small>
+                            </div>
+                            
+                            <div class="form-group">
                                 <label>🗑️ Test Suppression</label>
                                 <button class="btn btn-danger" onclick="testDeleteFunction()">🧪 Test Suppression</button>
                                 <small style="color: #dc3545; margin-top: 5px; display: block; font-size: clamp(0.7rem, 2vw, 0.8rem);">
@@ -4098,6 +4106,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // FORCER TOUJOURS LA MISE À JOUR DÈS L'INITIALISATION
             console.log(`${salesData.length} données de vente trouvées, calcul immédiat des stocks...`);
+            
+            // NOUVEAU: Lancer la synchronisation produits/inventaire au chargement du module
+            if (isFirebaseReady()) {
+                setTimeout(() => {
+                    synchronizeProductsAndInventory();
+                }, 2000); // Attendre 2 secondes pour que tout soit chargé
+            }
             
             // Mise à jour immédiate des KPIs
             forceUpdateStockKPIs();
@@ -8349,6 +8364,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             const entriesToSave = [];
             const newProductsToAdd = [];
+            const newInventoryItemsToAdd = []; // Nouveau: pour traquer les éléments d'inventaire à ajouter à Firebase
             
             // Traiter chaque ligne
             for (const line of validLines) {
@@ -8417,6 +8433,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     };
                     
                     inventoryData.push(newInventoryItem);
+                    newInventoryItemsToAdd.push(newInventoryItem); // Ajouter à la liste pour Firebase
                     localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
                     
                     // Ajouter à currentStockLevels
@@ -8456,7 +8473,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         });
                     }
                     
-                    console.log(`✅ ${entriesToSave.length} entrées et ${newProductsToAdd.length} nouveaux produits sauvegardés dans Firebase`);
+                    // Sauvegarder les nouveaux éléments d'inventaire
+                    for (const inventoryItem of newInventoryItemsToAdd) {
+                        await db.collection('inventory').doc(inventoryItem.id).set({
+                            ...inventoryItem,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                    
+                    console.log(`✅ ${entriesToSave.length} entrées, ${newProductsToAdd.length} nouveaux produits et ${newInventoryItemsToAdd.length} nouveaux éléments d'inventaire sauvegardés dans Firebase`);
                 } catch (error) {
                     console.error(`❌ Erreur sauvegarde Firebase:`, error);
                 }
@@ -10579,11 +10604,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             
             // Message de bienvenue avec fonctionnalités
         setTimeout(() => {
-            showAlert('Bienvenue dans KAMLAC Dashboard ! 🎉', 'success');
-            setTimeout(() => {
-                showAlert('Nouvelles fonctionnalités: Module Stocks 📦, Gestion modulaire 🔧, Analyses avancées 📊', 'info');
-            }, 2000);
-            
+
             // NOUVEAU: Démarrer le nettoyage automatique périodique du cache (toutes les 30 minutes)
             demarrerNettoyagePeriodique();
         }, 1000);
@@ -10977,6 +10998,10 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 // NOUVEAU : Synchroniser les données de stock aussi
                 await loadStockData();
                 console.log('✅ loadStockData() réactivée pour synchronisation complète');
+                
+                // NOUVEAU : Synchronisation automatique des produits/inventaire
+                console.log('🔄 Synchronisation automatique produits/inventaire...');
+                await synchronizeProductsAndInventory();
                 
                 // Recalculer les niveaux de stock après synchronisation
                 calculateCurrentStockLevels();
@@ -17715,6 +17740,685 @@ Date [ESPACES] Client [ESPACES] Montant
             
             showAlert('🗑️ Production supprimée', 'info');
         }
+
+        // 🔄 FONCTION DE SYNCHRONISATION PRODUITS/INVENTAIRE (BIDIRECTIONNELLE)
+        async function synchronizeProductsAndInventory() {
+            if (!isFirebaseReady()) {
+                console.log('⚠️ Firebase non disponible pour la synchronisation');
+                return;
+            }
+
+            console.log('🔄 Début de la synchronisation bidirectionnelle produits/inventaire...');
+            
+            try {
+                // Récupérer les deux collections
+                const [productsSnapshot, inventorySnapshot] = await Promise.all([
+                    firebase.firestore().collection('products').get(),
+                    firebase.firestore().collection('inventory').get()
+                ]);
+
+                const productsMap = new Map();
+                const inventoryMap = new Map();
+
+                // Mapper les produits existants
+                productsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.reference || data.name || data.product) {
+                        const productName = data.reference || data.name || data.product;
+                        productsMap.set(productName.toLowerCase().trim(), { id: doc.id, data });
+                    }
+                });
+
+                // Mapper l'inventaire existant
+                inventorySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.product && data.product.trim() !== '') {
+                        inventoryMap.set(data.product.toLowerCase().trim(), { id: doc.id, data });
+                    }
+                });
+
+                console.log(`📊 Produits existants: ${productsMap.size}, Inventaire existant: ${inventoryMap.size}`);
+
+                let synced = 0;
+                const batch = firebase.firestore().batch();
+
+                // PRIORITÉ 1: Synchroniser inventory → products (résoudre le problème principal)
+                for (const [productName, inventoryInfo] of inventoryMap) {
+                    if (!productsMap.has(productName)) {
+                        // Créer le produit manquant
+                        const productId = Date.now() + Math.random().toString(36).substr(2, 9);
+                        const productRef = firebase.firestore().collection('products').doc(productId);
+                        
+                        const newProduct = {
+                            id: productId,
+                            reference: inventoryInfo.data.product,
+                            name: inventoryInfo.data.product,
+                            price: inventoryInfo.data.prixVente || 0,
+                            prixAchat: inventoryInfo.data.prixAchat || 0,
+                            format: inventoryInfo.data.unit || 'Cartons',
+                            margin: '0%',
+                            brand: inventoryInfo.data.supplier || 'À définir',
+                            category: inventoryInfo.data.category || 'Synchronisation auto',
+                            description: `Synchronisé depuis inventory le ${new Date().toLocaleDateString()}`,
+                            addedBy: 'Synchronisation Auto',
+                            addedAt: new Date().toISOString(),
+                            syncedFromInventory: true,
+                            originalInventoryId: inventoryInfo.id,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+
+                        batch.set(productRef, newProduct);
+                        console.log(`✅ Préparé: Inventory→Products "${inventoryInfo.data.product}"`);
+                        synced++;
+                    }
+                }
+
+                // PRIORITÉ 2: Synchroniser products → inventory (compléter la sync)
+                for (const [productName, productInfo] of productsMap) {
+                    if (!inventoryMap.has(productName)) {
+                        // Créer l'élément d'inventaire manquant
+                        const inventoryId = `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                        const inventoryRef = firebase.firestore().collection('inventory').doc(inventoryId);
+                        
+                        const newInventoryItem = {
+                            id: inventoryId,
+                            product: productInfo.data.reference || productInfo.data.name,
+                            quantity: 0,
+                            stock: 0,
+                            unit: productInfo.data.format || 'Cartons',
+                            minLevel: 5,
+                            category: productInfo.data.category || 'Synchronisation auto',
+                            supplier: productInfo.data.brand || 'À définir',
+                            prixVente: productInfo.data.price || 0,
+                            prixAchat: productInfo.data.prixAchat || 0,
+                            addedBy: 'Synchronisation Auto',
+                            addedAt: new Date().toISOString(),
+                            syncedFromProducts: true,
+                            originalProductId: productInfo.id,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+
+                        batch.set(inventoryRef, newInventoryItem);
+                        console.log(`✅ Préparé: Products→Inventory "${newInventoryItem.product}"`);
+                        synced++;
+                    }
+                }
+
+                // Exécuter toutes les modifications
+                if (synced > 0) {
+                    console.log(`🔄 Sauvegarde de ${synced} synchronisations...`);
+                    await batch.commit();
+                    console.log(`✅ ${synced} éléments synchronisés avec succès`);
+                    
+                    // Recharger les données pour refléter les changements
+                    console.log('🔄 Rechargement des données...');
+                    await loadDataFromFirebase();
+                    
+                    // Mettre à jour les interfaces
+                    if (typeof updateProductsList === 'function') {
+                        updateProductsList();
+                    }
+                    if (typeof updateProductsDisplay === 'function') {
+                        updateProductsDisplay();
+                    }
+                    if (typeof updateStocksTables === 'function') {
+                        updateStocksTables();
+                    }
+                    
+                    showMessage(`🔄 ${synced} produit(s) synchronisé(s) automatiquement`, 'success');
+                } else {
+                    console.log('✅ Produits et inventaire déjà synchronisés');
+                }
+
+                console.log(`🔄 Synchronisation terminée: ${synced} éléments synchronisés`);
+                return { synced, total: inventoryMap.size + productsMap.size };
+
+            } catch (error) {
+                console.error('❌ Erreur lors de la synchronisation:', error);
+                showMessage('❌ Erreur de synchronisation: ' + error.message, 'error');
+                return { synced: 0, error: error.message };
+            }
+        }
+
+        // Ajouter un bouton de synchronisation manuelle (optionnel)
+        function addSyncButton() {
+            // Cette fonction pourrait être appelée pour ajouter un bouton de synchronisation dans l'interface
+            console.log('🔄 Fonction de synchronisation disponible: synchronizeProductsAndInventory()');
+        }
+
+        // 🔄 FONCTION DE SYNCHRONISATION LOCALE PRODUITS/INVENTAIRE
+        async function syncLocalProductsAndInventory() {
+            console.log('🔄 Début de la synchronisation locale produits/inventaire...');
+            
+            const localProductsData = productsData || [];
+            let localInventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+            
+            const localProductsMap = new Map();
+            const localInventoryMap = new Map();
+            
+            // Mapper les données locales
+            localProductsData.forEach(product => {
+                const productName = product.reference || product.name || product.product || '';
+                if (productName) {
+                    localProductsMap.set(productName.toLowerCase(), product);
+                }
+            });
+            
+            localInventoryData.forEach(item => {
+                const productName = item.product || '';
+                if (productName) {
+                    localInventoryMap.set(productName.toLowerCase(), item);
+                }
+            });
+            
+            let syncedLocal = 0;
+            
+            // Synchroniser: pour chaque produit d'inventaire local, s'assurer qu'il existe dans productsData
+            for (const [productName, inventoryItem] of localInventoryMap) {
+                if (!localProductsMap.has(productName)) {
+                    // Créer le produit manquant dans productsData
+                    const newProduct = {
+                        id: Date.now() + Math.random(),
+                        reference: inventoryItem.product,
+                        name: inventoryItem.product,
+                        price: 0, // Prix à définir
+                        format: 'À définir',
+                        margin: '0%',
+                        brand: 'Sync locale auto',
+                        addedBy: 'Synchronisation locale',
+                        addedAt: new Date().toISOString()
+                    };
+                    
+                    productsData.push(newProduct);
+                    console.log(`✅ Produit ajouté à productsData: ${inventoryItem.product}`);
+                    syncedLocal++;
+                    
+                    // Sauvegarder aussi dans Firebase si disponible
+                    if (isFirebaseReady()) {
+                        try {
+                            await db.collection('products').doc(newProduct.id.toString()).set({
+                                ...newProduct,
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            console.log(`✅ Produit aussi sauvé dans Firebase: ${newProduct.reference}`);
+                        } catch (error) {
+                            console.error(`❌ Erreur sauvegarde Firebase produit ${newProduct.reference}:`, error);
+                        }
+                    }
+                }
+            }
+            
+            // Synchroniser: pour chaque produit dans productsData, s'assurer qu'il existe dans l'inventaire local
+            for (const [productName, product] of localProductsMap) {
+                if (!localInventoryMap.has(productName)) {
+                    // Créer l'élément d'inventaire manquant
+                    const newInventoryItem = {
+                        id: `sync_local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        product: product.reference || product.name || product.product,
+                        quantity: 0,
+                        unit: 'Cartons',
+                        minLevel: 5,
+                        category: 'Sync locale auto',
+                        supplier: 'À définir',
+                        addedBy: 'Synchronisation locale',
+                        addedAt: new Date().toISOString()
+                    };
+                    
+                    localInventoryData.push(newInventoryItem);
+                    console.log(`✅ Élément ajouté à l'inventaire local: ${newInventoryItem.product}`);
+                    syncedLocal++;
+                    
+                    // Sauvegarder aussi dans Firebase si disponible
+                    if (isFirebaseReady()) {
+                        try {
+                            await db.collection('inventory').doc(newInventoryItem.id).set({
+                                ...newInventoryItem,
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            console.log(`✅ Inventaire aussi sauvé dans Firebase: ${newInventoryItem.product}`);
+                        } catch (error) {
+                            console.error(`❌ Erreur sauvegarde Firebase inventaire ${newInventoryItem.product}:`, error);
+                        }
+                    }
+                }
+            }
+            
+            // Sauvegarder les données locales mises à jour
+            if (syncedLocal > 0) {
+                localStorage.setItem('inventoryData', JSON.stringify(localInventoryData));
+                saveToLocalStorage(); // Sauvegarder productsData
+                
+                console.log(`🔄 Synchronisation locale terminée: ${syncedLocal} éléments synchronisés`);
+                showAlert(`🔄 ${syncedLocal} produit(s) synchronisé(s) en local`, 'success');
+                
+                // Mettre à jour les affichages
+                updateProductsList();
+                updateProductsDisplay();
+                updateInventoryTable();
+            } else {
+                console.log('✅ Données locales déjà synchronisées');
+            }
+            
+            return syncedLocal;
+        }
+
+        // Lancer la synchronisation automatique au démarrage (après chargement Firebase)
+        setTimeout(() => {
+            if (isFirebaseReady()) {
+                synchronizeProductsAndInventory();
+            }
+        }, 5000); // Attendre 5 secondes que Firebase soit prêt
+
+        // � FONCTION DE SYNCHRONISATION INVENTORY → PRODUCTS
+        async function syncInventoryToProducts() {
+            console.log('🔄 === SYNCHRONISATION INVENTORY → PRODUCTS ===');
+            
+            if (!isFirebaseReady()) {
+                console.error('❌ Firebase non disponible pour la synchronisation');
+                return { success: false, error: 'Firebase non disponible' };
+            }
+
+            try {
+                // 1. Récupérer tous les produits d'inventory
+                console.log('📋 Récupération de tous les produits d\'inventory...');
+                const inventorySnapshot = await firebase.firestore().collection('inventory').get();
+                const inventoryProducts = [];
+                
+                inventorySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.product && data.product.trim() !== '') {
+                        inventoryProducts.push({
+                            id: doc.id,
+                            name: data.product,
+                            ...data
+                        });
+                    }
+                });
+                
+                console.log(`📦 ${inventoryProducts.length} produits trouvés dans inventory`);
+
+                // 2. Récupérer tous les produits existants dans products
+                console.log('📦 Récupération de tous les produits existants...');
+                const productsSnapshot = await firebase.firestore().collection('products').get();
+                const existingProducts = new Set();
+                
+                productsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const productName = data.reference || data.name || data.product;
+                    if (productName) {
+                        existingProducts.add(productName.toLowerCase().trim());
+                    }
+                });
+                
+                console.log(`📦 ${existingProducts.size} produits existants dans products`);
+
+                // 3. Identifier les produits manquants
+                const missingProducts = inventoryProducts.filter(invProduct => {
+                    const normalizedName = invProduct.name.toLowerCase().trim();
+                    return !existingProducts.has(normalizedName);
+                });
+
+                console.log(`🆕 ${missingProducts.length} produits à ajouter dans products`);
+                
+                if (missingProducts.length === 0) {
+                    console.log('✅ Tous les produits d\'inventory sont déjà dans products');
+                    return { success: true, added: 0, total: inventoryProducts.length };
+                }
+
+                // 4. Créer les produits manquants dans la collection products
+                console.log('🔄 Création des produits manquants...');
+                const batch = firebase.firestore().batch();
+                let addedCount = 0;
+
+                for (const product of missingProducts) {
+                    try {
+                        // Générer un ID unique basé sur le timestamp
+                        const productId = Date.now() + Math.random().toString(36).substr(2, 9);
+                        const productRef = firebase.firestore().collection('products').doc(productId.toString());
+
+                        // Données du produit à créer
+                        const productData = {
+                            id: productId,
+                            name: product.name,
+                            reference: product.name,
+                            category: product.category || 'Divers',
+                            prixVente: product.prixVente || 0,
+                            prixAchat: product.prixAchat || 0,
+                            description: product.description || '',
+                            fournisseur: product.fournisseur || '',
+                            dateCreation: new Date().toISOString(),
+                            syncedFromInventory: true,
+                            originalInventoryId: product.id
+                        };
+
+                        batch.set(productRef, productData);
+                        addedCount++;
+                        
+                        console.log(`  ✅ Préparé: "${product.name}" (ID: ${productId})`);
+                        
+                    } catch (error) {
+                        console.error(`❌ Erreur lors de la préparation de "${product.name}":`, error);
+                    }
+                }
+
+                // 5. Exécuter le batch
+                if (addedCount > 0) {
+                    console.log(`🔄 Sauvegarde de ${addedCount} produits dans Firebase...`);
+                    await batch.commit();
+                    console.log(`✅ ${addedCount} produits ajoutés avec succès dans products`);
+                } else {
+                    console.log('⚠️ Aucun produit à ajouter');
+                }
+
+                // 6. Mettre à jour les données locales
+                console.log('🔄 Mise à jour des données locales...');
+                await loadProductsData();
+                
+                return { 
+                    success: true, 
+                    added: addedCount, 
+                    total: inventoryProducts.length,
+                    missingProducts: missingProducts.map(p => p.name)
+                };
+
+            } catch (error) {
+                console.error('❌ Erreur lors de la synchronisation inventory → products:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Fonction pour afficher les résultats de la synchronisation
+        function showSyncResults(result) {
+            if (result.success) {
+                if (result.added > 0) {
+                    console.log(`🎉 === SYNCHRONISATION RÉUSSIE ===`);
+                    console.log(`✅ ${result.added} nouveaux produits ajoutés dans products`);
+                    console.log(`📊 Total produits inventory: ${result.total}`);
+                    console.log(`📋 Produits ajoutés:`);
+                    result.missingProducts.forEach(name => console.log(`  - ${name}`));
+                    
+                    // Mettre à jour l'interface
+                    if (typeof updateProductsList === 'function') {
+                        updateProductsList();
+                    }
+                    if (typeof updateStocksTables === 'function') {
+                        updateStocksTables();
+                    }
+                    
+                    showMessage('✅ Synchronisation réussie ! ' + result.added + ' produits ajoutés au module Commercial', 'success');
+                } else {
+                    console.log('✅ Synchronisation complète - Aucun produit manquant');
+                    showMessage('✅ Synchronisation complète - Tous les produits sont déjà synchronisés', 'info');
+                }
+            } else {
+                console.error('❌ Échec de la synchronisation:', result.error);
+                showMessage('❌ Erreur lors de la synchronisation: ' + result.error, 'error');
+            }
+        }
+
+        // �🔍 FONCTION DE DIAGNOSTIC DES PRODUITS/INVENTAIRE
+        async function diagnosticProductsInventory() {
+            console.log('🔍 === DIAGNOSTIC COMPLET PRODUITS VS INVENTAIRE ===');
+            
+            // 1. DIAGNOSTIC LOCAL (localStorage)
+            console.log('\n📱 === DONNÉES LOCALES ===');
+            
+            const localProductsData = productsData || [];
+            const localInventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+            
+            console.log(`📦 productsData (local): ${localProductsData.length} produits`);
+            const localProductsMap = new Map();
+            localProductsData.forEach((product, index) => {
+                const productName = product.reference || product.name || product.product || 'SANS_NOM';
+                localProductsMap.set(productName.toLowerCase(), { index, data: product });
+                console.log(`  - ${productName} (index: ${index})`);
+            });
+            
+            console.log(`📋 inventoryData (local): ${localInventoryData.length} produits`);
+            const localInventoryMap = new Map();
+            localInventoryData.forEach((item, index) => {
+                const productName = item.product || 'SANS_NOM';
+                localInventoryMap.set(productName.toLowerCase(), { index, data: item });
+                console.log(`  - ${productName} (index: ${index})`);
+            });
+            
+            // Analyse des différences LOCALES
+            const localInventoryOnly = [];
+            const localProductsOnly = [];
+            
+            for (const [productName, info] of localInventoryMap) {
+                if (!localProductsMap.has(productName)) {
+                    localInventoryOnly.push(productName);
+                }
+            }
+            
+            for (const [productName, info] of localProductsMap) {
+                if (!localInventoryMap.has(productName)) {
+                    localProductsOnly.push(productName);
+                }
+            }
+            
+            console.log(`\n🔍 DIFFÉRENCES LOCALES:`);
+            console.log(`❌ Produits SEULEMENT dans INVENTORY local (${localInventoryOnly.length}):`);
+            localInventoryOnly.forEach(name => console.log(`  - ${name}`));
+            
+            console.log(`❌ Produits SEULEMENT dans PRODUCTS local (${localProductsOnly.length}):`);
+            localProductsOnly.forEach(name => console.log(`  - ${name}`));
+            
+            console.log(`✅ Produits dans les DEUX données locales: ${localProductsMap.size - localProductsOnly.length}`);
+            
+            // 2. DIAGNOSTIC FIREBASE
+            let firebaseResult = null;
+            if (isFirebaseReady()) {
+                console.log('\n🔥 === DONNÉES FIREBASE ===');
+                
+                try {
+                    // Utiliser la syntaxe Firebase v8 (compatible avec le code existant)
+                    const [productsSnapshot, inventorySnapshot] = await Promise.all([
+                        firebase.firestore().collection('products').get(),
+                        firebase.firestore().collection('inventory').get()
+                    ]);
+
+                    const firebaseProductsMap = new Map();
+                    const firebaseInventoryMap = new Map();
+                    const allFirebaseProducts = [];
+                    const allFirebaseInventory = [];
+
+                    console.log(`📦 Collection PRODUCTS: ${productsSnapshot.size} documents`);
+                    productsSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const productName = data.reference || data.name || data.product || 'SANS_NOM';
+                        firebaseProductsMap.set(productName.toLowerCase(), { id: doc.id, data });
+                        allFirebaseProducts.push({ id: doc.id, name: productName, ...data });
+                        console.log(`  - ${productName} (ID: ${doc.id})`);
+                    });
+
+                    console.log(`📋 Collection INVENTORY: ${inventorySnapshot.size} documents`);
+                    inventorySnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const productName = data.product || 'SANS_NOM';
+                        firebaseInventoryMap.set(productName.toLowerCase(), { id: doc.id, data });
+                        allFirebaseInventory.push({ id: doc.id, product: productName, stock: data.stock || 0, ...data });
+                        console.log(`  - ${productName} (ID: ${doc.id}) - Stock: ${data.stock || 0}`);
+                    });
+
+                    // Recherche spécifique des produits "Bulk"
+                    console.log(`\n🔍 RECHERCHE SPÉCIFIQUE DES PRODUITS "BULK":`);
+                    const bulkTerms = ['bulk', 'Bulk', 'BULK', 'Cafe Bulk', 'BULKTEST'];
+                    
+                    bulkTerms.forEach(term => {
+                        console.log(`\n🔎 Recherche de "${term}":`);
+                        
+                        // Dans products
+                        const foundInProducts = allFirebaseProducts.filter(p => 
+                            p.name && p.name.includes(term)
+                        );
+                        console.log(`   📦 Dans PRODUCTS: ${foundInProducts.length} trouvé(s)`);
+                        foundInProducts.forEach(p => console.log(`      - "${p.name}" (ID: ${p.id})`));
+                        
+                        // Dans inventory
+                        const foundInInventory = allFirebaseInventory.filter(i => 
+                            i.product && i.product.includes(term)
+                        );
+                        console.log(`   📋 Dans INVENTORY: ${foundInInventory.length} trouvé(s)`);
+                        foundInInventory.forEach(i => console.log(`      - "${i.product}" (ID: ${i.id}) - Stock: ${i.stock}`));
+                    });
+
+                    // Analyse des différences FIREBASE
+                    const firebaseInventoryOnly = [];
+                    const firebaseProductsOnly = [];
+                    
+                    for (const [productName, info] of firebaseInventoryMap) {
+                        if (!firebaseProductsMap.has(productName)) {
+                            firebaseInventoryOnly.push(productName);
+                        }
+                    }
+                    
+                    for (const [productName, info] of firebaseProductsMap) {
+                        if (!firebaseInventoryMap.has(productName)) {
+                            firebaseProductsOnly.push(productName);
+                        }
+                    }
+
+                    console.log(`\n🔍 DIFFÉRENCES FIREBASE:`);
+                    console.log(`❌ Produits SEULEMENT dans INVENTORY Firebase (${firebaseInventoryOnly.length}):`);
+                    firebaseInventoryOnly.forEach(name => console.log(`  - ${name}`));
+                    
+                    console.log(`❌ Produits SEULEMENT dans PRODUCTS Firebase (${firebaseProductsOnly.length}):`);
+                    firebaseProductsOnly.forEach(name => console.log(`  - ${name}`));
+                    
+                    console.log(`✅ Produits dans les DEUX collections Firebase: ${firebaseProductsMap.size - firebaseProductsOnly.length}`);
+                    
+                    firebaseResult = {
+                        totalProducts: productsSnapshot.size,
+                        totalInventory: inventorySnapshot.size,
+                        inventoryOnly: firebaseInventoryOnly,
+                        productsOnly: firebaseProductsOnly,
+                        synchronized: firebaseProductsMap.size - firebaseProductsOnly.length,
+                        allProducts: allFirebaseProducts,
+                        allInventory: allFirebaseInventory
+                    };
+
+                } catch (error) {
+                    console.error('❌ Erreur lors du diagnostic Firebase:', error);
+                    console.error('Détails:', error.message);
+                }
+            } else {
+                console.log('⚠️ Firebase non disponible pour le diagnostic');
+            }
+
+            // 3. RÉSUMÉ COMPLET
+            console.log(`\n📊 === RÉSUMÉ DIAGNOSTIC COMPLET ===`);
+            console.log(`LOCAL - Produits: ${localProductsData.length}, Inventaire: ${localInventoryData.length}`);
+            console.log(`LOCAL - Manquants dans products: ${localInventoryOnly.length}, Manquants dans inventory: ${localProductsOnly.length}`);
+            
+            if (firebaseResult) {
+                console.log(`FIREBASE - Produits: ${firebaseResult.totalProducts}, Inventaire: ${firebaseResult.totalInventory}`);
+                console.log(`FIREBASE - Manquants dans products: ${firebaseResult.inventoryOnly.length}, Manquants dans inventory: ${firebaseResult.productsOnly.length}`);
+            }
+
+            return {
+                local: {
+                    totalProducts: localProductsData.length,
+                    totalInventory: localInventoryData.length,
+                    inventoryOnly: localInventoryOnly,
+                    productsOnly: localProductsOnly,
+                    synchronized: localProductsMap.size - localProductsOnly.length
+                },
+                firebase: firebaseResult
+            };
+        }
+
+        // Fonction pour lancer la synchronisation Inventory → Products
+        async function runInventoryToProductsSync() {
+            console.log('🚀 Lancement de la synchronisation Inventory → Products...');
+            showMessage('🔄 Synchronisation en cours...', 'info');
+            
+            try {
+                const result = await syncInventoryToProducts();
+                showSyncResults(result);
+            } catch (error) {
+                console.error('❌ Erreur lors du lancement de la synchronisation:', error);
+                showMessage('❌ Erreur: ' + error.message, 'error');
+            }
+        }
+
+        // Fonction pour afficher le diagnostic à l'utilisateur
+        async function showProductsDiagnostic() {
+            const result = await diagnosticProductsInventory();
+            if (result) {
+                let message = `📊 DIAGNOSTIC COMPLET PRODUITS/INVENTAIRE:\n\n`;
+                
+                // Résultats locaux
+                message += `🖥️ DONNÉES LOCALES:\n`;
+                message += `✅ ${result.local.synchronized} produits synchronisés\n`;
+                message += `❌ ${result.local.inventoryOnly.length} produits manquants dans PRODUCTS local\n`;
+                message += `❌ ${result.local.productsOnly.length} produits manquants dans INVENTORY local\n\n`;
+                
+                if (result.local.inventoryOnly.length > 0) {
+                    message += `❗ Produits seulement dans INVENTORY local:\n`;
+                    result.local.inventoryOnly.slice(0, 5).forEach(name => message += `- ${name}\n`);
+                    if (result.local.inventoryOnly.length > 5) {
+                        message += `... et ${result.local.inventoryOnly.length - 5} autres\n`;
+                    }
+                    message += `\n`;
+                }
+                
+                if (result.local.productsOnly.length > 0) {
+                    message += `❗ Produits seulement dans PRODUCTS local:\n`;
+                    result.local.productsOnly.slice(0, 5).forEach(name => message += `- ${name}\n`);
+                    if (result.local.productsOnly.length > 5) {
+                        message += `... et ${result.local.productsOnly.length - 5} autres\n`;
+                    }
+                    message += `\n`;
+                }
+                
+                // Résultats Firebase
+                if (result.firebase) {
+                    message += `🔥 DONNÉES FIREBASE:\n`;
+                    message += `✅ ${result.firebase.synchronized} produits synchronisés\n`;
+                    message += `❌ ${result.firebase.inventoryOnly.length} produits manquants dans PRODUCTS Firebase\n`;
+                    message += `❌ ${result.firebase.productsOnly.length} produits manquants dans INVENTORY Firebase\n\n`;
+                    
+                    if (result.firebase.inventoryOnly.length > 0) {
+                        message += `❗ Produits seulement dans INVENTORY Firebase:\n`;
+                        result.firebase.inventoryOnly.slice(0, 3).forEach(name => message += `- ${name}\n`);
+                        if (result.firebase.inventoryOnly.length > 3) {
+                            message += `... et ${result.firebase.inventoryOnly.length - 3} autres\n`;
+                        }
+                        message += `\n`;
+                    }
+                } else {
+                    message += `🔥 FIREBASE: Non disponible\n\n`;
+                }
+                
+                alert(message);
+                
+                // Proposer la synchronisation si nécessaire
+                const hasLocalIssues = result.local.inventoryOnly.length > 0 || result.local.productsOnly.length > 0;
+                const hasFirebaseIssues = result.firebase && (result.firebase.inventoryOnly.length > 0 || result.firebase.productsOnly.length > 0);
+                
+                if (hasLocalIssues || hasFirebaseIssues) {
+                    if (confirm('Des incohérences détectées ! Voulez-vous lancer la synchronisation ?')) {
+                        await synchronizeProductsAndInventory();
+                        
+                        // Synchroniser aussi les données locales
+                        if (hasLocalIssues) {
+                            await syncLocalProductsAndInventory();
+                        }
+                    }
+                }
+            }
+        }
+
+        // Disponible dans la console: diagnosticProductsInventory() et showProductsDiagnostic()
+        window.diagnosticProductsInventory = diagnosticProductsInventory;
+        window.showProductsDiagnostic = showProductsDiagnostic;
+        window.runInventoryToProductsSync = runInventoryToProductsSync;
+        window.syncInventoryToProducts = syncInventoryToProducts;
+        window.showModule = showModule;
+        window.showSection = showSection;
+        window.syncLocalProductsAndInventory = syncLocalProductsAndInventory;
 
     </script>
 </body>
