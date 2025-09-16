@@ -3692,33 +3692,62 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
     
     <!-- Modal Produit -->
     <div id="productModal" class="product-modal">
-        <div class="product-modal-content">
-            <h3 style="margin-bottom: 15px;">📦 Ajouter/Modifier Produit</h3>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="productReference">Référence Produit</label>
-                    <input type="text" id="productReference" placeholder="Référence du produit">
-                </div>
-                <div class="form-group">
-                    <label for="productPrice">Prix de Vente (CFA)</label>
-                    <input type="number" id="productPrice" min="0" placeholder="0">
-                </div>
-                <div class="form-group">
-                    <label for="productFormat">Format</label>
-                    <input type="text" id="productFormat" placeholder="Format du produit">
-                </div>
-                <div class="form-group">
-                    <label for="productMargin">Marge</label>
-                    <input type="text" id="productMargin" placeholder="Marge">
-                </div>
-                <div class="form-group">
-                    <label for="productBrand">Marque</label>
-                    <input type="text" id="productBrand" placeholder="Marque">
+        <div class="product-modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <h3 style="margin-bottom: 20px; color: #667eea; border-bottom: 2px solid #667eea; padding-bottom: 10px;">📦 Fiche Produit</h3>
+            
+            <!-- Informations essentielles -->
+            <div class="card" style="margin-bottom: 15px;">
+                <h4 style="color: #27ae60; margin-bottom: 15px;">🏷️ Informations Produit</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="productReference">Référence Produit *</label>
+                        <input type="text" id="productReference" placeholder="Référence du produit" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="productBrand">Marque</label>
+                        <input type="text" id="productBrand" placeholder="Marque du produit">
+                    </div>
+                    <div class="form-group">
+                        <label for="productFormat">Format / Conditionnement</label>
+                        <input type="text" id="productFormat" placeholder="Ex: Boîte de 12, Paquet de 500g">
+                    </div>
+                    <div class="form-group">
+                        <label for="productCategory">Catégorie</label>
+                        <select id="productCategory">
+                            <option value="">-- Sélectionner --</option>
+                            <option value="Alimentaire">Alimentaire</option>
+                            <option value="Boissons">Boissons</option>
+                            <option value="Hygiène">Hygiène</option>
+                            <option value="Entretien">Entretien</option>
+                            <option value="Textile">Textile</option>
+                            <option value="Électronique">Électronique</option>
+                            <option value="Cosmétique">Cosmétique</option>
+                            <option value="Autre">Autre</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-            <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="saveProduct()" style="flex: 1;">💾 Sauvegarder</button>
-                <button class="btn btn-secondary" onclick="closeProductModal()" style="flex: 1;">❌ Annuler</button>
+
+            <!-- Prix et marge -->
+            <div class="card" style="margin-bottom: 15px;">
+                <h4 style="color: #f39c12; margin-bottom: 15px;">💰 Prix et Marge</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="productPrice">Prix de vente (CFA) *</label>
+                        <input type="number" id="productPrice" min="0" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="productMargin">Marge (%)</label>
+                        <input type="text" id="productMargin" placeholder="Ex: 30%">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div style="text-align: center; border-top: 2px solid #f1f1f1; padding-top: 20px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                <button onclick="saveProduct()" style="background: #667eea; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; min-width: 120px;">� Sauvegarder</button>
+                <button id="deleteProductBtn" onclick="deleteCurrentProduct()" style="background: #dc3545; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; min-width: 120px; display: none;">�️ Supprimer</button>
+                <button onclick="closeProductModal()" style="background: #6c757d; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; min-width: 120px;">✖️ Fermer</button>
             </div>
         </div>
     </div>
@@ -13158,18 +13187,28 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             if (productId) {
                 const product = productsData.find(p => p.id === productId);
                 if (product) {
+                    // Remplir les champs avec les données existantes
                     document.getElementById('productReference').value = product.reference || '';
-                    document.getElementById('productPrice').value = product.price || '';
-                    document.getElementById('productFormat').value = product.format || '';
-                    document.getElementById('productMargin').value = product.margin || '';
                     document.getElementById('productBrand').value = product.brand || '';
+                    document.getElementById('productFormat').value = product.format || '';
+                    document.getElementById('productCategory').value = product.category || '';
+                    document.getElementById('productPrice').value = product.price || '';
+                    document.getElementById('productMargin').value = product.margin || '';
+                    
+                    // Afficher le bouton supprimer pour les produits existants
+                    document.getElementById('deleteProductBtn').style.display = 'inline-block';
                 }
             } else {
+                // Réinitialiser tous les champs pour un nouveau produit
                 document.getElementById('productReference').value = '';
-                document.getElementById('productPrice').value = '';
-                document.getElementById('productFormat').value = '';
-                document.getElementById('productMargin').value = '';
                 document.getElementById('productBrand').value = '';
+                document.getElementById('productFormat').value = '';
+                document.getElementById('productCategory').value = '';
+                document.getElementById('productPrice').value = '';
+                document.getElementById('productMargin').value = '';
+                
+                // Masquer le bouton supprimer pour les nouveaux produits
+                document.getElementById('deleteProductBtn').style.display = 'none';
             }
             
             document.getElementById('productModal').style.display = 'block';
@@ -13181,45 +13220,92 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         async function saveProduct() {
+            // Récupérer les champs du formulaire simplifié
             const reference = document.getElementById('productReference').value.trim();
-            const price = parseFloat(document.getElementById('productPrice').value) || 0;
-            const format = document.getElementById('productFormat').value.trim();
-            const margin = document.getElementById('productMargin').value.trim();
             const brand = document.getElementById('productBrand').value.trim();
-            
+            const format = document.getElementById('productFormat').value.trim();
+            const category = document.getElementById('productCategory').value;
+            const price = parseFloat(document.getElementById('productPrice').value) || 0;
+            const margin = document.getElementById('productMargin').value.trim();
+
+            // Validation des champs obligatoires
+            if (!reference) {
+                showAlert('La référence produit est obligatoire', 'error');
+                return;
+            }
+
+            if (price <= 0) {
+                showAlert('Le prix de vente doit être supérieur à 0', 'error');
+                return;
+            }
+
+            // Créer l'objet produit avec la structure existante
             const product = {
                 id: editingProductId || Date.now() + Math.random(),
                 reference: reference,
                 price: price,
-                format: format,
-                margin: margin,
-                brand: brand
+                format: format || 'À définir',
+                margin: margin || '',
+                brand: brand || '',
+                category: category || ''
             };
-            
-            if (editingProductId) {
-                const index = productsData.findIndex(p => p.id === editingProductId);
-                if (index !== -1) {
-                    productsData[index] = product;
+
+            try {
+                if (editingProductId) {
+                    // Mettre à jour le produit existant
+                    const productIndex = productsData.findIndex(p => p.id == editingProductId);
+                    if (productIndex !== -1) {
+                        productsData[productIndex] = product;
+                        console.log(`✅ Produit mis à jour: ${reference}`);
+                    }
+                } else {
+                    // Vérifier si la référence existe déjà
+                    const existingProduct = productsData.find(p => 
+                        p.reference && p.reference.toLowerCase() === reference.toLowerCase()
+                    );
+                    
+                    if (existingProduct) {
+                        showAlert('Un produit avec cette référence existe déjà', 'error');
+                        return;
+                    }
+
+                    // Ajouter le nouveau produit
+                    productsData.push(product);
+                    console.log(`✅ Nouveau produit créé: ${reference}`);
                 }
-            } else {
-                productsData.push(product);
+
+                // Sauvegarder dans le localStorage
+                localStorage.setItem('kamlacProductsData', JSON.stringify(productsData));
+
+                // Sauvegarder dans Firebase si disponible
+                if (isFirebaseReady()) {
+                    await db.collection('products').doc(product.id.toString()).set({
+                        ...product,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log(`✅ Produit sauvegardé dans Firebase: ${reference}`);
+                }
+
+                // Mettre à jour l'affichage et fermer le modal
+                renderProducts();
+                updateProductsLists();
+                closeProductModal();
+                showAlert(`✅ Produit ${editingProductId ? 'modifié' : 'créé'} avec succès`, 'success');
                 
-                // NOUVEAU: Ajouter aussi au module stocks (synchronisation bidirectionnelle)
-                // Vérifier si le produit existe déjà dans l'inventaire
-                let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
-                const existingInInventory = inventoryData.find(item => 
-                    item.product && item.product.trim() === reference
-                );
-                
-                if (!existingInInventory && reference) {
-                    const newInventoryItem = {
+            } catch (error) {
+                console.error('❌ Erreur lors de la sauvegarde:', error);
+                showAlert('Erreur lors de la sauvegarde du produit', 'error');
+            }
+        }
                         id: `commercial_${product.id}`,
                         product: reference,
                         quantity: 0,
-                        unit: 'Cartons',
-                        minLevel: 5,
-                        category: 'Module Commercial',
-                        supplier: 'À définir',
+                        unit: unit,
+                        minLevel: minStock,
+                        maxLevel: maxStock,
+                        category: category || 'Module Commercial',
+                        supplier: mainSupplier || 'À définir',
+                        location: location,
                         addedBy: 'Module Commercial',
                         addedAt: new Date().toISOString()
                     };
@@ -13231,39 +13317,41 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     if (!currentStockLevels) currentStockLevels = {};
                     currentStockLevels[reference] = {
                         quantity: 0,
-                        unit: 'Cartons',
-                        minLevel: 5
+                        unit: unit,
+                        minLevel: minStock,
+                        maxLevel: maxStock
                     };
                     
                     // Sauvegarder dans Firebase inventaire
                     if (isFirebaseInitialized && db) {
                         db.collection('inventory').doc(newInventoryItem.id).set(newInventoryItem)
-                            .then(() => console.log(`✅ Produit ${reference} ajouté à Firebase inventory depuis module commercial`))
-                            .catch(error => console.log('⚠️ Erreur Firebase inventory depuis commercial:', error.message));
+                            .then(() => console.log(`✅ Produit ${reference} ajouté à Firebase inventory`))
+                            .catch(error => console.log('⚠️ Erreur Firebase inventory:', error.message));
                     }
                     
                     console.log(`✅ Produit ${reference} synchronisé vers le module stocks`);
                 }
             }
-            
+
             saveToLocalStorage();
-            
+
             if (isFirebaseInitialized) {
                 try {
                     await db.collection('products').doc(product.id.toString()).set({
                         ...product,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
+                    console.log(`✅ Produit ${reference} sauvegardé dans Firebase`);
                 } catch (error) {
                     console.error('Erreur sync produit:', error);
                 }
             }
-            
+
             updateProductsDisplay();
             updateProductsList();
             populateRecapFilters();
             closeProductModal();
-            showAlert(editingProductId ? 'Produit modifié' : 'Produit ajouté', 'success');
+            showAlert(editingProductId ? 'Produit modifié avec succès' : 'Nouveau produit créé avec succès', 'success');
         }
 
         async function deleteProduct(productId) {
@@ -13317,6 +13405,79 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 `;
                 container.appendChild(productCard);
             });
+        }
+
+        // Fonction pour calculer automatiquement la marge
+        function calculateMargin() {
+            const costPrice = parseFloat(document.getElementById('productCostPrice').value) || 0;
+            const salePrice = parseFloat(document.getElementById('productPrice').value) || 0;
+            
+            if (costPrice > 0 && salePrice > 0) {
+                const marginAmount = salePrice - costPrice;
+                const marginPercent = ((marginAmount / costPrice) * 100).toFixed(1);
+                
+                document.getElementById('productMargin').value = marginPercent + '%';
+                document.getElementById('productMarginAmount').value = formatCurrency(marginAmount);
+            } else {
+                document.getElementById('productMargin').value = '';
+                document.getElementById('productMarginAmount').value = '';
+            }
+        }
+
+        // Fonction pour réinitialiser le formulaire
+        function resetProductForm() {
+            if (confirm('Êtes-vous sûr de vouloir réinitialiser tous les champs ?')) {
+                // Identification
+                document.getElementById('productReference').value = '';
+                document.getElementById('productName').value = '';
+                document.getElementById('productBarcode').value = '';
+                document.getElementById('productSKU').value = '';
+                
+                // Catégorisation
+                document.getElementById('productCategory').value = '';
+                document.getElementById('productSubCategory').value = '';
+                document.getElementById('productBrand').value = '';
+                document.getElementById('productStatus').value = 'Actif';
+                
+                // Prix et marge
+                document.getElementById('productCostPrice').value = '';
+                document.getElementById('productPrice').value = '';
+                document.getElementById('productMargin').value = '';
+                document.getElementById('productMarginAmount').value = '';
+                
+                // Caractéristiques physiques
+                document.getElementById('productFormat').value = '';
+                document.getElementById('productWeight').value = '';
+                document.getElementById('productDimensions').value = '';
+                document.getElementById('productColor').value = '';
+                
+                // Stock et logistique
+                document.getElementById('productMinStock').value = '5';
+                document.getElementById('productMaxStock').value = '100';
+                document.getElementById('productUnit').value = 'Cartons';
+                document.getElementById('productLocation').value = '';
+                
+                // Fournisseurs
+                document.getElementById('productMainSupplier').value = '';
+                document.getElementById('productSupplierRef').value = '';
+                document.getElementById('productLeadTime').value = '7';
+                document.getElementById('productMinOrder').value = '1';
+                
+                // Dates (on ne réinitialise pas les dates de traçabilité)
+                document.getElementById('productExpiryDate').value = '';
+                
+                // Description et notes
+                document.getElementById('productDescription').value = '';
+                document.getElementById('productNotes').value = '';
+                document.getElementById('productTags').value = '';
+            }
+        }
+
+        // Fonction pour supprimer le produit en cours d'édition
+        function deleteCurrentProduct() {
+            if (editingProductId) {
+                deleteProduct(editingProductId);
+            }
         }
 
         // Import encaissements en masse
