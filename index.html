@@ -14143,17 +14143,37 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
 
         async function deleteProduct(productId) {
             if (confirm('Supprimer ce produit et TOUTES ses données liées (ventes, entrées, sorties) définitivement ?')) {
+                // Debug pour identifier le problème
+                console.log(`🔍 Recherche du produit avec ID: "${productId}" (type: ${typeof productId})`);
+                console.log(`📋 Produits disponibles:`, productsData.map(p => `ID: "${p.id}" (type: ${typeof p.id}), nom: "${p.reference || p.name}"`));
+                
                 // 1. Trouver le produit à supprimer pour récupérer son nom
-                const productToDelete = productsData.find(p => p.id === productId);
+                // Essayer avec conversion de type pour gérer les différences string/number
+                let productToDelete = productsData.find(p => p.id === productId);
                 if (!productToDelete) {
-                    showAlert('Produit non trouvé', 'error');
+                    // Essayer en convertissant en string
+                    productToDelete = productsData.find(p => p.id.toString() === productId.toString());
+                }
+                if (!productToDelete) {
+                    // Essayer en convertissant en number si possible
+                    const numericId = parseInt(productId);
+                    if (!isNaN(numericId)) {
+                        productToDelete = productsData.find(p => p.id === numericId);
+                    }
+                }
+                
+                if (!productToDelete) {
+                    console.error(`❌ Produit non trouvé avec ID: "${productId}"`);
+                    console.log(`📋 IDs disponibles:`, productsData.map(p => p.id));
+                    showAlert(`Produit non trouvé (ID: ${productId}). Vérifiez la console pour plus de détails.`, 'error');
                     return;
                 }
                 
                 const productName = productToDelete.reference || productToDelete.name;
+                console.log(`✅ Produit trouvé: "${productName}"`);
                 
                 // 2. Supprimer de la mémoire locale
-                productsData = productsData.filter(p => p.id !== productId);
+                productsData = productsData.filter(p => p.id.toString() !== productId.toString());
                 
                 // Supprimer aussi des données locales liées
                 salesData = salesData.filter(sale => sale.product !== productName);
