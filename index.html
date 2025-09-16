@@ -13848,8 +13848,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     <td>${formatCurrency(sale.valeur)}</td>
                     <td>
                         <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                            <button class="btn btn-warning" onclick="editSale(${sale.id})" style="padding: 4px 8px; font-size: 10px;">✏️</button>
-                            <button class="btn btn-danger" onclick="deleteSale(${sale.id})" style="padding: 4px 8px; font-size: 10px;">🗑️</button>
+                            <button class="btn btn-warning" onclick="editSale('${sale.id}')" style="padding: 4px 8px; font-size: 10px;">✏️</button>
+                            <button class="btn btn-danger" onclick="deleteSale('${sale.id}')" style="padding: 4px 8px; font-size: 10px;">🗑️</button>
                         </div>
                     </td>
                 `;
@@ -13888,8 +13888,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     <td>${payment.reference || '-'}</td>
                     <td>
                         <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                            <button class="btn btn-warning" onclick="editPayment(${payment.id})" style="padding: 4px 8px; font-size: 10px;">✏️</button>
-                            <button class="btn btn-danger" onclick="deletePayment(${payment.id})" style="padding: 4px 8px; font-size: 10px;">🗑️</button>
+                            <button class="btn btn-warning" onclick="editPayment('${payment.id}')" style="padding: 4px 8px; font-size: 10px;">✏️</button>
+                            <button class="btn btn-danger" onclick="deletePayment('${payment.id}')" style="padding: 4px 8px; font-size: 10px;">🗑️</button>
                         </div>
                     </td>
                 `;
@@ -14063,7 +14063,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             const brand = document.getElementById('productBrand').value.trim();
             
             const product = {
-                id: editingProductId || Date.now() + Math.random(),
+                id: editingProductId || Date.now().toString(),
                 reference: reference,
                 price: price,
                 format: format,
@@ -14186,8 +14186,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     </div>
                     <div class="product-price">${formatCurrency(product.price || 0)}</div>
                     <div style="margin-top: 10px; display: flex; gap: 6px;">
-                        <button class="btn btn-warning" onclick="showProductModal(${product.id})" style="padding: 6px 10px; font-size: 11px; flex: 1;">✏️</button>
-                        <button class="btn btn-danger" onclick="deleteProduct(${product.id})" style="padding: 6px 10px; font-size: 11px; flex: 1;">🗑️</button>
+                        <button class="btn btn-warning" onclick="showProductModal('${product.id}')" style="padding: 6px 10px; font-size: 11px; flex: 1;">✏️</button>
+                        <button class="btn btn-danger" onclick="deleteProduct('${product.id}')" style="padding: 6px 10px; font-size: 11px; flex: 1;">🗑️</button>
                     </div>
                 `;
                 container.appendChild(productCard);
@@ -14830,7 +14830,7 @@ Date [ESPACES] Client [ESPACES] Montant
             
             try {
                 const newSales = validLines.map(line => ({
-                    id: Date.now() + Math.random(),
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
                     client: client,
                     date: new Date(date).toLocaleDateString('fr-FR'),
                     invoice: invoiceNumber || `FAC-${Date.now()}`,
@@ -15009,7 +15009,7 @@ Date [ESPACES] Client [ESPACES] Montant
             }
             
             const payment = {
-                id: Date.now() + Math.random(),
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
                 client: client,
                 date: new Date(date).toLocaleDateString('fr-FR'),
                 amount: amount,
@@ -16853,8 +16853,8 @@ Date [ESPACES] Client [ESPACES] Montant
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                                     <strong style="color: #667eea;">  Note ${index + 1}</strong>
                                     <div style="display: flex; gap: 5px;">
-                                        <button onclick="editNote(${note.id})" style="background: #28a745; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Modifier cette note">✏️</button>
-                                        <button onclick="deleteNote(${note.id})" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Supprimer cette note">×</button>
+                                        <button onclick="editNote('${note.id}')" style="background: #28a745; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Modifier cette note">✏️</button>
+                                        <button onclick="deleteNote('${note.id}')" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Supprimer cette note">×</button>
                                     </div>
                                 </div>
                                 <div style="margin-bottom: 10px; line-height: 1.5; word-wrap: break-word;">${note.content}</div>
@@ -18547,7 +18547,7 @@ Date [ESPACES] Client [ESPACES] Montant
                     
                     // Recharger les données pour refléter les changements
                     console.log('🔄 Rechargement des données...');
-                    await loadDataFromFirebase();
+                    await reloadFromFirebaseOnly();
                     
                     // Mettre à jour les interfaces
                     if (typeof updateProductsList === 'function') {
@@ -18560,7 +18560,7 @@ Date [ESPACES] Client [ESPACES] Montant
                         updateStocksTables();
                     }
                     
-                    showMessage(`🔄 ${synced} produit(s) synchronisé(s) automatiquement`, 'success');
+                    showAlert(`🔄 ${synced} produit(s) synchronisé(s) automatiquement`, 'success');
                 } else {
                     console.log('✅ Produits et inventaire déjà synchronisés');
                 }
@@ -18570,7 +18570,7 @@ Date [ESPACES] Client [ESPACES] Montant
 
             } catch (error) {
                 console.error('❌ Erreur lors de la synchronisation:', error);
-                showMessage('❌ Erreur de synchronisation: ' + error.message, 'error');
+                showAlert('❌ Erreur de synchronisation: ' + error.message, 'error');
                 return { synced: 0, error: error.message };
             }
         }
@@ -18840,14 +18840,14 @@ Date [ESPACES] Client [ESPACES] Montant
                         updateStocksTables();
                     }
                     
-                    showMessage('✅ Synchronisation réussie ! ' + result.added + ' produits ajoutés au module Commercial', 'success');
+                    showAlert('✅ Synchronisation réussie ! ' + result.added + ' produits ajoutés au module Commercial', 'success');
                 } else {
                     console.log('✅ Synchronisation complète - Aucun produit manquant');
-                    showMessage('✅ Synchronisation complète - Tous les produits sont déjà synchronisés', 'info');
+                    showAlert('✅ Synchronisation complète - Tous les produits sont déjà synchronisés', 'info');
                 }
             } else {
                 console.error('❌ Échec de la synchronisation:', result.error);
-                showMessage('❌ Erreur lors de la synchronisation: ' + result.error, 'error');
+                showAlert('❌ Erreur lors de la synchronisation: ' + result.error, 'error');
             }
         }
 
@@ -19027,14 +19027,14 @@ Date [ESPACES] Client [ESPACES] Montant
         // Fonction pour lancer la synchronisation Inventory → Products
         async function runInventoryToProductsSync() {
             console.log('🚀 Lancement de la synchronisation Inventory → Products...');
-            showMessage('🔄 Synchronisation en cours...', 'info');
+            showAlert('🔄 Synchronisation en cours...', 'info');
             
             try {
                 const result = await syncInventoryToProducts();
                 showSyncResults(result);
             } catch (error) {
                 console.error('❌ Erreur lors du lancement de la synchronisation:', error);
-                showMessage('❌ Erreur: ' + error.message, 'error');
+                showAlert('❌ Erreur: ' + error.message, 'error');
             }
         }
 
