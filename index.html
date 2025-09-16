@@ -3677,6 +3677,83 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             </div>
                         </div>
                         
+                        <!-- Nouvelle section: Outils de Debug et Analyse -->
+                        <div style="background: rgba(255,255,255,0.95); color: #333; padding: 30px; border-radius: 15px; margin: 20px 0; text-align: left;">
+                            <h3 style="color: #667eea; margin-bottom: 20px; text-align: center;">🔧 Outils de Debug et Analyse</h3>
+                            
+                            <!-- Onglets pour organiser les outils -->
+                            <div style="display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee;">
+                                <button onclick="showDebugTab('firebase')" id="tabFirebase" class="debug-tab active" style="flex: 1; padding: 10px; border: none; background: #667eea; color: white; cursor: pointer; border-radius: 5px 5px 0 0; margin-right: 2px;">🔥 Firebase</button>
+                                <button onclick="showDebugTab('stocks')" id="tabStocks" class="debug-tab" style="flex: 1; padding: 10px; border: none; background: #ccc; color: #666; cursor: pointer; border-radius: 5px 5px 0 0; margin-right: 2px;">📦 Stocks</button>
+                                <button onclick="showDebugTab('commercial')" id="tabCommercial" class="debug-tab" style="flex: 1; padding: 10px; border: none; background: #ccc; color: #666; cursor: pointer; border-radius: 5px 5px 0 0; margin-right: 2px;">💼 Commercial</button>
+                                <button onclick="showDebugTab('system')" id="tabSystem" class="debug-tab" style="flex: 1; padding: 10px; border: none; background: #ccc; color: #666; cursor: pointer; border-radius: 5px 5px 0 0;">⚙️ Système</button>
+                            </div>
+                            
+                            <!-- Contenu des onglets -->
+                            <div id="debugFirebase" class="debug-content" style="display: block;">
+                                <h4 style="color: #667eea; margin-bottom: 15px;">🔥 Outils Firebase</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+                                    <button onclick="testFirebaseConnection()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🔍 Test Connexion</button>
+                                    <button onclick="synchronizeProductsAndInventory()" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🔄 Sync Produits</button>
+                                    <button onclick="synchroniserDonneesBidirectionnellement(stockEntriesData, [], 'stockEntries')" style="background: #ffc107; color: #333; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">↔️ Sync Bidirectionnelle</button>
+                                </div>
+                                <div id="firebaseTestResults" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
+                                    Cliquez sur un bouton pour voir les résultats...
+                                </div>
+                            </div>
+                            
+                            <div id="debugStocks" class="debug-content" style="display: none;">
+                                <h4 style="color: #667eea; margin-bottom: 15px;">📦 Outils Stocks</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+                                    <button onclick="testStockTablesDirectly()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🧪 Test Tables</button>
+                                    <button onclick="diagnosticStockIds()" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🔍 Diagnostic IDs</button>
+                                    <button onclick="validateStockImport()" style="background: #ffc107; color: #333; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">✅ Valider Import</button>
+                                    <button onclick="checkStockAvailability()" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">📊 Vérif Disponibilité</button>
+                                    <button onclick="diagnosticProductsInventory()" style="background: #6f42c1; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">📋 Diagnostic Inventaire</button>
+                                </div>
+                                <div id="stocksTestResults" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
+                                    Cliquez sur un bouton pour voir les résultats...
+                                </div>
+                            </div>
+                            
+                            <div id="debugCommercial" class="debug-content" style="display: none;">
+                                <h4 style="color: #667eea; margin-bottom: 15px;">💼 Outils Commercial</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+                                    <button onclick="validatePaymentsImport()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">✅ Valider Encaissements</button>
+                                    <button onclick="testDeleteFunction()" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🗑️ Test Suppression</button>
+                                    <button onclick="analyzeQuestion('top produits cette semaine')" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">📊 Analyse Ventes</button>
+                                </div>
+                                <div id="commercialTestResults" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
+                                    Cliquez sur un bouton pour voir les résultats...
+                                </div>
+                            </div>
+                            
+                            <div id="debugSystem" class="debug-content" style="display: none;">
+                                <h4 style="color: #667eea; margin-bottom: 15px;">⚙️ Outils Système</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+                                    <button onclick="testAllStockGraphics()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">📈 Test Graphiques</button>
+                                    <button onclick="cleanupDeletedMovementsList()" style="background: #ffc107; color: #333; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🧹 Nettoyer Cache</button>
+                                    <button onclick="checkCanvasElements()" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🎨 Check Canvas</button>
+                                    <button onclick="diagnoseMappingIssues()" style="background: #6f42c1; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🗂️ Diagnostic Mapping</button>
+                                </div>
+                                <div id="systemTestResults" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
+                                    Cliquez sur un bouton pour voir les résultats...
+                                </div>
+                            </div>
+                            
+                            <!-- Console de sortie globale -->
+                            <div style="margin-top: 25px;">
+                                <h4 style="color: #667eea; margin-bottom: 10px;">📟 Console de Debug</h4>
+                                <div id="debugConsole" style="background: #212529; color: #28a745; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 11px; max-height: 150px; overflow-y: auto; border: 1px solid #444;">
+                                    > Console de debug initialisée...<br>
+                                    > Tous les outils de debug et analyse sont maintenant disponibles dans le module Admin.<br>
+                                </div>
+                                <div style="margin-top: 10px; text-align: center;">
+                                    <button onclick="clearDebugConsole()" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 11px;">🗑️ Vider Console</button>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <button onclick="lockAdmin()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 10px 20px; border-radius: 20px; cursor: pointer;">🔒 Verrouiller</button>
                     </div>
                 </div>
@@ -7979,12 +8056,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         async function synchroniserDonneesBidirectionnellement(donneesLocales, donneesFirebase, collection) {
             try {
                 console.log(`🔄 Synchronisation bidirectionnelle pour ${collection}:`);
+                logToDebugConsole(`🔄 Sync bidirectionnelle ${collection}...`, 'info');
                 console.log(`📱 Local: ${donneesLocales.length} éléments`);
                 console.log(`🔥 Firebase: ${donneesFirebase.length} éléments`);
+                logToDebugConsole(`📱 Local: ${donneesLocales.length} | 🔥 Firebase: ${donneesFirebase.length}`, 'info');
                 
                 // Récupérer la liste des éléments supprimés
                 const deletedItems = JSON.parse(localStorage.getItem('deletedMovements') || '[]');
                 console.log(`🗑️ Éléments supprimés: ${deletedItems.length}`);
+                logToDebugConsole(`🗑️ Éléments supprimés: ${deletedItems.length}`, 'info');
                 
                 // Créer un Map pour une recherche rapide par ID
                 const localMap = new Map();
@@ -8017,6 +8097,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 console.log(`🆕 Uniques locales: ${uniquesLocal.length}`);
                 console.log(`🆕 Uniques Firebase (non supprimées): ${uniquesFirebase.length}`);
+                logToDebugConsole(`🆕 Uniques: Local ${uniquesLocal.length} | Firebase ${uniquesFirebase.length}`, 'info');
                 
                 // Fusionner toutes les données uniques
                 const donneesComplete = [
@@ -8036,6 +8117,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 });
                 
                 console.log(`✅ Après fusion: ${donneesUniques.length} éléments uniques`);
+                logToDebugConsole(`✅ Fusion: ${donneesUniques.length} éléments uniques`, 'success');
                 
                 // Mettre à jour les données locales
                 if (collection === 'stockEntries') {
@@ -8049,6 +8131,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // Sauvegarder dans Firebase si on a des données locales uniques
                 if (uniquesLocal.length > 0) {
                     console.log(`📤 Envoi de ${uniquesLocal.length} éléments uniques vers Firebase...`);
+                    logToDebugConsole(`📤 Envoi ${uniquesLocal.length} vers Firebase...`, 'info');
                     const batch = db.batch();
                     
                     uniquesLocal.forEach(item => {
@@ -8063,12 +8146,29 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     
                     await batch.commit();
                     console.log(`✅ ${uniquesLocal.length} éléments envoyés vers Firebase`);
+                    logToDebugConsole(`✅ ${uniquesLocal.length} éléments envoyés vers Firebase`, 'success');
                 }
+                
+                // Mettre à jour l'interface des résultats
+                updateDebugResults('firebase', `
+                    <div style="color: #28a745; font-weight: bold;">✅ SYNC BIDIRECTIONNELLE RÉUSSIE</div>
+                    <div>📱 Local: ${donneesLocales.length} éléments</div>
+                    <div>🔥 Firebase: ${donneesFirebase.length} éléments</div>
+                    <div>🗑️ Supprimés: ${deletedItems.length} éléments</div>
+                    <div>🆕 Uniques local: ${uniquesLocal.length}</div>
+                    <div>🆕 Uniques Firebase: ${uniquesFirebase.length}</div>
+                    <div style="color: #28a745; font-weight: bold;">✅ Résultat: ${donneesUniques.length} éléments synchronisés</div>
+                `);
                 
                 return donneesUniques;
                 
             } catch (error) {
                 console.error(`❌ Erreur synchronisation bidirectionnelle ${collection}:`, error);
+                logToDebugConsole(`❌ Erreur sync ${collection}: ${error.message}`, 'error');
+                updateDebugResults('firebase', `
+                    <div style="color: #dc3545; font-weight: bold;">❌ ERREUR SYNCHRONISATION</div>
+                    <div style="color: #666;">${error.message}</div>
+                `);
                 return donneesLocales; // Retourner les données locales en cas d'erreur
             }
         }
@@ -10749,66 +10849,94 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         // 🔥 FONCTION DE TEST FIREBASE
         async function testFirebaseConnection() {
             console.log('🔍 === TEST FIREBASE DÉMARRÉ ===');
+            logToDebugConsole('🔍 Démarrage test Firebase...', 'info');
             
             try {
                 // Test 1: Vérifier que Firebase est chargé
                 console.log('1️⃣ Test de chargement de Firebase...');
+                logToDebugConsole('1️⃣ Test chargement Firebase...', 'info');
                 if (typeof firebase === 'undefined') {
                     throw new Error('❌ La bibliothèque Firebase n\'est pas chargée');
                 }
                 console.log('✅ Firebase disponible, version:', firebase.SDK_VERSION);
+                logToDebugConsole(`✅ Firebase v${firebase.SDK_VERSION} disponible`, 'success');
                 
                 // Test 2: Vérifier la configuration
                 console.log('2️⃣ Test de la configuration...');
+                logToDebugConsole('2️⃣ Vérification configuration...', 'info');
                 console.log('🔧 Configuration Firebase:', JSON.stringify(firebaseConfig, null, 2));
                 
                 // Test 3: État de l'initialisation
                 console.log('3️⃣ État d\'initialisation...');
+                logToDebugConsole('3️⃣ Vérification état initialisation...', 'info');
                 console.log(`🔍 isFirebaseInitialized: ${isFirebaseInitialized}`);
                 console.log(`🔍 db disponible: ${!!db}`);
                 console.log(`🔍 isFirebaseReady(): ${isFirebaseReady()}`);
+                logToDebugConsole(`Firebase initialisé: ${isFirebaseInitialized}, DB: ${!!db}, Ready: ${isFirebaseReady()}`, 'info');
                 
                 // Test 4: Tentative de réinitialisation si nécessaire
                 if (!isFirebaseInitialized || !db) {
                     console.log('4️⃣ Tentative de réinitialisation...');
+                    logToDebugConsole('4️⃣ Réinitialisation Firebase...', 'warning');
                     await initializeFirebase();
                 }
                 
                 // Test 5: Test de connexion basique
                 console.log('5️⃣ Test de connexion basique...');
+                logToDebugConsole('5️⃣ Test connexion basique...', 'info');
                 if (db) {
                     const testDoc = await db.collection('test').limit(1).get();
                     console.log('✅ Connexion Firestore OK, taille:', testDoc.size);
+                    logToDebugConsole(`✅ Connexion OK (${testDoc.size} docs)`, 'success');
                 } else {
                     throw new Error('❌ Base de données indisponible');
                 }
                 
                 // Test 6: Test d'écriture/lecture
                 console.log('6️⃣ Test d\'écriture/lecture...');
+                logToDebugConsole('6️⃣ Test écriture/lecture...', 'info');
                 const testId = `test_${Date.now()}`;
                 await db.collection('test_connection').doc(testId).set({
                     message: 'Test de connexion',
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 console.log('✅ Écriture OK');
+                logToDebugConsole('✅ Écriture test OK', 'success');
                 
                 const readTest = await db.collection('test_connection').doc(testId).get();
                 if (readTest.exists) {
                     console.log('✅ Lecture OK:', readTest.data());
+                    logToDebugConsole('✅ Lecture test OK', 'success');
                     // Nettoyer le test
                     await db.collection('test_connection').doc(testId).delete();
                     console.log('✅ Suppression OK');
+                    logToDebugConsole('✅ Suppression test OK', 'success');
                 } else {
                     throw new Error('❌ Document de test non trouvé');
                 }
                 
                 console.log('🎉 === TEST FIREBASE RÉUSSI ===');
+                logToDebugConsole('🎉 Tous les tests Firebase réussis !', 'success');
+                updateDebugResults('firebase', `
+                    <div style="color: #28a745; font-weight: bold;">✅ TEST FIREBASE RÉUSSI</div>
+                    <div>✅ Firebase SDK v${firebase.SDK_VERSION} chargé</div>
+                    <div>✅ Configuration valide</div>
+                    <div>✅ Connexion Firestore OK</div>
+                    <div>✅ Écriture/Lecture/Suppression OK</div>
+                    <div>✅ Toutes les fonctionnalités Firebase opérationnelles</div>
+                `);
                 showAlert('🎉 Firebase fonctionne parfaitement !', 'success');
                 
             } catch (error) {
                 console.error('❌ === TEST FIREBASE ÉCHOUÉ ===');
                 console.error('❌ Erreur:', error.message);
                 console.error('❌ Stack:', error.stack);
+                logToDebugConsole(`❌ Test Firebase échoué: ${error.message}`, 'error');
+                updateDebugResults('firebase', `
+                    <div style="color: #dc3545; font-weight: bold;">❌ TEST FIREBASE ÉCHOUÉ</div>
+                    <div style="color: #666;">${error.message}</div>
+                    <div style="margin-top: 10px; color: #666; font-size: 10px;">Consultez la console pour plus de détails</div>
+                `);
                 showAlert(`❌ Test Firebase échoué: ${error.message}`, 'error');
             }
         }
@@ -16882,6 +17010,60 @@ Date [ESPACES] Client [ESPACES] Montant
             document.getElementById('adminContent').style.display = 'none';
             document.getElementById('adminPinError').style.display = 'none';
             document.getElementById('adminPinInput').value = '';
+        }
+        
+        // ===== FONCTIONS DE GESTION DES ONGLETS DE DEBUG =====
+        
+        function showDebugTab(tabName) {
+            // Masquer tous les contenus
+            const contents = document.querySelectorAll('.debug-content');
+            contents.forEach(content => content.style.display = 'none');
+            
+            // Désactiver tous les onglets
+            const tabs = document.querySelectorAll('.debug-tab');
+            tabs.forEach(tab => {
+                tab.style.background = '#ccc';
+                tab.style.color = '#666';
+            });
+            
+            // Activer l'onglet sélectionné
+            const activeTab = document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+            if (activeTab) {
+                activeTab.style.background = '#667eea';
+                activeTab.style.color = 'white';
+            }
+            
+            // Afficher le contenu correspondant
+            const activeContent = document.getElementById('debug' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+            if (activeContent) {
+                activeContent.style.display = 'block';
+            }
+        }
+        
+        function logToDebugConsole(message, type = 'info') {
+            const console = document.getElementById('debugConsole');
+            if (!console) return;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#28a745';
+            
+            const newLine = `<span style="color: ${color};">[${timestamp}] ${message}</span><br>`;
+            console.innerHTML += newLine;
+            console.scrollTop = console.scrollHeight;
+        }
+        
+        function clearDebugConsole() {
+            const console = document.getElementById('debugConsole');
+            if (console) {
+                console.innerHTML = '> Console vidée...<br>';
+            }
+        }
+        
+        function updateDebugResults(tabName, content) {
+            const resultsDiv = document.getElementById(tabName + 'TestResults');
+            if (resultsDiv) {
+                resultsDiv.innerHTML = content;
+            }
         }
         
         // Gestion du Enter sur le champ PIN
