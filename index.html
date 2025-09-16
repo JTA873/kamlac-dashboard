@@ -4119,7 +4119,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // NOUVEAU: Forcer la mise à jour de TOUS les tableaux
             setTimeout(() => {
-                console.log('🔄 Forçage de la mise à jour de tous les tableaux stocks...');
+                console.log('🔄 Mise à jour tableaux...');
                 try {
                     updateAllMovementsTable();
                     updateEntriesMovementsTable();
@@ -4289,7 +4289,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         // Fonction pour mettre à jour les données des récapitulatifs stocks
         function updateStockRecapData() {
-            console.log('🔄 Mise à jour des données récapitulatives stocks...');
+            console.log('🔄 MAJ données récap...');
             
             try {
                 // Mettre à jour le tableau d'inventaire
@@ -4317,7 +4317,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         // NOUVELLE FONCTION : Mettre à jour le tableau "Tous Mouvements"
         function updateAllMovementsTable() {
-            console.log('🔄 Mise à jour du tableau "Tous Mouvements"...');
+            console.log('🔄 MAJ tableau mouvements...');
             
             const tableBody = document.getElementById('allMovementsTableBody');
             if (!tableBody) {
@@ -5416,26 +5416,24 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         async function deleteStockEntry(id) {
             if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette entrée ?')) return;
             
-            console.log(`🔍 DÉBUT suppression entrée ID: ${id}`);
-            console.log(`📊 Données avant suppression: ${stockEntriesData.length} entrées`);
+            console.log(`�️ Suppression entrée: ${id}`);
+            
+            // ✅ BLOQUER les listeners Firebase pendant la suppression
+            deletionInProgress = true;
             
             // Logique simplifiée et robuste
             stockEntriesData = stockEntriesData.filter(e => e.id != id);
             saveToLocalStorage();
             
-            console.log(`📊 Données après suppression locale: ${stockEntriesData.length} entrées`);
-            
             // ✅ LOGIQUE FIREBASE SIMPLIFIÉE
             if (isFirebaseReady()) {
                 try {
-                    console.log(`🗑️ Suppression Firebase de l'entrée ID: ${id}`);
-                    
                     // Essayer d'abord la suppression directe avec l'ID
                     await db.collection('stockEntries').doc(id.toString()).delete();
-                    console.log(`✅ Entrée ${id} supprimée de Firebase (suppression directe)`);
+                    console.log(`✅ Entrée supprimée Firebase: ${id}`);
                     
                 } catch (error) {
-                    console.warn(`⚠️ Suppression directe échouée, recherche dans les documents...`);
+                    console.warn(`⚠️ Recherche document Firebase...`);
                     
                     try {
                         // Si la suppression directe échoue, chercher le document
@@ -5446,28 +5444,36 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             const data = doc.data();
                             if (data.id == id || data.id === id.toString()) {
                                 docToDelete = doc;
-                                console.log(`✅ Document Firebase trouvé: ${doc.id} contient l'ID ${id}`);
                             }
                         });
                         
                         if (docToDelete) {
                             await docToDelete.ref.delete();
-                            console.log(`✅ Entrée ${id} supprimée de Firebase (recherche)`);
+                            console.log(`✅ Entrée trouvée et supprimée: ${id}`);
                         } else {
-                            console.warn(`⚠️ Document Firebase avec ID ${id} introuvable`);
+                            console.warn(`⚠️ Document Firebase introuvable: ${id}`);
                         }
                     } catch (searchError) {
-                        console.error(`❌ Erreur suppression Firebase entrée ${id}:`, searchError);
+                        console.error(`❌ Erreur suppression Firebase: ${searchError.message}`);
                     }
                 }
             } else {
-                console.log(`⚠️ Firebase indisponible - entrée ${id} supprimée seulement en local`);
+                console.log(`⚠️ Firebase offline`);
             }
             
+            // ✅ DÉBLOQUER les listeners Firebase après suppression
+            deletionInProgress = false;
+            
+            // Recalculer les niveaux de stock après suppression
+            calculateCurrentStockLevels();
+            
+            // Mettre à jour toutes les interfaces
             updateEntriesMovementsTable();
             updateAllMovementsTable();
+            updateInventoryTable(); // ✅ AJOUT CRUCIAL
             forceUpdateStockKPIs();
-            showAlert('✅ Entrée supprimée', 'warning');
+            
+            showAlert('✅ Entrée supprimée - Inventaire mis à jour', 'success');
         }
         
         function editStockExit(id, source) {
@@ -5514,7 +5520,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             stockExitsData = stockExitsData.filter(e => e.id != id && e.id !== id.toString());
             const finalLength = stockExitsData.length;
             
-            console.log(`📊 Suppression locale: ${initialLength} → ${finalLength} sorties (${initialLength - finalLength} supprimée(s))`);
+            console.log(`📊 Suppression locale: ${initialLength - finalLength} sorties`);
             
             if (initialLength === finalLength) {
                 console.error(`❌ AUCUNE SUPPRESSION LOCALE ! ID ${id} non trouvé`);
@@ -5584,7 +5590,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     showAlert(`⚠️ Erreur Firebase: ${error.message}`, 'warning');
                 }
             } else {
-                console.log(`⚠️ Firebase indisponible - sortie ${id} supprimée seulement en local`);
+                console.log(`⚠️ Firebase offline - sortie ${id} local`);
             }
             
             // Mise à jour de l'interface
@@ -6221,7 +6227,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         // NOUVELLE FONCTION : Mettre à jour le tableau des entrées seulement
         function updateEntriesMovementsTable() {
-            console.log('📥 Mise à jour du tableau des entrées...');
+            console.log('📥 MAJ entrées...');
             
             const tableBody = document.getElementById('entriesMovementsTableBody');
             if (!tableBody) {
@@ -6288,7 +6294,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         // NOUVELLE FONCTION : Mettre à jour le tableau des sorties seulement
         function updateExitsMovementsTable() {
-            console.log('📤 Mise à jour du tableau des sorties...');
+            console.log('📤 MAJ sorties...');
             
             const tableBody = document.getElementById('exitsMovementsTableBody');
             if (!tableBody) {
@@ -6598,7 +6604,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         // Fonction pour mettre à jour les statistiques stocks
         function updateStockStatistics() {
-            console.log('📊 Mise à jour des statistiques stocks...');
+            console.log('📊 MAJ stats...');
             
             try {
                 const stats = calculateStockStatistics();
@@ -6634,7 +6640,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         // Fonction pour mettre à jour les alertes stocks
         function updateStockAlerts() {
-            console.log('⚠️ Mise à jour des alertes stocks...');
+            console.log('⚠️ MAJ alertes...');
             
             try {
                 // Mettre à jour le tableau des alertes
@@ -6793,7 +6799,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         // ========================================
         
         function updateStockDashboard() {
-            console.log('🔄 Mise à jour dashboard stocks simplifié...');
+            console.log('🔄 MAJ dashboard...');
             calculateCurrentStockLevels();
             
             // Mettre à jour les cartes KPI
@@ -6850,7 +6856,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 row.style.cursor = 'pointer';
                 row.setAttribute('data-product', product);
                 row.addEventListener('click', () => {
-                    console.log(`🖱️ Clic détecté sur le produit: ${product}`);
+                    // console.log(`🖱️ Clic détecté sur le produit: ${product}`);
                     navigateToProductMovements(product);
                 });
                 row.innerHTML = `
@@ -7295,7 +7301,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         row.style.cursor = 'pointer';
                         row.setAttribute('data-product', stock.product);
                         row.addEventListener('click', () => {
-                            console.log(`🖱️ Clic détecté sur le produit (tableau positif): ${stock.product}`);
+                            // console.log(`🖱️ Clic détecté sur le produit (tableau positif): ${stock.product}`);
                             navigateToProductMovements(stock.product);
                         });
                         row.innerHTML = `
@@ -7320,7 +7326,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         row.style.cursor = 'pointer';
                         row.setAttribute('data-product', stock.product);
                         row.addEventListener('click', () => {
-                            console.log(`🖱️ Clic détecté sur le produit (tableau négatif): ${stock.product}`);
+                            // console.log(`🖱️ Clic détecté sur le produit (tableau négatif): ${stock.product}`);
                             navigateToProductMovements(stock.product);
                         });
                         row.innerHTML = `
@@ -8050,7 +8056,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
             
             lastLoadStockTime = now;
-            console.log('🔄 loadStockData() AUTORISÉE - SYNCHRONISATION BIDIRECTIONNELLE');
+            console.log('🔄 Sync bidirectionnelle...');
             
             // Nettoyer périodiquement la liste des éléments supprimés
             cleanupDeletedMovementsList();
@@ -8077,7 +8083,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Si Firebase est initialisé, synchroniser BIDIRECTIONNELLEMENT avec les données du cloud
             if (isFirebaseInitialized && db) {
                 try {
-                    console.log('🔄 Synchronisation BIDIRECTIONNELLE des données de stock avec Firebase...');
+                    console.log('🔄 Sync Firebase stocks...');
                     
                     // Charger les entrées de stock depuis Firebase
                     const entriesSnapshot = await db.collection('stockEntries').get();
@@ -8138,7 +8144,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         }
                     }
                     
-                    console.log('✅ Synchronisation bidirectionnelle des données de stock terminée');
+                    console.log('✅ Sync stocks OK');
                     console.log(`📊 Résultat final: ${stockEntriesData.length} entrées, ${stockExitsData.length} sorties`);
                     
                 } catch (error) {
@@ -8215,7 +8221,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             currentStockLevels = {};
             
             // ÉTAPE 1: D'abord, calculer les sorties basées sur les VENTES du module commercial
-            console.log('Calcul des stocks basé sur les ventes existantes...');
+            console.log('📊 Calcul stocks...');
             salesData.forEach(sale => {
                 const product = sale.product;
                 const quantity = parseFloat(sale.quantity) || 0;
@@ -8286,11 +8292,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 // Logger les produits en stock négatif (normal au début)
                 if (level.quantity < 0) {
-                    console.log(`⚠️ Stock négatif détecté pour ${product}: ${level.quantity} ${level.unit} (vendus: ${level.salesQuantity})`);
+                    console.log(`⚠️ Stock négatif: ${product} (${level.quantity})`);
                 }
             });
             
-            console.log('Niveaux de stock calculés:', currentStockLevels);
+            console.log(`✅ Stock calculé: ${Object.keys(currentStockLevels).length} produits`);
         }
         
         function setStockDefaultDates() {
@@ -8486,7 +8492,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     console.error(`❌ Erreur sauvegarde Firebase:`, error);
                 }
             } else {
-                console.log(`⚠️ Firebase indisponible - ${entriesToSave.length} entrées sauvegardées seulement en local`);
+                console.log(`⚠️ Firebase offline - ${entriesToSave.length} entrées local`);
             }
             
             // Mettre à jour les listes
@@ -8837,7 +8843,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     console.error(`❌ Erreur sauvegarde Firebase:`, error);
                 }
             } else {
-                console.log(`⚠️ Firebase indisponible - ${exitsToSave.length} sorties sauvegardées seulement en local`);
+                console.log(`⚠️ Firebase offline - ${exitsToSave.length} sorties local`);
             }
             
             // Recalculer les niveaux de stock
@@ -10627,7 +10633,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             productsData = JSON.parse(localStorage.getItem('kamlacProductsData') || '[]');
             aiNotes = JSON.parse(localStorage.getItem('kamlacAiNotes') || '[]');
             noteCategories = JSON.parse(localStorage.getItem('kamlacNoteCategories') || '[]');
-            stockEntries = JSON.parse(localStorage.getItem('kamlacStockEntries') || '[]');
+            stockEntries = JSON.parse(localStorage.getItem('stockEntries') || '[]');
             stockExits = JSON.parse(localStorage.getItem('kamlacStockExits') || '[]');
         }
 
@@ -11309,9 +11315,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         function setupStockRealtimeSync() {
             if (!isFirebaseInitialized) return;
             
-            console.log('  Configuration de la synchronisation temps réel des stocks...');
-            
-            console.log('🔄 Configuration de la synchronisation temps réel des stocks...');
+            console.log('🔄 Sync temps réel stocks...');
             
             // Écouter les changements sur les entrées de stock
             db.collection('stockEntries').onSnapshot((snapshot) => {
@@ -11336,20 +11340,20 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     if (change.type === 'added' && !existingEntryIds.has(data.id)) {
                         stockEntriesData.push(data);
                         hasChanges = true;
-                        console.log('📦 Nouvelle entrée de stock détectée:', data.product);
+                        console.log('📦 +Entrée:', data.product);
                     }
                     if (change.type === 'modified') {
                         const index = stockEntriesData.findIndex(e => e.id === data.id);
                         if (index !== -1) {
                             stockEntriesData[index] = data;
                             hasChanges = true;
-                            console.log('✏️ Entrée de stock modifiée:', data.product);
+                            console.log('✏️ ~Entrée:', data.product);
                         }
                     }
                     if (change.type === 'removed') {
                         stockEntriesData = stockEntriesData.filter(e => e.id !== data.id);
                         hasChanges = true;
-                        console.log('🗑️ Entrée de stock supprimée:', data.product);
+                        console.log('🗑️ -Entrée:', data.product);
                     }
                 });
                 
@@ -11368,8 +11372,13 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                         updateEntriesMovementsTable();
                     }
                     
+                    // ✅ AJOUT CRUCIAL : Mise à jour de l'inventaire
+                    if (typeof updateInventoryTable === 'function') {
+                        updateInventoryTable();
+                    }
+                    
                     // Message supprimé pour éviter le spam - showAlert('📦 Données de stock mises à jour en temps réel', 'info');
-                    console.log('📦 Données de stock mises à jour en temps réel');
+                    console.log('📦 Stock sync OK');
                 }
                 updateCloudStatus('online', '☁️ Sync');
             });
@@ -11390,20 +11399,20 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     if (change.type === 'added' && !existingExitIds.has(data.id)) {
                         stockExitsData.push(data);
                         hasChanges = true;
-                        console.log('📤 Nouvelle sortie de stock détectée:', data.product);
+                        console.log('📤 +Sortie:', data.product);
                     }
                     if (change.type === 'modified') {
                         const index = stockExitsData.findIndex(e => e.id === data.id);
                         if (index !== -1) {
                             stockExitsData[index] = data;
                             hasChanges = true;
-                            console.log('✏️ Sortie de stock modifiée:', data.product);
+                            console.log('✏️ ~Sortie:', data.product);
                         }
                     }
                     if (change.type === 'removed') {
                         stockExitsData = stockExitsData.filter(e => e.id !== data.id);
                         hasChanges = true;
-                        console.log('🗑️ Sortie de stock supprimée:', data.product);
+                        console.log('🗑️ -Sortie:', data.product);
                     }
                 });
                 
@@ -11420,6 +11429,11 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     }
                     if (typeof updateExitsMovementsTable === 'function') {
                         updateExitsMovementsTable();
+                    }
+                    
+                    // ✅ AJOUT CRUCIAL : Mise à jour de l'inventaire
+                    if (typeof updateInventoryTable === 'function') {
+                        updateInventoryTable();
                     }
                     
                     console.log('📤 Données de sorties de stock mises à jour en temps réel');
