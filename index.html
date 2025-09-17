@@ -8870,6 +8870,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 );
                 
                 if (!existingProduct) {
+                    console.log('🔍 Produit recherché:', productName);
+                    console.log('📋 Produits disponibles:', productsData.map(p => p.reference).filter(Boolean));
+                    
                     // Le produit n'existe pas - informer l'utilisateur et arrêter
                     showAlert(`⚠️ Le produit "${productName}" n'existe pas dans le module Produits.\n\nVeuillez d'abord le créer via l'onglet "⚙️ Produits" avant de faire des entrées de stock.`, 'warning');
                     return; // Arrêter la sauvegarde
@@ -9234,12 +9237,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             for (const line of validLines) {
                 const productName = line.product.trim();
                 
-                // Vérifier si le produit existe dans le module Produits
+                // Vérifier si le produit existe dans le module Produits (recherche simple)
                 const existingProduct = productsData.find(p => 
                     p.reference && p.reference.trim().toLowerCase() === productName.toLowerCase()
                 );
                 
                 if (!existingProduct) {
+                    console.log('🔍 Produit recherché pour sortie:', productName);
+                    console.log('📋 Produits disponibles:', productsData.map(p => p.reference).filter(Boolean));
                     missingProducts.push(productName);
                     continue; // Passer au produit suivant
                 }
@@ -12475,9 +12480,10 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             // SEULE source de vérité : productsData
             productsList = productsData.map(product => ({
                 id: product.id,
-                name: product.reference || 'Sans référence',
+                name: product.reference, // Le nom affiché est la référence
+                reference: product.reference,
                 price: product.price || 0,
-                displayText: `${product.reference || 'Sans ref'} - ${formatCurrency(product.price || 0)}`
+                displayText: `${product.reference} - ${formatCurrency(product.price || 0)}`
             })).sort((a, b) => a.name.localeCompare(b.name));
             
             console.log(`✅ Liste produits mise à jour: ${productsList.length} produits disponibles`);
@@ -12791,7 +12797,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         function selectProductFromDropdown(input, product, dropdown) {
-            input.value = product.displayText;
+            input.value = product.reference; // Utiliser le nom réel du produit, pas le displayText
             dropdown.style.display = 'none';
             
             // Identifier le type de ligne (vente, entrée, ou sortie)
@@ -12804,7 +12810,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     const line = salesLines.find(l => l.id == lineId);
                     if (line) {
                         line.productId = product.id;
-                        line.product = product.name;
+                        line.product = product.reference; // Utiliser toujours reference
                         if (!line.priceManuallyEdited) {
                             line.unitPrice = product.price;
                         }
@@ -12818,7 +12824,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     const line = entryLines.find(l => l.id == lineId);
                     if (line) {
                         line.productId = product.id;
-                        line.product = product.name;
+                        line.product = product.reference; // Utiliser toujours reference
                         line.totalCost = line.quantity * line.unitCost;
                         renderEntryLines();
                         updateEntryTotals();
@@ -12829,7 +12835,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     const line = exitLines.find(l => l.id == lineId);
                     if (line) {
                         line.productId = product.id;
-                        line.product = product.name;
+                        line.product = product.reference; // Utiliser toujours reference
                         line.totalCost = line.quantity * line.unitCost;
                         renderExitLines();
                         updateExitTotals();
@@ -15288,7 +15294,7 @@ Date [ESPACES] Client [ESPACES] Montant
                         <div class="form-group">
                             <label>Produit *</label>
                             <div class="input-container">
-                                <input type="text" id="productLine${line.id}" data-line-id="${line.id}" placeholder="Rechercher un produit..." value="${line.product ? productsList.find(p => p.id == line.productId)?.displayText || line.product : ''}" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)" required>
+                                <input type="text" id="productLine${line.id}" data-line-id="${line.id}" placeholder="Rechercher un produit..." value="${line.product || ''}" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)" required>
                                 <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'productLine${line.id}', 'products')">▼</span>
                                 <div class="custom-dropdown" id="productLine${line.id}Dropdown"></div>
                             </div>
@@ -15393,7 +15399,7 @@ Date [ESPACES] Client [ESPACES] Montant
                         <div class="form-group">
                             <label>Produit *</label>
                             <div class="input-container">
-                                <input type="text" id="entryProductLine${line.id}" data-line-id="${line.id}" placeholder="Nom du produit..." value="${line.product}" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this); updateEntryLine(${line.id}, 'product', this.value)" onkeydown="handleDropdownKeydown(event, this)" required>
+                                <input type="text" id="entryProductLine${line.id}" data-line-id="${line.id}" placeholder="Nom du produit..." value="${line.product || ''}" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this); updateEntryLine(${line.id}, 'product', this.value)" onkeydown="handleDropdownKeydown(event, this)" required>
                                 <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'entryProductLine${line.id}', 'products')">▼</span>
                                 <div class="custom-dropdown" id="entryProductLine${line.id}Dropdown"></div>
                             </div>
@@ -15464,12 +15470,16 @@ Date [ESPACES] Client [ESPACES] Montant
 
         function updateEntryTotals() {
             const totalLines = entryLines.length;
-            const totalValue = entryLines.reduce((sum, line) => sum + line.totalCost, 0);
-            const totalQuantity = entryLines.reduce((sum, line) => sum + line.quantity, 0);
+            const totalValue = entryLines.reduce((sum, line) => sum + (line.totalCost || 0), 0);
+            const totalQuantity = entryLines.reduce((sum, line) => sum + (line.quantity || 0), 0);
             
-            document.getElementById('totalEntryLines').textContent = totalLines;
-            document.getElementById('totalEntryQuantity').textContent = totalQuantity.toLocaleString();
-            document.getElementById('totalEntryAmount').textContent = formatCurrency(totalValue);
+            const totalLinesElement = document.getElementById('totalEntryLines');
+            const totalQuantityElement = document.getElementById('totalEntryQuantity');
+            const totalAmountElement = document.getElementById('totalEntryAmount');
+            
+            if (totalLinesElement) totalLinesElement.textContent = totalLines;
+            if (totalQuantityElement) totalQuantityElement.textContent = totalQuantity.toLocaleString();
+            if (totalAmountElement) totalAmountElement.textContent = formatCurrency(totalValue);
         }
 
         // Gestion des lignes de sorties de stock
