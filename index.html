@@ -1081,16 +1081,72 @@
         }
         
         .product-card {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 10px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
             border: 1px solid #e9ecef;
             transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            position: relative;
+            overflow: hidden;
         }
         
         .product-card:hover {
             border-color: #667eea;
-            background: #f0f4ff;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .enhanced-product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        /* Styles pour les boutons de l'interface produits */
+        .btn-outline-secondary {
+            background: white;
+            color: #6c757d;
+            border: 2px solid #6c757d;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline-secondary:hover {
+            background: #6c757d;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+        
+        .btn-outline-warning {
+            background: white;
+            color: #fd7e14;
+            border: 2px solid #fd7e14;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline-warning:hover {
+            background: #fd7e14;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(253, 126, 20, 0.3);
+        }
+        
+        /* Animation pour les cartes produits */
+        .product-card {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .product-name {
@@ -1252,9 +1308,11 @@
             border-radius: 0 0 8px 8px;
             max-height: 200px;
             overflow-y: auto;
-            z-index: 100;
+            z-index: 1000;
             display: none;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            /* Empêcher le dropdown d'interférer avec les événements de la souris */
+            pointer-events: auto;
         }
 
         .custom-dropdown-option {
@@ -1262,15 +1320,22 @@
             cursor: pointer;
             transition: background 0.2s;
             border-bottom: 1px solid #f8f9fa;
+            user-select: none;
+            /* S'assurer que les options sont cliquables */
+            pointer-events: auto;
         }
 
         .custom-dropdown-option:hover {
-            background: #f8f9fa;
+            background: #f8f9fa !important;
         }
 
         .custom-dropdown-option.selected {
-            background: #667eea;
+            background: #667eea !important;
             color: white;
+        }
+
+        .custom-dropdown-option:last-child {
+            border-bottom: none;
         }
 
         /* Styles pour le chat IA */
@@ -2738,30 +2803,47 @@
                 <!-- Section Produits -->
                 <div id="settings-products" class="settings-section active">
                     <div class="invoice-section">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                            <div>
-                                <h3 style="color: #667eea;">📦 Gestion des Produits</h3>
-                                <p style="color: #666; margin-top: 5px; font-size: clamp(0.8rem, 2vw, 0.9rem);">Gérez votre catalogue de produits</p>
-                            </div>
-                            <button class="btn btn-primary" onclick="showProductModal()" style="padding: 16px 24px; font-size: 16px; font-weight: 700;">➕ Ajouter Produit</button>
-                        </div>
-
-                        <div class="stats-row">
-                            <div class="stat-item">
-                                <div class="stat-value" id="productsCount">0</div>
-                                <div class="stat-label">Produits</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="avgProductPrice">0 CFA</div>
-                                <div class="stat-label">Prix Moyen</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="brandsCount">0</div>
-                                <div class="stat-label">Marques</div>
+                        <!-- En-tête amélioré -->
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                                <div>
+                                    <h3 style="color: white; margin: 0; font-size: 1.5rem;">📦 Gestion des Produits</h3>
+                                    <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 0.95rem;">Source unique - Synchronisation automatique avec inventaire et listes déroulantes</p>
+                                </div>
+                                <button class="btn" onclick="showProductModal()" style="background: white; color: #667eea; padding: 14px 24px; font-size: 16px; font-weight: 700; border-radius: 25px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.3s ease;">
+                                    ➕ Nouveau Produit
+                                </button>
                             </div>
                         </div>
 
-                        <div id="productsGrid" class="product-grid">
+                        <!-- Statistiques améliorées -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; text-align: center;">
+                                <div style="font-size: 2rem; font-weight: 700; margin-bottom: 5px;" id="productsCount">0</div>
+                                <div style="font-size: 0.9rem; opacity: 0.9;">Produits Total</div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%); padding: 20px; border-radius: 12px; color: white; text-align: center;">
+                                <div style="font-size: 2rem; font-weight: 700; margin-bottom: 5px;" id="brandsCount">0</div>
+                                <div style="font-size: 0.9rem; opacity: 0.9;">Marques</div>
+                            </div>
+                        </div>
+
+                        <!-- Barre d'outils -->
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" id="productSearch" placeholder="🔍 Rechercher un produit..." style="padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; width: 250px; font-size: 14px;" onkeyup="filterProducts()">
+                                <select id="brandFilter" style="padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; font-size: 14px;" onchange="filterProducts()">
+                                    <option value="">Toutes les marques</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-outline-secondary" onclick="sortProducts('reference')" style="padding: 8px 16px; border-radius: 20px;">📝 Nom</button>
+                                <button class="btn btn-outline-secondary" onclick="sortProducts('price')" style="padding: 8px 16px; border-radius: 20px;">💰 Prix</button>
+                            </div>
+                        </div>
+
+                        <!-- Grille de produits améliorée -->
+                        <div id="productsGrid" class="enhanced-product-grid">
                             <!-- Les produits seront affichés ici -->
                         </div>
                     </div>
@@ -3796,33 +3878,79 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
     
     <!-- Modal Produit -->
     <div id="productModal" class="product-modal">
-        <div class="product-modal-content">
-            <h3 style="margin-bottom: 15px;">📦 Ajouter/Modifier Produit</h3>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="productReference">Référence Produit</label>
-                    <input type="text" id="productReference" placeholder="Référence du produit">
-                </div>
-                <div class="form-group">
-                    <label for="productPrice">Prix de Vente (CFA)</label>
-                    <input type="number" id="productPrice" min="0" placeholder="0">
-                </div>
-                <div class="form-group">
-                    <label for="productFormat">Format</label>
-                    <input type="text" id="productFormat" placeholder="Format du produit">
-                </div>
-                <div class="form-group">
-                    <label for="productMargin">Marge</label>
-                    <input type="text" id="productMargin" placeholder="Marge">
-                </div>
-                <div class="form-group">
-                    <label for="productBrand">Marque</label>
-                    <input type="text" id="productBrand" placeholder="Marque">
+        <div class="product-modal-content" style="max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
+                <h2 style="margin: 0; color: #667eea;">📦 Fiche Produit</h2>
+                <button onclick="closeProductModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+            </div>
+            
+            <!-- Informations Produit -->
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">🏷️ Informations Produit</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Nom/Référence du Produit *</label>
+                        <input type="text" id="productReference" 
+                               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;"
+                               placeholder="Nom du produit">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Prix de Vente (CFA)</label>
+                        <input type="number" id="productPrice" min="0"
+                               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;"
+                               placeholder="0">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Format/Conditionnement</label>
+                        <input type="text" id="productFormat" 
+                               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;"
+                               placeholder="Format du produit">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Marque</label>
+                        <input type="text" id="productBrand" 
+                               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;"
+                               placeholder="Marque">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Marge/Commentaire</label>
+                        <input type="text" id="productMargin" 
+                               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;"
+                               placeholder="Marge ou commentaire">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Catégorie</label>
+                        <select id="productCategory" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+                            <option value="">Sélectionner une catégorie</option>
+                            <option value="Café">☕ Café</option>
+                            <option value="Lait">🥛 Lait en poudre</option>
+                            <option value="Boissons">🥤 Boissons</option>
+                            <option value="Autre">📦 Autre</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-            <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="saveProduct()" style="flex: 1;">💾 Sauvegarder</button>
-                <button class="btn btn-secondary" onclick="closeProductModal()" style="flex: 1;">❌ Annuler</button>
+            
+            <!-- Statistiques (si édition) -->
+            <div id="productStats" style="display: none; background: #e8f5e8; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: #28a745; margin-bottom: 10px;">📊 Statistiques Produit</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 14px;">
+                    <div><strong>Stock actuel:</strong> <span id="currentStock">-</span></div>
+                    <div><strong>Total vendu:</strong> <span id="totalSold">-</span></div>
+                    <div><strong>CA généré:</strong> <span id="totalRevenue">-</span></div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-top: 25px;">
+                <button onclick="saveProduct()" 
+                        style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; padding: 14px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; flex: 1; min-width: 150px;">
+                    💾 Enregistrer
+                </button>
+                <button onclick="closeProductModal()" 
+                        style="background: #6c757d; color: white; border: none; padding: 14px 25px; border-radius: 8px; cursor: pointer; font-size: 16px; flex: 1; min-width: 120px;">
+                    ❌ Annuler
+                </button>
             </div>
         </div>
     </div>
@@ -6139,52 +6267,55 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 <!-- Informations Produit -->
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                    <h3 style="color: #667eea; margin-bottom: 15px;">🏷️ Informations Produit</h3>
+                    <h3 style="color: #667eea; margin-bottom: 15px;">🏷️ Informations Produit (Lecture seule)</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div>
-                            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Nom du Produit *</label>
-                            <input type="text" id="editProductName" value="${productName}" 
-                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Nom du Produit</label>
+                            <div style="width: 100%; padding: 8px; border: 1px solid #e9ecef; border-radius: 5px; background: #f8f9fa; color: #495057;">
+                                ${productName}
+                            </div>
                         </div>
                         <div>
                             <label style="display: block; font-weight: bold; margin-bottom: 5px;">Référence</label>
-                            <input type="text" id="editProductRef" value="${productData.reference || productName}" 
-                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <div style="width: 100%; padding: 8px; border: 1px solid #e9ecef; border-radius: 5px; background: #f8f9fa; color: #495057;">
+                                ${productData.reference || productName}
+                            </div>
                         </div>
                         <div>
                             <label style="display: block; font-weight: bold; margin-bottom: 5px;">Prix de Vente (CFA)</label>
-                            <input type="number" id="editProductPrice" value="${productData.price || 0}" min="0"
-                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <div style="width: 100%; padding: 8px; border: 1px solid #e9ecef; border-radius: 5px; background: #f8f9fa; color: #495057;">
+                                ${productData.price ? productData.price.toLocaleString() + ' CFA' : 'Non défini'}
+                            </div>
                         </div>
                         <div>
                             <label style="display: block; font-weight: bold; margin-bottom: 5px;">Prix d'Achat Moyen (CFA)</label>
-                            <input type="number" id="editProductCost" value="${Math.round(avgPurchasePrice)}" min="0"
-                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <div style="width: 100%; padding: 8px; border: 1px solid #e9ecef; border-radius: 5px; background: #f8f9fa; color: #495057;">
+                                ${Math.round(avgPurchasePrice).toLocaleString()} CFA
+                            </div>
                         </div>
                         <div>
                             <label style="display: block; font-weight: bold; margin-bottom: 5px;">Format/Conditionnement</label>
-                            <input type="text" id="editProductFormat" value="${productData.format || inventoryItem.category || ''}" 
-                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <div style="width: 100%; padding: 8px; border: 1px solid #e9ecef; border-radius: 5px; background: #f8f9fa; color: #495057;">
+                                ${productData.format || inventoryItem.category || 'Non défini'}
+                            </div>
                         </div>
                         <div>
                             <label style="display: block; font-weight: bold; margin-bottom: 5px;">Marque</label>
-                            <input type="text" id="editProductBrand" value="${productData.brand || ''}" 
-                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <div style="width: 100%; padding: 8px; border: 1px solid #e9ecef; border-radius: 5px; background: #f8f9fa; color: #495057;">
+                                ${productData.brand || 'Non définie'}
+                            </div>
                         </div>
                         <div>
                             <label style="display: block; font-weight: bold; margin-bottom: 5px;">Unité</label>
-                            <select id="editProductUnit" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
-                                <option value="Cartons" ${stockInfo.unit === 'Cartons' ? 'selected' : ''}>Cartons</option>
-                                <option value="Pièces" ${stockInfo.unit === 'Pièces' ? 'selected' : ''}>Pièces</option>
-                                <option value="Kg" ${stockInfo.unit === 'Kg' ? 'selected' : ''}>Kg</option>
-                                <option value="Litres" ${stockInfo.unit === 'Litres' ? 'selected' : ''}>Litres</option>
-                                <option value="Mètres" ${stockInfo.unit === 'Mètres' ? 'selected' : ''}>Mètres</option>
-                            </select>
+                            <div style="width: 100%; padding: 8px; border: 1px solid #e9ecef; border-radius: 5px; background: #f8f9fa; color: #495057;">
+                                ${stockInfo.unit || 'Cartons'}
+                            </div>
                         </div>
                         <div>
                             <label style="display: block; font-weight: bold; margin-bottom: 5px;">Seuil d'Alerte</label>
-                            <input type="number" id="editProductMinLevel" value="${stockInfo.minLevel || 5}" min="0"
-                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <div style="width: 100%; padding: 8px; border: 1px solid #e9ecef; border-radius: 5px; background: #f8f9fa; color: #495057;">
+                                ${stockInfo.minLevel || 5}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -6231,17 +6362,17 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 <!-- Actions -->
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
-                    <button onclick="saveProductSheet('${productName}')" 
-                            style="background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">
-                        💾 Enregistrer Modifications
-                    </button>
                     <button onclick="showProductMovements('${productName.replace(/'/g, "\\'")}', this.closest('.modal-overlay'))" 
                             style="background: #17a2b8; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer;">
-                        📊 Voir Mouvements
+                        � Voir Mouvements
                     </button>
                     <button onclick="exportProductData('${productName.replace(/'/g, "\\'")}', this.closest('.modal-overlay'))" 
                             style="background: #667eea; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer;">
-                        📄 Exporter Données
+                        � Exporter Données
+                    </button>
+                    <button onclick="navigateToProductEdit('${productName.replace(/'/g, "\\'")}'); this.closest('.modal-overlay').remove();" 
+                            style="background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer;">
+                        ✏️ Modifier (Onglet Produits)
                     </button>
                     <button onclick="this.closest('.modal-overlay').remove()" 
                             style="background: #6c757d; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer;">
@@ -6252,6 +6383,24 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             modal.appendChild(modalContent);
             document.body.appendChild(modal);
+        }
+        
+        // Fonction pour naviguer vers l'onglet Produits et modifier un produit
+        function navigateToProductEdit(productName) {
+            // Naviguer vers l'onglet Produits
+            showSection('settings');
+            showSettingsSection('products');
+            
+            // Trouver le produit dans productsData
+            const product = productsData.find(p => p.reference === productName);
+            if (product) {
+                // Ouvrir le modal d'édition après un petit délai
+                setTimeout(() => {
+                    showProductModal(product.id);
+                }, 300);
+            } else {
+                showAlert('Produit non trouvé dans la liste des produits', 'warning');
+            }
         }
         
         // Fonction pour sauvegarder les modifications de la fiche produit
@@ -6271,56 +6420,41 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
             
             try {
-                // 1. Mettre à jour productsData (module commercial)
+                // 1. Vérifier si le produit existe dans productsData (MODULE PRODUITS = SOURCE UNIQUE)
                 let productIndex = productsData.findIndex(p => p.reference === originalProductName);
+                
                 if (productIndex === -1) {
-                    // Créer nouveau produit
-                    productsData.push({
-                        id: Date.now() + Math.random(),
-                        reference: newName,
-                        price: price,
-                        format: format,
-                        margin: cost > 0 ? `${Math.round(((price - cost) / cost) * 100)}%` : '',
-                        brand: brand,
-                        addedBy: 'Fiche éditable',
-                        addedAt: new Date().toISOString()
-                    });
+                    // Le produit n'existe pas dans le module Produits
+                    showAlert(`⚠️ Ce produit n'existe pas dans le module Produits. Veuillez d'abord le créer via l'onglet "⚙️ Produits" avant de modifier ses informations.`, 'warning');
+                    return;
                 } else {
-                    // Mettre à jour produit existant
+                    // Mettre à jour UNIQUEMENT le produit existant (pas de création)
                     productsData[productIndex] = {
                         ...productsData[productIndex],
                         reference: newName,
                         price: price,
                         format: format,
                         margin: cost > 0 ? `${Math.round(((price - cost) / cost) * 100)}%` : productsData[productIndex].margin,
-                        brand: brand
+                        brand: brand,
+                        updatedAt: new Date().toISOString(),
+                        updatedBy: 'Fiche Stock'
                     };
                 }
                 
-                // 2. Mettre à jour inventoryData (module stocks)
+                // 2. Mettre à jour UNIQUEMENT l'inventaire correspondant
                 let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
                 let inventoryIndex = inventoryData.findIndex(item => item.product === originalProductName);
-                if (inventoryIndex === -1) {
-                    // Créer nouveau dans inventaire
-                    inventoryData.push({
-                        id: `edit_${Date.now()}`,
-                        product: newName,
-                        quantity: 0,
-                        unit: unit,
-                        minLevel: minLevel,
-                        category: format,
-                        supplier: 'Voir fournisseurs',
-                        addedBy: 'Fiche éditable',
-                        addedAt: new Date().toISOString()
-                    });
-                } else {
+                
+                if (inventoryIndex !== -1) {
                     // Mettre à jour inventaire existant
                     inventoryData[inventoryIndex] = {
                         ...inventoryData[inventoryIndex],
                         product: newName,
                         unit: unit,
                         minLevel: minLevel,
-                        category: format
+                        category: format,
+                        updatedAt: new Date().toISOString(),
+                        updatedBy: 'Fiche Stock'
                     };
                 }
                 localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
@@ -6338,26 +6472,27 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     currentStockLevels[originalProductName].minLevel = minLevel;
                 }
                 
-                // 4. Mettre à jour les fournisseurs
-                const supplierInputs = document.querySelectorAll('[id^="supplier_"]');
-                const updatedSuppliers = Array.from(supplierInputs).map(input => input.value.trim()).filter(s => s);
-                
-                // TODO: Sauvegarder les fournisseurs dans les entrées de stock
+                // 4. Mettre à jour le nom dans l'inventaire si changé
+                if (originalProductName !== newName) {
+                    updateInventoryProductName(originalProductName, newName);
+                }
                 
                 // 5. Sauvegarder en local et Firebase
                 saveToLocalStorage();
                 
                 if (isFirebaseInitialized && db) {
                     // Sauvegarder produit dans Firebase
-                    const productToSave = productsData[productIndex] || productsData[productsData.length - 1];
+                    const productToSave = productsData[productIndex];
                     await db.collection('products').doc(productToSave.id.toString()).set({
                         ...productToSave,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     
                     // Sauvegarder inventaire dans Firebase
-                    const inventoryToSave = inventoryData[inventoryIndex] || inventoryData[inventoryData.length - 1];
-                    await db.collection('inventory').doc(inventoryToSave.id).set(inventoryToSave);
+                    if (inventoryIndex !== -1) {
+                        const inventoryToSave = inventoryData[inventoryIndex];
+                        await db.collection('inventory').doc(inventoryToSave.id).set(inventoryToSave);
+                    }
                 }
                 
                 // 6. Mettre à jour les listes
@@ -8729,29 +8864,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 entriesToSave.push(entry);
                 
-                // Créer automatiquement le nouveau produit s'il n'existe pas
+                // Vérifier si le produit existe dans productsData (MODULE PRODUITS = SOURCE UNIQUE)
                 const existingProduct = productsData.find(p => 
                     p.reference && p.reference.trim().toLowerCase() === productName.toLowerCase()
                 );
                 
                 if (!existingProduct) {
-                    // Créer un nouveau produit avec un prix par défaut basé sur le coût d'achat
-                    const estimatedSalePrice = line.unitCost > 0 ? Math.round(line.unitCost * 1.3) : 0; // Marge de 30% par défaut
-                    
-                    const newProduct = {
-                        id: Date.now() + Math.random(),
-                        reference: productName,
-                        price: estimatedSalePrice,
-                        format: 'À définir',
-                        margin: '30%',
-                        brand: 'Nouveau produit',
-                        addedBy: 'Entrée de stock',
-                        addedAt: new Date().toISOString()
-                    };
-                    
-                    productsData.push(newProduct);
-                    newProductsToAdd.push(newProduct);
-                    console.log(`✅ Nouveau produit créé automatiquement: ${productName} à ${estimatedSalePrice} CFA (basé sur coût ${line.unitCost})`);
+                    // Le produit n'existe pas - informer l'utilisateur et arrêter
+                    showAlert(`⚠️ Le produit "${productName}" n'existe pas dans le module Produits.\n\nVeuillez d'abord le créer via l'onglet "⚙️ Produits" avant de faire des entrées de stock.`, 'warning');
+                    return; // Arrêter la sauvegarde
                 }
                 
                 // Ajouter aussi au système d'inventaire s'il n'existe pas déjà
@@ -9108,17 +9229,39 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // Vérifier la disponibilité du stock pour toutes les lignes
             const stockIssues = [];
+            const missingProducts = [];
+            
             for (const line of validLines) {
-                const currentLevel = currentStockLevels[line.product];
+                const productName = line.product.trim();
+                
+                // Vérifier si le produit existe dans le module Produits
+                const existingProduct = productsData.find(p => 
+                    p.reference && p.reference.trim().toLowerCase() === productName.toLowerCase()
+                );
+                
+                if (!existingProduct) {
+                    missingProducts.push(productName);
+                    continue; // Passer au produit suivant
+                }
+                
+                // Vérifier la disponibilité du stock
+                const currentLevel = currentStockLevels[productName];
                 if (!currentLevel || currentLevel.quantity < line.quantity) {
                     const available = currentLevel ? currentLevel.quantity : 0;
                     stockIssues.push({
-                        product: line.product,
+                        product: productName,
                         requested: line.quantity,
                         available: available,
                         unit: currentLevel ? currentLevel.unit : line.unit
                     });
                 }
+            }
+            
+            // Bloquer si des produits n'existent pas
+            if (missingProducts.length > 0) {
+                const productList = missingProducts.join(', ');
+                showAlert(`❌ Sortie annulée - Produits inexistants :\n\n${productList}\n\n⚙️ Veuillez d'abord créer ces produits via l'onglet "Produits" avant de faire des sorties de stock.`, 'error');
+                return; // Arrêter la sauvegarde
             }
             
             if (stockIssues.length > 0) {
@@ -10784,6 +10927,26 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
+            
+            // Système de suivi de la position de la souris pour les dropdowns
+            document.addEventListener('mousemove', function(e) {
+                window.lastMouseX = e.clientX;
+                window.lastMouseY = e.clientY;
+            });
+            
+            // Fermer les dropdowns quand on clique ailleurs
+            document.addEventListener('click', function(e) {
+                // Vérifier si le clic est à l'extérieur de tous les dropdowns et inputs
+                const isDropdownClick = e.target.closest('.custom-dropdown') || 
+                                      e.target.closest('.dropdown-arrow') || 
+                                      e.target.matches('input[type="text"]');
+                
+                if (!isDropdownClick) {
+                    document.querySelectorAll('.custom-dropdown').forEach(dropdown => {
+                        dropdown.style.display = 'none';
+                    });
+                }
+            });
         });
         
         // Nettoyage automatique du cache avant fermeture de la page
@@ -10926,6 +11089,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             populateRecapFilters();
             updateClientsList();
             updateProductsList();
+            
+            // NOUVEAU: Nettoyer et synchroniser les produits au démarrage
+            setTimeout(() => {
+                cleanupAndSynchronizeProducts();
+            }, 2000); // Après 2 secondes pour laisser le temps aux autres initialisations
+            
             applyFilters();
             applyRecapFilters();
             updateClientsOverview();
@@ -10970,6 +11139,58 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             noteCategories = JSON.parse(localStorage.getItem('kamlacNoteCategories') || '[]');
             stockEntries = JSON.parse(localStorage.getItem('stockEntries') || '[]');
             stockExits = JSON.parse(localStorage.getItem('kamlacStockExits') || '[]');
+            
+            console.log(`📦 Produits chargés depuis localStorage: ${productsData.length}`);
+            
+            // Charger aussi depuis Firebase si disponible
+            loadProductsFromFirebase();
+        }
+        
+        // Fonction SIMPLE pour charger les produits depuis Firebase
+        async function loadProductsFromFirebase() {
+            if (!isFirebaseInitialized || !db) {
+                console.log('🔄 Firebase non initialisé, utilisation localStorage uniquement');
+                return;
+            }
+            
+            try {
+                console.log('🔄 Chargement des produits depuis Firebase...');
+                const snapshot = await db.collection('products').get();
+                
+                if (!snapshot.empty) {
+                    const firebaseProducts = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        firebaseProducts.push({
+                            id: doc.id,
+                            reference: data.reference || data.name || 'Sans nom',
+                            price: data.price || 0,
+                            format: data.format || '',
+                            margin: data.margin || '',
+                            brand: data.brand || '',
+                            ...data
+                        });
+                    });
+                    
+                    // Fusionner avec les données locales (sans doublons)
+                    const existingIds = new Set(productsData.map(p => p.id));
+                    const newProducts = firebaseProducts.filter(p => !existingIds.has(p.id));
+                    
+                    if (newProducts.length > 0) {
+                        productsData.push(...newProducts);
+                        saveToLocalStorage();
+                        console.log(`✅ ${newProducts.length} nouveaux produits ajoutés depuis Firebase`);
+                    }
+                    
+                    console.log(`✅ Total produits disponibles: ${productsData.length}`);
+                    
+                    // Mettre à jour l'affichage
+                    updateProductsDisplay();
+                    updateProductsList();
+                }
+            } catch (error) {
+                console.log('⚠️ Erreur lors du chargement Firebase:', error.message);
+            }
         }
 
         // Fonction pour vérifier si on peut faire un appel Firebase
@@ -12249,21 +12470,158 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             }
         }
 
-        // Gestion de la liste des produits
+        // Gestion de la liste des produits - SOURCE UNIQUE
         function updateProductsList() {
+            // SEULE source de vérité : productsData
             productsList = productsData.map(product => ({
                 id: product.id,
                 name: product.reference || 'Sans référence',
                 price: product.price || 0,
                 displayText: `${product.reference || 'Sans ref'} - ${formatCurrency(product.price || 0)}`
             })).sort((a, b) => a.name.localeCompare(b.name));
+            
+            console.log(`✅ Liste produits mise à jour: ${productsList.length} produits disponibles`);
+            
+            // Synchroniser automatiquement l'inventaire après chaque mise à jour
+            synchronizeInventoryFromProducts();
+        }
+        
+        // Synchronisation uni-directionnelle : Produits → Inventaire
+        function synchronizeInventoryFromProducts() {
+            let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+            let hasChanges = false;
+            
+            // Pour chaque produit dans productsData, s'assurer qu'il existe dans l'inventaire
+            productsData.forEach(product => {
+                const existingInventoryItem = inventoryData.find(item => 
+                    item.linkedProductId === product.id || 
+                    (item.product && item.product.toLowerCase() === product.reference.toLowerCase())
+                );
+                
+                if (!existingInventoryItem) {
+                    // Créer l'entrée inventaire manquante
+                    const newInventoryItem = {
+                        id: `product_${product.id}`,
+                        product: product.reference,
+                        quantity: 0,
+                        unit: 'Unités',
+                        minLevel: 5,
+                        category: product.format || 'Général',
+                        supplier: 'À définir',
+                        cost: 0,
+                        linkedProductId: product.id,
+                        syncedFrom: 'Module Produits',
+                        addedAt: new Date().toISOString()
+                    };
+                    
+                    inventoryData.push(newInventoryItem);
+                    hasChanges = true;
+                    console.log(`✅ Inventaire synchronisé pour: ${product.reference}`);
+                } else if (existingInventoryItem.product !== product.reference) {
+                    // Mettre à jour le nom si changé
+                    existingInventoryItem.product = product.reference;
+                    existingInventoryItem.linkedProductId = product.id;
+                    existingInventoryItem.category = product.format || existingInventoryItem.category;
+                    existingInventoryItem.updatedAt = new Date().toISOString();
+                    existingInventoryItem.syncedFrom = 'Module Produits';
+                    hasChanges = true;
+                    console.log(`✅ Nom produit mis à jour dans l'inventaire: ${product.reference}`);
+                }
+            });
+            
+            // Sauvegarder si des changements ont été effectués
+            if (hasChanges) {
+                localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+                console.log(`🔄 Inventaire synchronisé avec ${productsData.length} produits`);
+            }
+        }
+        
+        // Fonction pour obtenir les produits disponibles (SOURCE UNIQUE)
+        function getAvailableProducts() {
+            return productsList; // Toujours retourner la liste officielle
+        }
+        
+        // Fonction de nettoyage des doublons et synchronisation
+        function cleanupAndSynchronizeProducts() {
+            console.log('🧹 Nettoyage et synchronisation des produits...');
+            
+            // 1. Nettoyer les doublons dans productsData
+            const cleanedProducts = [];
+            const seenReferences = new Set();
+            
+            productsData.forEach(product => {
+                const ref = product.reference?.toLowerCase();
+                if (ref && !seenReferences.has(ref)) {
+                    seenReferences.add(ref);
+                    cleanedProducts.push(product);
+                } else if (ref) {
+                    console.log(`🗑️ Doublon supprimé: ${product.reference}`);
+                }
+            });
+            
+            const removedCount = productsData.length - cleanedProducts.length;
+            productsData.length = 0; // Vider le tableau
+            productsData.push(...cleanedProducts); // Remplir avec les données nettoyées
+            
+            // 2. Nettoyer l'inventaire des entrées orphelines
+            let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+            const validProductNames = new Set(productsData.map(p => p.reference.toLowerCase()));
+            
+            const cleanedInventory = inventoryData.filter(item => {
+                const hasLinkedProduct = item.linkedProductId && 
+                    productsData.some(p => p.id === item.linkedProductId);
+                const hasValidProductName = item.product && 
+                    validProductNames.has(item.product.toLowerCase());
+                
+                if (!hasLinkedProduct && !hasValidProductName) {
+                    console.log(`🗑️ Entrée inventaire orpheline supprimée: ${item.product}`);
+                    return false;
+                }
+                return true;
+            });
+            
+            const removedInventoryCount = inventoryData.length - cleanedInventory.length;
+            localStorage.setItem('inventoryData', JSON.stringify(cleanedInventory));
+            
+            // 3. Sauvegarder et mettre à jour
+            saveToLocalStorage();
+            updateProductsList();
+            
+            console.log(`✅ Nettoyage terminé: ${removedCount} produits doublons supprimés, ${removedInventoryCount} entrées inventaire orphelines supprimées`);
+            
+            if (removedCount > 0 || removedInventoryCount > 0) {
+                showAlert(`🧹 Nettoyage effectué:\n• ${removedCount} produit(s) doublon(s) supprimé(s)\n• ${removedInventoryCount} entrée(s) inventaire orpheline(s) supprimée(s)`, 'success');
+            }
         }
 
         // Système de dropdown personnalisé
         function showCustomDropdown(input, type) {
             const dropdownId = input.id + 'Dropdown';
-            const dropdown = document.getElementById(dropdownId);
-            if (!dropdown) return;
+            let dropdown = document.getElementById(dropdownId);
+            
+            // Créer le dropdown s'il n'existe pas
+            if (!dropdown) {
+                dropdown = document.createElement('div');
+                dropdown.id = dropdownId;
+                dropdown.className = 'custom-dropdown';
+                dropdown.style.position = 'absolute';
+                dropdown.style.top = '100%';
+                dropdown.style.left = '0';
+                dropdown.style.right = '0';
+                dropdown.style.background = 'white';
+                dropdown.style.border = '1px solid #e9ecef';
+                dropdown.style.borderTop = 'none';
+                dropdown.style.borderRadius = '0 0 8px 8px';
+                dropdown.style.maxHeight = '200px';
+                dropdown.style.overflowY = 'auto';
+                dropdown.style.zIndex = '1000';
+                dropdown.style.display = 'none';
+                dropdown.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                
+                // Insérer le dropdown après l'input
+                input.parentNode.style.position = 'relative';
+                input.parentNode.appendChild(dropdown);
+            }
             
             const inputValue = input.value.toLowerCase();
             let items = [];
@@ -12279,28 +12637,63 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 );
             }
             
-            // Afficher tous les éléments si l'input est vide ou si on clique sur la flèche
-            if (!inputValue || items.length > 0) {
-                dropdown.innerHTML = '';
-                const itemsToShow = inputValue ? items.slice(0, 10) : (type === 'clients' ? clientsList.slice(0, 10) : productsList.slice(0, 10));
-                
+            // Toujours afficher la liste, même si l'input est vide (afficher les 10 premiers)
+            dropdown.innerHTML = '';
+            const itemsToShow = inputValue ? items.slice(0, 10) : (type === 'clients' ? clientsList.slice(0, 10) : productsList.slice(0, 10));
+            
+            if (itemsToShow.length > 0) {
                 itemsToShow.forEach(item => {
                     const option = document.createElement('div');
                     option.className = 'custom-dropdown-option';
+                    option.style.padding = '10px 12px';
+                    option.style.cursor = 'pointer';
+                    option.style.transition = 'background 0.2s';
+                    option.style.borderBottom = '1px solid #f8f9fa';
+                    
+                    // Surligner le texte correspondant à la recherche
+                    if (inputValue && item.name) {
+                        const text = item.displayText || item.name || item;
+                        const regex = new RegExp(`(${inputValue})`, 'gi');
+                        option.innerHTML = text.replace(regex, '<strong>$1</strong>');
+                    } else {
+                        option.textContent = item.displayText || item.name || item;
+                    }
+                    
+                    // Gestion du hover
+                    option.addEventListener('mouseenter', function() {
+                        // Retirer la sélection des autres options
+                        dropdown.querySelectorAll('.custom-dropdown-option').forEach(opt => {
+                            opt.classList.remove('selected');
+                            opt.style.background = '';
+                        });
+                        // Ajouter la sélection à cette option
+                        this.classList.add('selected');
+                        this.style.background = '#f8f9fa';
+                    });
+                    
+                    option.addEventListener('mouseleave', function() {
+                        this.style.background = '';
+                    });
                     
                     if (type === 'clients') {
-                        option.textContent = item;
-                        option.onclick = () => selectDropdownOption(input, item, dropdown);
+                        option.onmousedown = (e) => {
+                            e.preventDefault();
+                            selectDropdownOption(input, item, dropdown);
+                        };
                     } else if (type === 'products') {
-                        option.textContent = item.displayText;
                         option.dataset.productId = item.id;
                         option.dataset.productName = item.name;
                         option.dataset.productPrice = item.price;
-                        option.onclick = () => selectProductFromDropdown(input, item, dropdown);
+                        option.onmousedown = (e) => {
+                            e.preventDefault();
+                            selectProductFromDropdown(input, item, dropdown);
+                        };
                     }
                     
                     dropdown.appendChild(option);
                 });
+                
+                // Afficher le dropdown immédiatement
                 dropdown.style.display = 'block';
             } else {
                 dropdown.style.display = 'none';
@@ -12308,11 +12701,25 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         function hideCustomDropdown(input) {
+            // Utiliser un délai plus long pour permettre aux clics d'être traités
             setTimeout(() => {
                 const dropdownId = input.id + 'Dropdown';
                 const dropdown = document.getElementById(dropdownId);
                 if (dropdown) {
-                    dropdown.style.display = 'none';
+                    // Vérifier si la souris est encore sur le dropdown avant de le fermer
+                    const rect = dropdown.getBoundingClientRect();
+                    const mouseX = window.lastMouseX || 0;
+                    const mouseY = window.lastMouseY || 0;
+                    
+                    const isMouseOverDropdown = (
+                        mouseX >= rect.left && mouseX <= rect.right &&
+                        mouseY >= rect.top && mouseY <= rect.bottom
+                    );
+                    
+                    // Ne fermer que si la souris n'est pas sur le dropdown
+                    if (!isMouseOverDropdown) {
+                        dropdown.style.display = 'none';
+                    }
                 }
                 
                 // Si c'est un champ produit et qu'un texte a été saisi manuellement
@@ -12332,31 +12739,32 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                         }
                     }
                 }
-            }, 200);
+            }, 300);
         }
 
         function toggleCustomDropdown(input, type) {
             const dropdownId = input.id + 'Dropdown';
             const dropdown = document.getElementById(dropdownId);
-            if (!dropdown) return;
             
-            // Fermer tous les autres dropdowns ouverts
+            // Fermer tous les autres dropdowns ouverts d'abord
             document.querySelectorAll('.custom-dropdown').forEach(dd => {
-                if (dd.id !== dropdownId) {
+                if (dd.id !== dropdownId && dd.style.display === 'block') {
                     dd.style.display = 'none';
                 }
             });
             
-            if (dropdown.style.display === 'block') {
-                dropdown.style.display = 'none';
-            } else {
-                // Effacer le contenu et afficher toute la liste
-                input.value = '';
+            if (!dropdown || dropdown.style.display === 'none') {
+                // Ouvrir la liste - toujours montrer les éléments disponibles
                 showCustomDropdown(input, type);
-                // Focus après un petit délai pour éviter les conflits
+                // Focus sur l'input pour permettre la saisie
                 setTimeout(() => {
                     input.focus();
+                    // Sélectionner tout le texte pour faciliter la saisie
+                    input.select();
                 }, 50);
+            } else {
+                // Fermer la liste
+                dropdown.style.display = 'none';
             }
         }
 
@@ -12373,6 +12781,13 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         function selectDropdownOption(input, value, dropdown) {
             input.value = value;
             dropdown.style.display = 'none';
+            
+            // Déclencher l'événement input pour mettre à jour l'interface si nécessaire
+            const event = new Event('input', { bubbles: true });
+            input.dispatchEvent(event);
+            
+            // Remettre le focus sur l'input pour continuer la saisie
+            setTimeout(() => input.focus(), 10);
         }
 
         function selectProductFromDropdown(input, product, dropdown) {
@@ -12423,6 +12838,13 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     }
                 }
             }
+            
+            // Déclencher l'événement input pour mettre à jour l'interface si nécessaire
+            const event = new Event('input', { bubbles: true });
+            input.dispatchEvent(event);
+            
+            // Remettre le focus sur l'input pour continuer la saisie
+            setTimeout(() => input.focus(), 10);
         }
 
         function handleDropdownKeydown(event, input) {
@@ -13460,6 +13882,13 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             
             document.getElementById('settings-' + settingsSectionName).classList.add('active');
             event.target.classList.add('active');
+            
+            // Charger et afficher les produits quand on va sur l'onglet Produits
+            if (settingsSectionName === 'products') {
+                console.log('Affichage de l\'onglet Produits - Chargement des données...');
+                loadProductsFromFirebase();
+                updateProductsDisplay();
+            }
         }
 
         // Navigation sous-sections saisie (commercial)
@@ -14082,20 +14511,68 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             editingProductId = productId;
             
             if (productId) {
-                const product = productsData.find(p => p.id === productId);
+                // Chercher avec une comparaison flexible (nombre et chaîne)
+                const product = productsData.find(p => 
+                    p.id == productId || // Comparaison flexible
+                    p.id === productId || // Comparaison stricte
+                    String(p.id) === String(productId) // Conversion en chaîne
+                );
+                
                 if (product) {
                     document.getElementById('productReference').value = product.reference || '';
                     document.getElementById('productPrice').value = product.price || '';
                     document.getElementById('productFormat').value = product.format || '';
                     document.getElementById('productMargin').value = product.margin || '';
                     document.getElementById('productBrand').value = product.brand || '';
+                    
+                    // Définir la catégorie basée sur la marque ou le nom
+                    const category = document.getElementById('productCategory');
+                    if (category) {
+                        const productName = (product.reference || '').toLowerCase();
+                        if (productName.includes('café') || productName.includes('cafe')) {
+                            category.value = 'Café';
+                        } else if (productName.includes('lep') || productName.includes('lait')) {
+                            category.value = 'Lait';
+                        } else if (productName.includes('lido') || productName.includes('drink')) {
+                            category.value = 'Boissons';
+                        } else {
+                            category.value = 'Autre';
+                        }
+                    }
+                    
+                    // Afficher les statistiques pour l'édition
+                    const statsDiv = document.getElementById('productStats');
+                    if (statsDiv) {
+                        // Calculer les statistiques du produit
+                        const productName = product.reference;
+                        const stockInfo = currentStockLevels[productName] || { quantity: 0 };
+                        const productSales = salesData.filter(sale => sale.product === productName);
+                        const totalSold = productSales.reduce((sum, sale) => sum + (parseFloat(sale.quantity) || 0), 0);
+                        const totalRevenue = productSales.reduce((sum, sale) => sum + (parseFloat(sale.valeur) || 0), 0);
+                        
+                        document.getElementById('currentStock').textContent = `${stockInfo.quantity} cartons`;
+                        document.getElementById('totalSold').textContent = `${totalSold} cartons`;
+                        document.getElementById('totalRevenue').textContent = `${totalRevenue.toLocaleString()} CFA`;
+                        
+                        statsDiv.style.display = 'block';
+                    }
                 }
             } else {
+                // Nouveau produit
                 document.getElementById('productReference').value = '';
                 document.getElementById('productPrice').value = '';
                 document.getElementById('productFormat').value = '';
                 document.getElementById('productMargin').value = '';
                 document.getElementById('productBrand').value = '';
+                
+                const category = document.getElementById('productCategory');
+                if (category) category.value = '';
+                
+                // Masquer les statistiques pour un nouveau produit
+                const statsDiv = document.getElementById('productStats');
+                if (statsDiv) {
+                    statsDiv.style.display = 'none';
+                }
             }
             
             document.getElementById('productModal').style.display = 'block';
@@ -14112,6 +14589,24 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             const format = document.getElementById('productFormat').value.trim();
             const margin = document.getElementById('productMargin').value.trim();
             const brand = document.getElementById('productBrand').value.trim();
+            const category = document.getElementById('productCategory') ? document.getElementById('productCategory').value : '';
+            
+            // Validation des champs obligatoires
+            if (!reference) {
+                showAlert('La référence du produit est obligatoire', 'error');
+                return;
+            }
+            
+            // Vérifier les doublons uniquement lors de la création
+            if (!editingProductId) {
+                const existingProduct = productsData.find(p => 
+                    p.reference && p.reference.toLowerCase() === reference.toLowerCase()
+                );
+                if (existingProduct) {
+                    showAlert('Un produit avec cette référence existe déjà', 'error');
+                    return;
+                }
+            }
             
             const product = {
                 id: editingProductId || Date.now().toString(),
@@ -14119,77 +14614,120 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 price: price,
                 format: format,
                 margin: margin,
-                brand: brand
+                brand: brand,
+                category: category,
+                createdAt: editingProductId ? undefined : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
             };
             
             if (editingProductId) {
+                // Modification d'un produit existant
                 const index = productsData.findIndex(p => p.id === editingProductId);
                 if (index !== -1) {
+                    const oldReference = productsData[index].reference;
                     productsData[index] = product;
+                    
+                    // Mettre à jour l'inventaire correspondant si le nom a changé
+                    if (oldReference !== reference) {
+                        updateInventoryProductName(oldReference, reference);
+                    }
                 }
             } else {
+                // Création d'un nouveau produit
                 productsData.push(product);
                 
-                // NOUVEAU: Ajouter aussi au module stocks (synchronisation bidirectionnelle)
-                // Vérifier si le produit existe déjà dans l'inventaire
-                let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
-                const existingInInventory = inventoryData.find(item => 
-                    item.product && item.product.trim() === reference
-                );
-                
-                if (!existingInInventory && reference) {
-                    const newInventoryItem = {
-                        id: `commercial_${product.id}`,
-                        product: reference,
-                        quantity: 0,
-                        unit: 'Cartons',
-                        minLevel: 5,
-                        category: 'Module Commercial',
-                        supplier: 'À définir',
-                        addedBy: 'Module Commercial',
-                        addedAt: new Date().toISOString()
-                    };
-                    
-                    inventoryData.push(newInventoryItem);
-                    localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
-                    
-                    // Ajouter à currentStockLevels
-                    if (!currentStockLevels) currentStockLevels = {};
-                    currentStockLevels[reference] = {
-                        quantity: 0,
-                        unit: 'Cartons',
-                        minLevel: 5
-                    };
-                    
-                    // Sauvegarder dans Firebase inventaire
-                    if (isFirebaseInitialized && db) {
-                        db.collection('inventory').doc(newInventoryItem.id).set(newInventoryItem)
-                            .then(() => console.log(`✅ Produit ${reference} ajouté à Firebase inventory depuis module commercial`))
-                            .catch(error => console.log('⚠️ Erreur Firebase inventory depuis commercial:', error.message));
-                    }
-                    
-                    console.log(`✅ Produit ${reference} synchronisé vers le module stocks`);
-                }
+                // Créer automatiquement l'entrée dans l'inventaire
+                createInventoryEntryForProduct(product);
             }
             
+            // Sauvegarder dans localStorage
             saveToLocalStorage();
             
+            // Synchroniser avec Firebase
             if (isFirebaseInitialized) {
                 try {
                     await db.collection('products').doc(product.id.toString()).set({
                         ...product,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
+                    console.log(`✅ Produit ${reference} synchronisé avec Firebase`);
                 } catch (error) {
-                    console.error('Erreur sync produit:', error);
+                    console.error('❌ Erreur sync Firebase produit:', error);
                 }
             }
             
+            // Mettre à jour toutes les interfaces
             updateProductsDisplay();
-            updateProductsList();
+            updateProductsList(); // Met à jour les listes déroulantes
             populateRecapFilters();
+            
             closeProductModal();
-            showAlert(editingProductId ? 'Produit modifié' : 'Produit ajouté', 'success');
+            showAlert(editingProductId ? 'Produit modifié avec succès' : 'Produit créé avec succès', 'success');
+            
+            console.log(`✅ Produit ${editingProductId ? 'modifié' : 'créé'}: ${reference}`);
+        }
+        
+        // Fonction pour créer automatiquement l'entrée inventaire
+        function createInventoryEntryForProduct(product) {
+            let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+            
+            // Vérifier si le produit existe déjà dans l'inventaire
+            const existingInInventory = inventoryData.find(item => 
+                item.product && item.product.trim().toLowerCase() === product.reference.toLowerCase()
+            );
+            
+            if (!existingInInventory) {
+                const newInventoryItem = {
+                    id: `product_${product.id}`,
+                    product: product.reference,
+                    quantity: 0,
+                    unit: 'Unités',
+                    minLevel: 5,
+                    category: product.format || 'Général',
+                    supplier: 'À définir',
+                    cost: 0,
+                    addedBy: 'Module Produits',
+                    addedAt: new Date().toISOString(),
+                    linkedProductId: product.id
+                };
+                
+                inventoryData.push(newInventoryItem);
+                localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+                
+                // Synchroniser avec Firebase
+                if (isFirebaseInitialized && db) {
+                    db.collection('inventory').doc(newInventoryItem.id).set(newInventoryItem)
+                        .then(() => console.log(`✅ Entrée inventaire créée pour ${product.reference}`))
+                        .catch(error => console.log('⚠️ Erreur Firebase inventory:', error.message));
+                }
+                
+                console.log(`✅ Entrée inventaire automatique créée pour: ${product.reference}`);
+            }
+        }
+        
+        // Fonction pour mettre à jour le nom dans l'inventaire
+        function updateInventoryProductName(oldName, newName) {
+            let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+            
+            const inventoryItem = inventoryData.find(item => 
+                item.product && item.product.toLowerCase() === oldName.toLowerCase()
+            );
+            
+            if (inventoryItem) {
+                inventoryItem.product = newName;
+                inventoryItem.updatedAt = new Date().toISOString();
+                
+                localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+                
+                // Synchroniser avec Firebase
+                if (isFirebaseInitialized && db) {
+                    db.collection('inventory').doc(inventoryItem.id).update({
+                        product: newName,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }).then(() => console.log(`✅ Nom produit mis à jour dans l'inventaire: ${oldName} → ${newName}`))
+                    .catch(error => console.log('⚠️ Erreur mise à jour inventaire:', error.message));
+                }
+            }
         }
 
         async function deleteProduct(productId) {
@@ -14315,9 +14853,6 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             
             // Stats produits
             document.getElementById('productsCount').textContent = productsData.length;
-            const avgPrice = productsData.length > 0 ? 
-                productsData.reduce((sum, p) => sum + (p.price || 0), 0) / productsData.length : 0;
-            document.getElementById('avgProductPrice').textContent = formatCurrency(avgPrice);
             const uniqueBrands = new Set(productsData.map(p => p.brand).filter(b => b));
             document.getElementById('brandsCount').textContent = uniqueBrands.size;
             
@@ -14325,17 +14860,152 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             productsData.forEach(product => {
                 const productCard = document.createElement('div');
                 productCard.className = 'product-card';
+                // Normaliser l'ID pour éviter les problèmes de type
+                const normalizedId = String(product.id);
+                
+                // Calculer un indicateur de couleur basé sur le prix
+                const priceColor = (product.price || 0) > 1000 ? '#28a745' : (product.price || 0) > 500 ? '#fd7e14' : '#6c757d';
+                
                 productCard.innerHTML = `
-                    <div class="product-name">${product.reference || 'Sans référence'}</div>
-                    <div class="product-details">
-                        ${product.brand ? `<strong>Marque:</strong> ${product.brand}<br>` : ''}
-                        ${product.format ? `<strong>Format:</strong> ${product.format}<br>` : ''}
-                        ${product.margin ? `<strong>Marge:</strong> ${product.margin}` : ''}
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, ${priceColor}, ${priceColor}99);"></div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <div class="product-name" style="font-size: 1.1rem; font-weight: 700; color: #333; margin-bottom: 5px; line-height: 1.3;">
+                                ${product.reference || 'Sans référence'}
+                            </div>
+                            ${product.brand ? `<div style="background: #f8f9fa; color: #667eea; padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: 600; display: inline-block; margin-bottom: 10px;">
+                                ${product.brand}
+                            </div>` : ''}
+                        </div>
+                        <div class="product-price" style="font-size: 1.3rem; font-weight: 700; color: ${priceColor}; text-align: right;">
+                            ${formatCurrency(product.price || 0)}
+                        </div>
                     </div>
-                    <div class="product-price">${formatCurrency(product.price || 0)}</div>
-                    <div style="margin-top: 10px; display: flex; gap: 6px;">
-                        <button class="btn btn-warning" onclick="showProductModal('${product.id}')" style="padding: 6px 10px; font-size: 11px; flex: 1;">✏️</button>
-                        <button class="btn btn-danger" onclick="deleteProduct('${product.id}')" style="padding: 6px 10px; font-size: 11px; flex: 1;">🗑️</button>
+                    
+                    <div class="product-details" style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
+                        ${product.format ? `<div style="margin-bottom: 5px;"><strong style="color: #333;">📦 Format:</strong> ${product.format}</div>` : ''}
+                        ${product.margin ? `<div><strong style="color: #333;">📊 Marge:</strong> ${product.margin}</div>` : ''}
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: auto;">
+                        <button class="btn" onclick="showProductModal('${normalizedId}')" 
+                                style="flex: 1; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
+                            ✏️ Modifier
+                        </button>
+                        <button class="btn" onclick="if(confirm('Supprimer ce produit ?')) deleteProduct('${normalizedId}')" 
+                                style="background: #fff; color: #dc3545; border: 2px solid #dc3545; padding: 10px 15px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
+                            🗑️
+                        </button>
+                    </div>
+                `;
+                container.appendChild(productCard);
+            });
+            
+            console.log('✅ Affichage terminé -', productsData.length, 'cartes créées');
+            
+            // Mettre à jour le filtre des marques
+            updateBrandFilter();
+        }
+
+        // Mettre à jour le filtre des marques
+        function updateBrandFilter() {
+            const brandFilter = document.getElementById('brandFilter');
+            if (!brandFilter) return;
+            
+            const brands = [...new Set(productsData.map(p => p.brand).filter(b => b))].sort();
+            brandFilter.innerHTML = '<option value="">Toutes les marques</option>';
+            brands.forEach(brand => {
+                brandFilter.innerHTML += `<option value="${brand}">${brand}</option>`;
+            });
+        }
+
+        // Filtrer les produits
+        function filterProducts() {
+            const search = document.getElementById('productSearch')?.value.toLowerCase() || '';
+            const brandFilter = document.getElementById('brandFilter')?.value || '';
+            
+            const filteredProducts = productsData.filter(product => {
+                const matchesSearch = !search || 
+                    (product.reference && product.reference.toLowerCase().includes(search)) ||
+                    (product.brand && product.brand.toLowerCase().includes(search)) ||
+                    (product.format && product.format.toLowerCase().includes(search));
+                
+                const matchesBrand = !brandFilter || product.brand === brandFilter;
+                
+                return matchesSearch && matchesBrand;
+            });
+            
+            displayFilteredProducts(filteredProducts);
+        }
+
+        // Trier les produits
+        function sortProducts(criteria) {
+            let sortedProducts = [...productsData];
+            
+            if (criteria === 'reference') {
+                sortedProducts.sort((a, b) => (a.reference || '').localeCompare(b.reference || ''));
+            } else if (criteria === 'price') {
+                sortedProducts.sort((a, b) => (b.price || 0) - (a.price || 0));
+            }
+            
+            displayFilteredProducts(sortedProducts);
+        }
+
+        // Afficher les produits filtrés
+        function displayFilteredProducts(products) {
+            const container = document.getElementById('productsGrid');
+            container.innerHTML = '';
+            
+            if (products.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">📦</div>
+                        <h3>Aucun produit trouvé</h3>
+                        <p>Essayez de modifier vos critères de recherche</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            products.forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.className = 'product-card';
+                const normalizedId = String(product.id);
+                
+                const priceColor = (product.price || 0) > 1000 ? '#28a745' : (product.price || 0) > 500 ? '#fd7e14' : '#6c757d';
+                
+                productCard.innerHTML = `
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, ${priceColor}, ${priceColor}99);"></div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <div class="product-name" style="font-size: 1.1rem; font-weight: 700; color: #333; margin-bottom: 5px; line-height: 1.3;">
+                                ${product.reference || 'Sans référence'}
+                            </div>
+                            ${product.brand ? `<div style="background: #f8f9fa; color: #667eea; padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: 600; display: inline-block; margin-bottom: 10px;">
+                                ${product.brand}
+                            </div>` : ''}
+                        </div>
+                        <div class="product-price" style="font-size: 1.3rem; font-weight: 700; color: ${priceColor}; text-align: right;">
+                            ${formatCurrency(product.price || 0)}
+                        </div>
+                    </div>
+                    
+                    <div class="product-details" style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
+                        ${product.format ? `<div style="margin-bottom: 5px;"><strong style="color: #333;">📦 Format:</strong> ${product.format}</div>` : ''}
+                        ${product.margin ? `<div><strong style="color: #333;">📊 Marge:</strong> ${product.margin}</div>` : ''}
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: auto;">
+                        <button class="btn" onclick="showProductModal('${normalizedId}')" 
+                                style="flex: 1; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
+                            ✏️ Modifier
+                        </button>
+                        <button class="btn" onclick="if(confirm('Supprimer ce produit ?')) deleteProduct('${normalizedId}')" 
+                                style="background: #fff; color: #dc3545; border: 2px solid #dc3545; padding: 10px 15px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
+                            🗑️
+                        </button>
                     </div>
                 `;
                 container.appendChild(productCard);
@@ -14991,100 +15661,30 @@ Date [ESPACES] Client [ESPACES] Montant
                 salesData.push(...newSales);
                 saveToLocalStorage();
                 
-                // NOUVEAU: Créer automatiquement les nouveaux produits
-                const newProductsToAdd = [];
+                // Vérifier que tous les produits existent dans le module Produits
+                const missingProducts = [];
                 validLines.forEach(line => {
-                    // Si c'est un produit saisi manuellement (pas d'ID produit) et pas encore dans productsData
-                    if (!line.productId && line.product && line.product.trim()) {
-                        const productName = line.product.trim();
+                    // Vérifier tous les produits (avec ou sans ID)
+                    const productName = line.product && line.product.trim();
+                    if (productName) {
                         const existingProduct = productsData.find(p => 
                             p.reference && p.reference.trim().toLowerCase() === productName.toLowerCase()
                         );
                         
                         if (!existingProduct) {
-                            // Créer un nouveau produit avec le prix de la vente
-                            const newProduct = {
-                                id: Date.now() + Math.random(),
-                                reference: productName,
-                                price: line.unitPrice || 0,
-                                format: 'À définir',
-                                margin: '',
-                                brand: 'Nouveau produit',
-                                addedBy: 'Vente automatique',
-                                addedAt: new Date().toISOString()
-                            };
-                            
-                            productsData.push(newProduct);
-                            newProductsToAdd.push(newProduct);
-                            console.log(`✅ Nouveau produit créé automatiquement: ${productName} à ${line.unitPrice} CFA`);
-                            
-                            // Ajouter aussi au module stocks (inventaire)
-                            let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
-                            const existingInInventory = inventoryData.find(item => 
-                                item.product && item.product.trim().toLowerCase() === productName.toLowerCase()
-                            );
-                            
-                            if (!existingInInventory) {
-                                const newInventoryItem = {
-                                    id: `vente_${newProduct.id}`,
-                                    product: productName,
-                                    quantity: 0, // On part de 0, les ventes vont créer du stock négatif
-                                    unit: 'Cartons',
-                                    minLevel: 5,
-                                    category: 'Vente automatique',
-                                    supplier: 'À définir',
-                                    addedBy: 'Vente automatique',
-                                    addedAt: new Date().toISOString()
-                                };
-                                
-                                inventoryData.push(newInventoryItem);
-                                localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
-                                
-                                // Ajouter à currentStockLevels
-                                if (!currentStockLevels) currentStockLevels = {};
-                                currentStockLevels[productName] = {
-                                    quantity: 0,
-                                    unit: 'Cartons',
-                                    minLevel: 5
-                                };
-                                
-                                console.log(`✅ Produit ajouté à l'inventaire: ${productName}`);
-                            }
+                            missingProducts.push(productName);
                         }
                     }
                 });
                 
-                // Sauvegarder les nouveaux produits dans Firebase
-                if (isFirebaseInitialized && newProductsToAdd.length > 0) {
-                    const productBatch = db.batch();
-                    newProductsToAdd.forEach(product => {
-                        const docRef = db.collection('products').doc(product.id.toString());
-                        productBatch.set(docRef, {
-                            ...product,
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    });
+                if (missingProducts.length > 0) {
+                    // Supprimer les ventes qui viennent d'être ajoutées puisque la validation a échoué
+                    salesData.splice(-newSales.length, newSales.length);
                     
-                    // Sauvegarder aussi l'inventaire dans Firebase
-                    newProductsToAdd.forEach(product => {
-                        const inventoryItem = {
-                            id: `vente_${product.id}`,
-                            product: product.reference,
-                            quantity: 0,
-                            unit: 'Cartons',
-                            minLevel: 5,
-                            category: 'Vente automatique',
-                            supplier: 'À définir',
-                            addedBy: 'Vente automatique',
-                            addedAt: new Date().toISOString()
-                        };
-                        
-                        const inventoryDocRef = db.collection('inventory').doc(inventoryItem.id);
-                        productBatch.set(inventoryDocRef, inventoryItem);
-                    });
-                    
-                    await productBatch.commit();
-                    console.log(`✅ ${newProductsToAdd.length} nouveaux produits sauvegardés dans Firebase`);
+                    const productList = missingProducts.join(', ');
+                    showAlert(`❌ Vente annulée - Produits inexistants :\n\n${productList}\n\n⚙️ Veuillez d'abord créer ces produits via l'onglet "Produits" avant de faire cette vente.`, 'error');
+                    updateCloudStatus('error', '❌ Échec');
+                    return; // Arrêter la sauvegarde
                 }
                 
                 if (isFirebaseInitialized) {
