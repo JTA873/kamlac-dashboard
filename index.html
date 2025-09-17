@@ -8845,6 +8845,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Traiter chaque ligne
             for (const line of validLines) {
                 const productName = line.product.trim();
+                console.log('🏷️ Traitement produit:', productName); // Debug
                 
                 // Créer l'entrée
                 const entry = {
@@ -12734,8 +12735,13 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     if (lineId) {
                         const line = salesLines.find(l => l.id == lineId);
                         if (line && !line.productId) {
-                            // L'utilisateur a tapé manuellement, on met à jour le nom du produit
-                            line.product = input.value.trim();
+                            // L'utilisateur a tapé manuellement, extraire seulement la référence produit
+                            let productValue = input.value.trim();
+                            // Si c'est au format "nom - prix CFA", extraire seulement le nom
+                            if (productValue.includes(' - ') && productValue.includes(' CFA')) {
+                                productValue = productValue.split(' - ')[0].trim();
+                            }
+                            line.product = productValue;
                             // Si le prix unitaire est à 0 et qu'il n'a pas été modifié manuellement, le mettre à 1 par défaut
                             if (line.unitPrice === 0 && !line.priceManuallyEdited) {
                                 line.unitPrice = 1;
@@ -12797,7 +12803,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         function selectProductFromDropdown(input, product, dropdown) {
-            input.value = product.reference; // Utiliser le nom réel du produit, pas le displayText
+            input.value = product.displayText; // Afficher le texte complet avec le prix
             dropdown.style.display = 'none';
             
             // Identifier le type de ligne (vente, entrée, ou sortie)
@@ -15294,7 +15300,7 @@ Date [ESPACES] Client [ESPACES] Montant
                         <div class="form-group">
                             <label>Produit *</label>
                             <div class="input-container">
-                                <input type="text" id="productLine${line.id}" data-line-id="${line.id}" placeholder="Rechercher un produit..." value="${line.product || ''}" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)" required>
+                                <input type="text" id="productLine${line.id}" data-line-id="${line.id}" placeholder="Rechercher un produit..." value="${line.productId ? (productsList.find(p => p.id == line.productId)?.displayText || line.product) : (line.product || '')}" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)" required>
                                 <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'productLine${line.id}', 'products')">▼</span>
                                 <div class="custom-dropdown" id="productLine${line.id}Dropdown"></div>
                             </div>
@@ -15399,7 +15405,7 @@ Date [ESPACES] Client [ESPACES] Montant
                         <div class="form-group">
                             <label>Produit *</label>
                             <div class="input-container">
-                                <input type="text" id="entryProductLine${line.id}" data-line-id="${line.id}" placeholder="Nom du produit..." value="${line.product || ''}" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this); updateEntryLine(${line.id}, 'product', this.value)" onkeydown="handleDropdownKeydown(event, this)" required>
+                                <input type="text" id="entryProductLine${line.id}" data-line-id="${line.id}" placeholder="Nom du produit..." value="${line.productId ? (productsList.find(p => p.id == line.productId)?.displayText || line.product) : (line.product || '')}" oninput="showCustomDropdown(this, 'products')" onblur="hideCustomDropdown(this); updateEntryLine(${line.id}, 'product', this.value)" onkeydown="handleDropdownKeydown(event, this)" required>
                                 <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'entryProductLine${line.id}', 'products')">▼</span>
                                 <div class="custom-dropdown" id="entryProductLine${line.id}Dropdown"></div>
                             </div>
@@ -15443,7 +15449,12 @@ Date [ESPACES] Client [ESPACES] Montant
             if (!line) return;
             
             if (field === 'product') {
-                line.product = value.trim();
+                // Extraire seulement la référence produit si c'est au format "nom - prix CFA"
+                let productValue = value.trim();
+                if (productValue.includes(' - ') && productValue.includes(' CFA')) {
+                    productValue = productValue.split(' - ')[0].trim();
+                }
+                line.product = productValue;
             } else if (field === 'quantity') {
                 line.quantity = parseFloat(value) || 0;
                 line.totalCost = line.quantity * line.unitCost;
@@ -15519,7 +15530,7 @@ Date [ESPACES] Client [ESPACES] Montant
                         <div class="form-group">
                             <label>Produit *</label>
                             <div class="input-container">
-                                <input type="text" id="exitProductLine${line.id}" data-line-id="${line.id}" placeholder="Nom du produit..." value="${line.product}" oninput="showCustomDropdown(this, 'products'); checkStockAvailabilityForLine(${line.id})" onblur="hideCustomDropdown(this)" onkeydown="handleDropdownKeydown(event, this)" required>
+                                <input type="text" id="exitProductLine${line.id}" data-line-id="${line.id}" placeholder="Nom du produit..." value="${line.productId ? (productsList.find(p => p.id == line.productId)?.displayText || line.product) : (line.product || '')}" oninput="showCustomDropdown(this, 'products'); checkStockAvailabilityForLine(${line.id})" onblur="hideCustomDropdown(this); updateExitLine(${line.id}, 'product', this.value)" onkeydown="handleDropdownKeydown(event, this)" required>
                                 <span class="dropdown-arrow" onclick="handleDropdownArrowClick(event, 'exitProductLine${line.id}', 'products')">▼</span>
                                 <div class="custom-dropdown" id="exitProductLine${line.id}Dropdown"></div>
                             </div>
@@ -15562,7 +15573,14 @@ Date [ESPACES] Client [ESPACES] Montant
             const line = exitLines.find(l => l.id === lineId);
             if (!line) return;
             
-            if (field === 'quantity') {
+            if (field === 'product') {
+                // Extraire seulement la référence produit si c'est au format "nom - prix CFA"
+                let productValue = value.trim();
+                if (productValue.includes(' - ') && productValue.includes(' CFA')) {
+                    productValue = productValue.split(' - ')[0].trim();
+                }
+                line.product = productValue;
+            } else if (field === 'quantity') {
                 line.quantity = parseFloat(value) || 0;
                 line.totalCost = line.quantity * line.unitCost;
             } else if (field === 'unitCost') {
