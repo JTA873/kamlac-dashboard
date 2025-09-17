@@ -37,6 +37,8 @@
         }
         
         body {
+            margin: 0;
+            padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
@@ -45,12 +47,172 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             transition: background-color 0.3s ease, color 0.3s ease;
+            display: flex;
+        }
+
+        /* Barre latérale gauche */
+        .sidebar {
+            width: 280px;
+            min-height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-header {
+            padding: 20px 15px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.2rem;
+            margin: 0 0 5px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-header .version-info {
+            font-size: 0.75rem;
+            opacity: 0.9;
+            margin: 2px 0;
+        }
+
+        .sidebar-header .sync-status {
+            font-size: 0.7rem;
+            margin-top: 8px;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .sidebar-section {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-section-title {
+            padding: 15px;
+            background: var(--bg-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--accent-color);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .sidebar-menu-item {
+            margin: 0;
+        }
+
+        .sidebar-menu-item a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .sidebar-menu-item a:hover {
+            background: var(--bg-primary);
+            border-left-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .sidebar-menu-item a.active {
+            background: var(--bg-primary);
+            border-left-color: var(--accent-color);
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        .sidebar-quick-actions {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-primary);
+        }
+
+        .sidebar-quick-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .sidebar-quick-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .sidebar-toggle {
+            position: fixed;
+            left: 15px;
+            top: 15px;
+            z-index: 1001;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
         
         .dashboard-container {
+            flex: 1;
+            margin-left: 280px;
             min-height: 100vh;
             padding: 10px;
             background: var(--bg-primary);
+            transition: margin-left 0.3s ease;
+        }
+
+        .dashboard-container.expanded {
+            margin-left: 0;
         }
         
         .header {
@@ -428,6 +590,27 @@
             
             .chart-card .chart-container {
                 height: 250px !important;
+            }
+
+            /* Responsive sidebar */
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .sidebar-toggle {
+                display: flex;
+            }
+
+            .dashboard-container {
+                margin-left: 0;
+            }
+
+            .dashboard-container.sidebar-open {
+                margin-left: 0;
             }
         }
 
@@ -2274,13 +2457,108 @@
     </style>
 </head>
 <body>
+    <!-- Bouton toggle sidebar pour mobile -->
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+        ☰
+    </button>
+
+    <!-- Barre latérale gauche -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h1>📊 KAMLAC Food Industries</h1>
+            <div class="version-info">
+                <div>Dernière mise à jour: <span id="sidebarLastUpdate">--</span></div>
+                <div>Version: <strong id="sidebarAppVersion">2.1.1</strong></div>
+            </div>
+            <div class="sync-status" id="sidebarSyncStatus">☁️ Sync</div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <!-- Section Modules -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">
+                    <span>🏢</span>
+                    <span>Modules</span>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('commercial')" class="active" id="sidebar-commercial">
+                            <span>💼</span>
+                            <span>Module Commercial</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('stocks')" id="sidebar-stocks">
+                            <span>📦</span>
+                            <span>Module Stocks</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('admin')" id="sidebar-admin">
+                            <span>🔐</span>
+                            <span>Module Admin</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Section Stocks -->
+            <div class="sidebar-section" id="sidebar-stocks-section" style="display: none;">
+                <div class="sidebar-section-title">
+                    <span>📦</span>
+                    <span>Stocks</span>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('stocks'); showStocksSection('stock-dashboard');" id="sidebar-stock-dashboard">
+                            <span>📊</span>
+                            <span>Dashboard Stocks</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('stocks'); showStocksSection('stock-inventory');" id="sidebar-stock-inventory">
+                            <span>📦</span>
+                            <span>Inventaire</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('stocks'); showStocksSection('stock-recap');" id="sidebar-stock-recap">
+                            <span>📋</span>
+                            <span>Mouvements</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('stocks'); showStocksSection('stock-saisie');" id="sidebar-stock-saisie">
+                            <span>✏️</span>
+                            <span>Saisie</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('stocks'); showStocksSection('stock-settings');" id="sidebar-stock-settings">
+                            <span>⚙️</span>
+                            <span>Alertes</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <div class="sidebar-quick-actions">
+            <button class="sidebar-quick-btn" onclick="toggleFloatingMenu()">
+                <span>+</span>
+                <span>Accès rapide</span>
+            </button>
+        </div>
+    </div>
+
     <!-- Progress Bar -->
     <div class="progress-container" id="progressContainer" style="display: none;">
         <div class="progress-bar" id="progressBar"></div>
     </div>
     
     <div class="dashboard-container">
-        <div class="header">
+        <!-- Ancien header et navigation masqués car maintenant dans la sidebar -->
+        <div class="header" style="display: none;">
             <h1>📊 KAMLAC Food Industries </h1>
             <div class="last-update" id="lastUpdate">Dernière mise à jour: --</div>
             <div style="margin-top: 8px; font-size: clamp(0.7rem, 1.8vw, 0.8rem); color: var(--text-secondary);">
@@ -2290,7 +2568,7 @@
         </div>
         
         <!-- Navigation principale des modules -->
-        <div class="module-nav">
+        <div class="module-nav" style="display: none;">
             <button class="module-tab active" onclick="showModule('commercial')">💼 Module Commercial</button>
             <button class="module-tab" onclick="showModule('stocks')">📦 Module Stocks</button>
             <button class="module-tab" onclick="showModule('admin')">🔐 Module Admin</button>
@@ -2470,13 +2748,13 @@
                 </div>
                 
                 <div class="sub-nav-tabs">
-                    <button class="sub-nav-tab sales-tab active" onclick="showSubSection('recap-sales')">📦 Ventes</button>
+                    <button class="sub-nav-tab global-tab active" onclick="showSubSection('recap-global')">🔄 Tous Mouvements</button>
+                    <button class="sub-nav-tab sales-tab" onclick="showSubSection('recap-sales')">📦 Ventes</button>
                     <button class="sub-nav-tab payments-tab" onclick="showSubSection('recap-payments')">💰 Encaissements</button>
-                    <button class="sub-nav-tab global-tab" onclick="showSubSection('recap-global')">🌐 Global</button>
                 </div>
 
                 <!-- Sous-section Ventes -->
-                <div id="recap-sales" class="sub-section active">
+                <div id="recap-sales" class="sub-section">
                     <h3 style="margin-bottom: 15px; color: #667eea;">📦 Historique des Ventes</h3>
                     
                     <!-- Stats récapitulatif ventes -->
@@ -2554,8 +2832,8 @@
                 </div>
 
                 <!-- Sous-section Global -->
-                <div id="recap-global" class="sub-section">
-                    <h3 style="margin-bottom: 15px; color: #667eea;">🌐 Vue Globale - Ventes et Encaissements</h3>
+                <div id="recap-global" class="sub-section active">
+                    <h3 style="margin-bottom: 15px; color: #667eea;">🔄 Vue Globale - Tous Mouvements</h3>
                     
                     <!-- Stats récapitulatif global -->
                     <div class="stats-row" style="margin-bottom: 20px;">
@@ -4344,6 +4622,29 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     }
                 });
                 console.log(`✅ ${stockExitsData.length} sorties rechargées depuis Firebase`);
+
+                // 3. Recharger les produits depuis Firebase
+                console.log(`🏷️ Rechargement products...`);
+                const productsSnapshot = await db.collection('products').get();
+                productsData = [];
+                productsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data) {
+                        productsData.push({
+                            id: doc.id,
+                            reference: data.reference || data.name || 'Sans nom',
+                            price: data.price || 0,
+                            format: data.format || '',
+                            margin: data.margin || '',
+                            brand: data.brand || '',
+                            category: data.category || '',
+                            createdAt: data.createdAt || '',
+                            updatedAt: data.updatedAt || '',
+                            ...data
+                        });
+                    }
+                });
+                console.log(`✅ ${productsData.length} produits rechargés depuis Firebase`);
                 
                 // 🚫 PAS DE SAUVEGARDE localStorage - Mode Firebase pur
                 console.log(`🚫 Mode Firebase pur - Pas de sauvegarde localStorage`);
@@ -4447,6 +4748,83 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         // ========================================
         // GESTION DES MODULES
         // ========================================
+        // FONCTIONS SIDEBAR
+        // ========================================
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const dashboard = document.querySelector('.dashboard-container');
+            
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('show');
+            }
+        }
+
+        function updateSidebarActive(moduleId, sectionId = null) {
+            // Réinitialiser tous les liens actifs
+            document.querySelectorAll('.sidebar-menu-item a').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            // Masquer toutes les sections de modules
+            document.querySelectorAll('.sidebar-section').forEach(section => {
+                if (section.id && section.id !== 'sidebar-modules-section') {
+                    section.style.display = 'none';
+                }
+            });
+
+            // Activer le module dans la sidebar
+            const moduleLink = document.getElementById(`sidebar-${moduleId}`);
+            if (moduleLink) {
+                moduleLink.classList.add('active');
+            }
+
+            // Afficher la section correspondante et activer le bon lien
+            if (moduleId === 'stocks') {
+                const stocksSection = document.getElementById('sidebar-stocks-section');
+                if (stocksSection) {
+                    stocksSection.style.display = 'block';
+                }
+                
+                if (sectionId) {
+                    const sectionLink = document.getElementById(`sidebar-${sectionId}`);
+                    if (sectionLink) {
+                        sectionLink.classList.add('active');
+                        // Retirer l'active du module principal si une section est sélectionnée
+                        if (moduleLink) {
+                            moduleLink.classList.remove('active');
+                        }
+                    }
+                }
+            }
+        }
+
+        function syncSidebarWithMainUpdate() {
+            // Synchroniser les informations de la sidebar avec le contenu principal
+            const lastUpdate = document.getElementById('lastUpdate');
+            const appVersion = document.getElementById('appVersion');
+            const cloudStatus = document.getElementById('cloudStatus');
+            
+            const sidebarLastUpdate = document.getElementById('sidebarLastUpdate');
+            const sidebarAppVersion = document.getElementById('sidebarAppVersion');
+            const sidebarSyncStatus = document.getElementById('sidebarSyncStatus');
+            
+            if (lastUpdate && sidebarLastUpdate) {
+                sidebarLastUpdate.textContent = lastUpdate.textContent.replace('Dernière mise à jour: ', '');
+            }
+            
+            if (appVersion && sidebarAppVersion) {
+                sidebarAppVersion.textContent = appVersion.textContent;
+            }
+            
+            if (cloudStatus && sidebarSyncStatus) {
+                sidebarSyncStatus.textContent = cloudStatus.textContent;
+            }
+        }
+
+        // ========================================
+        // FONCTIONS NAVIGATION MODULES
+        // ========================================
         
         function showModule(moduleId) {
             // Cacher tous les modules
@@ -4480,6 +4858,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 initializeCommercialModule();
             } else if (moduleId === 'admin') {
                 initializeAdminModule();
+            }
+
+            // Mettre à jour la sidebar
+            updateSidebarActive(moduleId);
+            
+            // Fermer la sidebar sur mobile après sélection
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('show');
             }
         }
         
@@ -4665,6 +5051,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 case 'stock-settings':
                     updateStockSettings();
                     break;
+            }
+
+            // Mettre à jour la sidebar
+            updateSidebarActive('stocks', sectionId);
+            
+            // Fermer la sidebar sur mobile après sélection
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('show');
             }
         }
         
@@ -4857,28 +5251,41 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             displayMovements.forEach(movement => {
                 const row = document.createElement('tr');
                 
-                const typeClass = movement.quantity > 0 ? 'text-success' : 'text-danger';
+                const isEntry = movement.quantity > 0;
+                const typeClass = isEntry ? 'text-success' : 'text-danger';
                 const quantityDisplay = Math.abs(movement.quantity).toLocaleString();
+                const typeIcon = isEntry ? '📥' : '📤';
+                const amountStyle = isEntry ? 'color: #28a745; font-weight: 600;' : 'color: #dc3545; font-weight: 600;';
+                
+                // Ajouter les attributs pour le système de hover et le clic
+                row.setAttribute('data-product', movement.product);
+                row.style.cursor = 'pointer';
+                row.onclick = function(e) {
+                    // Éviter le clic si on clique sur le bouton supprimer
+                    if (e.target.closest('button')) return;
+                    if (movement.source === 'sales') {
+                        // Pour les ventes, ouvrir la fiche produit
+                        showProductSheet(movement.product);
+                    } else {
+                        editMovement(movement.source, movement.id);
+                    }
+                };
                 
                 row.innerHTML = `
                     <td>${movement.date}</td>
-                    <td><span class="${typeClass}" style="font-weight: 500;">${movement.type}</span></td>
+                    <td style="font-weight: 600;"><span style="${isEntry ? 'color: #28a745;' : 'color: #dc3545;'}">${typeIcon} ${movement.type}</span></td>
                     <td style="font-weight: 500;">${movement.product}</td>
-                    <td class="${typeClass}" style="font-weight: bold;">${quantityDisplay}</td>
+                    <td style="${amountStyle}">${quantityDisplay}</td>
                     <td>${movement.unit}</td>
                     <td>${movement.unitCost.toLocaleString()} CFA</td>
-                    <td>${movement.totalCost.toLocaleString()} CFA</td>
+                    <td style="${amountStyle}">${movement.totalCost.toLocaleString()} CFA</td>
                     <td style="color: #666; font-size: 0.9rem;">${movement.reference}</td>
-                    <td>
+                    <td onclick="event.stopPropagation();">
                         ${movement.source === 'sales' ? 
                             '<span style="color: #666; font-size: 0.85rem; font-style: italic;">Géré depuis Ventes</span>' 
                             : 
-                            `<button onclick="editMovement('${movement.source}', '${movement.id}')" 
-                                    class="btn-icon" title="Modifier" style="font-size: 0.8rem; margin-right: 5px;">
-                                ✏️
-                            </button>
-                            <button onclick="deleteMovement('${movement.source}', '${movement.id}')" 
-                                    class="btn-icon" title="Supprimer" style="font-size: 0.8rem;">
+                            `<button onclick="deleteMovement('${movement.source}', '${movement.id}')" 
+                                    class="btn-action btn-danger" title="Supprimer">
                                 🗑️
                             </button>`
                         }
@@ -5277,6 +5684,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     statusText = 'OK';
                 }
                 
+                // Ajouter les attributs pour le système de hover et le clic
+                row.setAttribute('data-product', product);
+                row.style.cursor = 'pointer';
+                row.onclick = function(e) {
+                    // Éviter le clic si on clique sur le bouton fiche
+                    if (e.target.closest('button')) return;
+                    showProductSheet(product);
+                };
+                
                 row.innerHTML = `
                     <td style="font-weight: 500;">${product}</td>
                     <td class="${statusClass}" style="font-weight: bold;">
@@ -5292,9 +5708,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     <td style="font-size: 0.8rem; color: #888;">
                         ${stock.lastMovement ? new Date(stock.lastMovement).toLocaleDateString() : 'N/A'}
                     </td>
-                    <td>
+                    <td onclick="event.stopPropagation();">
                         <button onclick="showProductSheet('${product.replace(/'/g, "\\'")}')" 
-                                class="btn-icon" title="Fiche produit" style="background: #667eea; color: white; padding: 5px 10px; border-radius: 5px;">
+                                class="btn-action" title="Fiche produit" style="background: #667eea; color: white; padding: 5px 10px; border-radius: 5px;">
                             📋 Fiche
                         </button>
                     </td>
@@ -6696,6 +7112,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     if (specificType === 'Retour') specificType = 'Retour client';
                     if (specificType === 'Ajustement') specificType = 'Ajustement inventaire';
                     
+                    // Ajouter les attributs pour le système de hover et le clic
+                    row.setAttribute('data-product', entry.product);
+                    row.style.cursor = 'pointer';
+                    row.onclick = function(e) {
+                        // Éviter le clic si on clique sur le bouton supprimer
+                        if (e.target.closest('button')) return;
+                        editStockEntry(entry.id);
+                    };
+                    
                     row.innerHTML = `
                         <td>${entry.date}</td>
                         <td style="font-weight: 500;">${entry.product}</td>
@@ -6706,9 +7131,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         <td style="color: #666; font-weight: 500;">${specificType}</td>
                         <td style="color: #666;">${entry.supplier || entry.fournisseur || 'Non spécifié'}</td>
                         <td style="color: #666;">${entry.reference || 'Non spécifiée'}</td>
-                        <td>
-                            <button onclick="editStockEntry('${entry.id}')" class="btn-icon" title="Modifier" style="margin-right: 5px;">✏️</button>
-                            <button onclick="deleteStockEntry('${entry.id}')" class="btn-icon" title="Supprimer">🗑️</button>
+                        <td onclick="event.stopPropagation();">
+                            <button onclick="deleteStockEntry('${entry.id}')" class="btn-action btn-danger" title="Supprimer">🗑️</button>
                         </td>
                     `;
                     
@@ -6804,6 +7228,20 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     
                     const typeClass = exit.source === 'sales' ? 'text-primary' : 'text-warning';
                     
+                    // Ajouter les attributs pour le système de hover et le clic
+                    row.setAttribute('data-product', exit.product);
+                    row.style.cursor = 'pointer';
+                    row.onclick = function(e) {
+                        // Éviter le clic si on clique sur le bouton supprimer
+                        if (e.target.closest('button')) return;
+                        if (exit.source === 'sales') {
+                            // Pour les ventes, ouvrir la fiche produit
+                            showProductSheet(exit.product);
+                        } else {
+                            editStockExit(exit.id, exit.source);
+                        }
+                    };
+                    
                     row.innerHTML = `
                         <td>${exit.date}</td>
                         <td style="font-weight: 500;">${exit.product}</td>
@@ -6814,15 +7252,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         <td><span class="${typeClass}" style="font-weight: 500;">${exit.type}</span></td>
                         <td style="color: #666;">${exit.destination || exit.client || 'Non spécifié'}</td>
                         <td style="color: #666; font-size: 0.9rem;">${exit.reference || 'Non spécifiée'}</td>
-                        <td>
-                            <button onclick="editStockExit('${exit.id}', '${exit.source}')" 
-                                    class="btn-icon" title="Modifier" style="margin-right: 5px;">
-                                ✏️
-                            </button>
-                            <button onclick="deleteStockExit('${exit.id}', '${exit.source}')" 
-                                    class="btn-icon" title="Supprimer">
-                                🗑️
-                            </button>
+                        <td onclick="event.stopPropagation();">
+                            ${exit.source === 'sales' ? 
+                                '<span style="color: #666; font-size: 0.85rem; font-style: italic;">Géré depuis Ventes</span>' 
+                                : 
+                                `<button onclick="deleteStockExit('${exit.id}', '${exit.source}')" 
+                                        class="btn-action btn-danger" title="Supprimer">
+                                    🗑️
+                                </button>`
+                            }
                         </td>
                     `;
                     
@@ -8835,6 +9273,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             if (validLines.length === 0) {
                 showAlert('Veuillez ajouter au moins une ligne d\'entrée valide', 'error');
+                return;
+            }
+            
+            // Validation obligatoire du coût d'achat pour toutes les lignes
+            const linesWithoutCost = validLines.filter(line => !line.unitCost || line.unitCost <= 0);
+            if (linesWithoutCost.length > 0) {
+                showAlert('Le coût d\'achat est obligatoire pour toutes les entrées de stock et doit être supérieur à 0', 'error');
                 return;
             }
             
@@ -10934,6 +11379,13 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
             
+            // Initialiser la sidebar
+            updateSidebarActive('commercial');
+            syncSidebarWithMainUpdate();
+            
+            // Synchroniser périodiquement la sidebar
+            setInterval(syncSidebarWithMainUpdate, 5000);
+            
             // Système de suivi de la position de la souris pour les dropdowns
             document.addEventListener('mousemove', function(e) {
                 window.lastMouseX = e.clientX;
@@ -11178,14 +11630,33 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                         });
                     });
                     
-                    // Fusionner avec les données locales (sans doublons)
+                    // Mettre à jour les produits existants et ajouter les nouveaux
                     const existingIds = new Set(productsData.map(p => p.id));
-                    const newProducts = firebaseProducts.filter(p => !existingIds.has(p.id));
-                    
+                    const newProducts = [];
+                    let updatedCount = 0;
+
+                    firebaseProducts.forEach(firebaseProduct => {
+                        if (existingIds.has(firebaseProduct.id)) {
+                            // Produit existant - mettre à jour
+                            const index = productsData.findIndex(p => p.id === firebaseProduct.id);
+                            if (index !== -1) {
+                                productsData[index] = firebaseProduct;
+                                updatedCount++;
+                            }
+                        } else {
+                            // Nouveau produit
+                            newProducts.push(firebaseProduct);
+                        }
+                    });
+
+                    // Ajouter les nouveaux produits
                     if (newProducts.length > 0) {
                         productsData.push(...newProducts);
+                    }
+
+                    if (newProducts.length > 0 || updatedCount > 0) {
                         saveToLocalStorage();
-                        console.log(`✅ ${newProducts.length} nouveaux produits ajoutés depuis Firebase`);
+                        console.log(`✅ ${newProducts.length} nouveaux produits ajoutés, ${updatedCount} produits mis à jour depuis Firebase`);
                     }
                     
                     console.log(`✅ Total produits disponibles: ${productsData.length}`);
@@ -13904,7 +14375,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         // Navigation sous-sections saisie (commercial)
-        function showSaisieSection(saisieSectionName) {
+        function showSaisieSection(saisieSectionName, targetElement = null) {
             document.querySelectorAll('#saisie .settings-section').forEach(section => {
                 section.classList.remove('active');
             });
@@ -13914,7 +14385,19 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             });
             
             document.getElementById('saisie-' + saisieSectionName).classList.add('active');
-            event.target.classList.add('active');
+            
+            // Activer l'onglet correspondant
+            if (targetElement) {
+                targetElement.classList.add('active');
+            } else if (typeof event !== 'undefined' && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // Trouver et activer l'onglet correspondant par son contenu
+                const targetTab = document.querySelector(`#saisie .settings-tab[onclick*="'${saisieSectionName}'"]`);
+                if (targetTab) {
+                    targetTab.classList.add('active');
+                }
+            }
         }
 
         // Navigation sous-sections saisie stocks
@@ -14330,6 +14813,16 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             
             sortedSales.forEach(sale => {
                 const row = tbody.insertRow();
+                
+                // Ajouter les attributs pour le système de hover et le clic
+                row.setAttribute('data-product', sale.product || sale.client);
+                row.style.cursor = 'pointer';
+                row.onclick = function(e) {
+                    // Éviter le clic si on clique sur un bouton
+                    if (e.target.closest('button')) return;
+                    editSale(sale.id);
+                };
+                
                 row.innerHTML = `
                     <td>${sale.date}</td>
                     <td>${sale.client}</td>
@@ -14338,11 +14831,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     <td>${sale.quantity || '-'}</td>
                     <td>${formatCurrency(sale.unitPrice || 0)}</td>
                     <td>${formatCurrency(sale.valeur)}</td>
-                    <td>
-                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                            <button class="btn btn-warning" onclick="editSale('${sale.id}')" style="padding: 4px 8px; font-size: 10px;">✏️</button>
-                            <button class="btn btn-danger" onclick="deleteSale('${sale.id}')" style="padding: 4px 8px; font-size: 10px;">🗑️</button>
-                        </div>
+                    <td onclick="event.stopPropagation();">
+                        <button class="btn-action btn-danger" onclick="deleteSale('${sale.id}')" title="Supprimer">🗑️</button>
                     </td>
                 `;
             });
@@ -14372,17 +14862,24 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             
             sortedPayments.forEach(payment => {
                 const row = tbody.insertRow();
+                
+                // Ajouter les attributs pour le système de hover et le clic
+                row.setAttribute('data-product', payment.client);
+                row.style.cursor = 'pointer';
+                row.onclick = function(e) {
+                    // Éviter le clic si on clique sur un bouton
+                    if (e.target.closest('button')) return;
+                    editPayment(payment.id);
+                };
+                
                 row.innerHTML = `
                     <td>${payment.date}</td>
                     <td>${payment.client}</td>
                     <td>${formatCurrency(payment.amount)}</td>
                     <td>${payment.method}</td>
                     <td>${payment.reference || '-'}</td>
-                    <td>
-                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                            <button class="btn btn-warning" onclick="editPayment('${payment.id}')" style="padding: 4px 8px; font-size: 10px;">✏️</button>
-                            <button class="btn btn-danger" onclick="deletePayment('${payment.id}')" style="padding: 4px 8px; font-size: 10px;">🗑️</button>
-                        </div>
+                    <td onclick="event.stopPropagation();">
+                        <button class="btn-action btn-danger" onclick="deletePayment('${payment.id}')" title="Supprimer">🗑️</button>
                     </td>
                 `;
             });
@@ -14489,18 +14986,29 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 const amountStyle = operation.isPositive ? 'color: #28a745; font-weight: 600;' : 'color: #6c757d; font-weight: 600;';
                 const typeIcon = operation.isPositive ? '📦' : '💰';
                 
+                // Ajouter les attributs pour le système de hover et le clic
+                row.setAttribute('data-product', operation.description);
+                row.style.cursor = 'pointer';
+                row.onclick = function(e) {
+                    // Éviter le clic si on clique sur un bouton
+                    if (e.target.closest('button')) return;
+                    if (operation.isPositive) {
+                        editSale(operation.id);
+                    } else {
+                        editPayment(operation.id);
+                    }
+                };
+                
                 row.innerHTML = `
                     <td>${operation.date}</td>
                     <td style="font-weight: 600;"><span style="${operation.isPositive ? 'color: #28a745;' : 'color: #fd7e14;'}">${typeIcon} ${operation.type}</span></td>
                     <td>${operation.client}</td>
                     <td>${operation.description}</td>
                     <td style="${amountStyle}">${formatCurrency(operation.amount)}</td>
-                    <td>
+                    <td onclick="event.stopPropagation();">
                         ${operation.isPositive ? 
-                            `<button class="btn-action" onclick="editSale('${operation.id}')" title="Modifier">✏️</button>
-                             <button class="btn-action btn-danger" onclick="deleteSale('${operation.id}')" title="Supprimer">🗑️</button>` :
-                            `<button class="btn-action" onclick="editPayment('${operation.id}')" title="Modifier">✏️</button>
-                             <button class="btn-action btn-danger" onclick="deletePayment('${operation.id}')" title="Supprimer">🗑️</button>`
+                            `<button class="btn-action btn-danger" onclick="deleteSale('${operation.id}')" title="Supprimer">🗑️</button>` :
+                            `<button class="btn-action btn-danger" onclick="deletePayment('${operation.id}')" title="Supprimer">🗑️</button>`
                         }
                     </td>
                 `;
@@ -14620,6 +15128,15 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 }
             }
             
+            // Pour les produits existants, conserver le createdAt original
+            let existingCreatedAt = null;
+            if (editingProductId) {
+                const existingProduct = productsData.find(p => p.id === editingProductId);
+                if (existingProduct && existingProduct.createdAt) {
+                    existingCreatedAt = existingProduct.createdAt;
+                }
+            }
+
             const product = {
                 id: editingProductId || Date.now().toString(),
                 reference: reference,
@@ -14628,7 +15145,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 margin: margin,
                 brand: brand,
                 category: category,
-                createdAt: editingProductId ? undefined : new Date().toISOString(),
+                createdAt: editingProductId ? (existingCreatedAt || new Date().toISOString()) : new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
             
@@ -14658,8 +15175,16 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             // Synchroniser avec Firebase
             if (isFirebaseInitialized) {
                 try {
+                    // Créer une copie du produit sans les champs undefined
+                    const productForFirebase = {};
+                    Object.keys(product).forEach(key => {
+                        if (product[key] !== undefined) {
+                            productForFirebase[key] = product[key];
+                        }
+                    });
+                    
                     await db.collection('products').doc(product.id.toString()).set({
-                        ...product,
+                        ...productForFirebase,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     console.log(`✅ Produit ${reference} synchronisé avec Firebase`);
@@ -14673,10 +15198,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             updateProductsList(); // Met à jour les listes déroulantes
             populateRecapFilters();
             
+            // Sauvegarder l'état avant de fermer la modale
+            const wasEditing = editingProductId !== null;
             closeProductModal();
-            showAlert(editingProductId ? 'Produit modifié avec succès' : 'Produit créé avec succès', 'success');
+            showAlert(wasEditing ? 'Produit modifié avec succès' : 'Produit créé avec succès', 'success');
             
-            console.log(`✅ Produit ${editingProductId ? 'modifié' : 'créé'}: ${reference}`);
+            console.log(`✅ Produit ${wasEditing ? 'modifié' : 'créé'}: ${reference}`);
         }
         
         // Fonction pour créer automatiquement l'entrée inventaire
@@ -17824,8 +18351,10 @@ Date [ESPACES] Client [ESPACES] Montant
 
         function openQuickSale() {
             toggleFloatingMenu(); // Fermer le menu
-            // Aller directement à la section ventes
-            showSection('sales');
+            // Aller directement à la section saisie vente
+            showModule('commercial');
+            showSection('saisie');
+            showSaisieSection('vente');
             setTimeout(() => {
                 const clientInput = document.getElementById('invoiceClient');
                 if (clientInput) {
@@ -17836,8 +18365,10 @@ Date [ESPACES] Client [ESPACES] Montant
 
         function openQuickPayment() {
             toggleFloatingMenu(); // Fermer le menu
-            // Aller directement à la section encaissements
-            showSection('payments');
+            // Aller directement à la section saisie encaissement
+            showModule('commercial');
+            showSection('saisie');
+            showSaisieSection('encaissement');
             setTimeout(() => {
                 const clientInput = document.getElementById('paymentClient');
                 if (clientInput) {
