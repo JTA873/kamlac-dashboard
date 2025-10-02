@@ -2719,6 +2719,84 @@
             25% { transform: translateX(-10px); }
             75% { transform: translateX(10px); }
         }
+        
+        /* Styles pour les factures groupées */
+        .invoice-group {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .invoice-group:hover {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left-color: #2196f3;
+            transform: translateX(2px);
+        }
+        
+        .invoice-group.expanded {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-left-color: #ff9800;
+        }
+        
+        .invoice-header {
+            font-weight: 600;
+            padding: 12px 15px;
+            position: relative;
+        }
+        
+        .invoice-expand-icon {
+            display: inline-block;
+            margin-right: 8px;
+            transition: transform 0.3s ease;
+            font-size: 12px;
+            color: #667eea;
+        }
+        
+        .invoice-group.expanded .invoice-expand-icon {
+            transform: rotate(90deg);
+            color: #ff9800;
+        }
+        
+        .invoice-summary {
+            font-size: 14px;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .invoice-details {
+            display: none;
+            padding: 0;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .invoice-group.expanded .invoice-details {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+        
+        .invoice-details table {
+            margin: 0;
+            background: white;
+        }
+        
+        .invoice-details .data-table th {
+            background: #f1f3f4;
+            font-size: 12px;
+            padding: 8px;
+        }
+        
+        .invoice-details .data-table td {
+            font-size: 13px;
+            padding: 8px;
+        }
+        
+        .invoice-total {
+            background: #28a745;
+            color: white;
+            font-weight: 600;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -3058,12 +3136,10 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
+                                    <th>Facture</th>
                                     <th>Date</th>
                                     <th>Client</th>
-                                    <th>Facture</th>
-                                    <th>Produit</th>
-                                    <th>Qté</th>
-                                    <th>P.U.</th>
+                                    <th>Articles</th>
                                     <th>Total</th>
                                     <th>Actions</th>
                                 </tr>
@@ -15126,48 +15202,108 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             const tbody = document.getElementById('salesRecapTableBody');
             tbody.innerHTML = '';
             
-            const sortedSales = filteredRecapSales.sort((a, b) => {
+            // Grouper les ventes par facture
+            const invoiceGroups = {};
+            
+            filteredRecapSales.forEach(sale => {
+                const invoiceKey = sale.invoice || `SANS_FACTURE_${sale.client}_${sale.date}`;
+                if (!invoiceGroups[invoiceKey]) {
+                    invoiceGroups[invoiceKey] = {
+                        invoice: sale.invoice || 'Sans facture',
+                        date: sale.date,
+                        client: sale.client,
+                        items: [],
+                        total: 0
+                    };
+                }
+                invoiceGroups[invoiceKey].items.push(sale);
+                invoiceGroups[invoiceKey].total += sale.valeur || 0;
+            });
+            
+            // Convertir en tableau et trier par date
+            const sortedInvoices = Object.values(invoiceGroups).sort((a, b) => {
                 const dateA = parseDate(a.date);
                 const dateB = parseDate(b.date);
                 return dateB - dateA;
-            }); // Suppression de la limite .slice(0, 100)
-            
-            sortedSales.forEach(sale => {
-                const row = tbody.insertRow();
-                
-                // Ajouter les attributs pour le système de hover et le clic
-                row.setAttribute('data-product', sale.product || sale.client);
-                row.style.cursor = 'pointer';
-                row.onclick = function(e) {
-                    // Éviter le clic si on clique sur un bouton
-                    if (e.target.closest('button')) return;
-                    editSale(sale.id);
-                };
-                
-                row.innerHTML = `
-                    <td>${sale.date}</td>
-                    <td>${sale.client}</td>
-                    <td>${sale.invoice || '-'}</td>
-                    <td>${sale.product || '-'}</td>
-                    <td>${sale.quantity || '-'}</td>
-                    <td>${formatCurrency(sale.unitPrice || 0)}</td>
-                    <td>${formatCurrency(sale.valeur)}</td>
-                    <td onclick="event.stopPropagation();">
-                        <button class="btn-action btn-danger" onclick="deleteSale('${sale.id}')" title="Supprimer">🗑️</button>
-                    </td>
-                `;
             });
             
-            // Afficher le nombre total de lignes
-            if (sortedSales.length > 50) {
-                const row = tbody.insertRow(0);
-                row.innerHTML = `<td colspan="8" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedSales.length} ventes affichées</td>`;
-            }
+            sortedInvoices.forEach((invoiceGroup, index) => {
+                // Ligne principale de la facture (groupée)
+                const mainRow = tbody.insertRow();
+                mainRow.className = 'invoice-group';
+                mainRow.setAttribute('data-invoice', invoiceGroup.invoice);
+                
+                const itemsCount = invoiceGroup.items.length;
+                const itemsSummary = itemsCount === 1 ? 
+                    `1 article: ${invoiceGroup.items[0].product}` : 
+                    `${itemsCount} articles`;
+                
+                mainRow.innerHTML = `
+                    <td class="invoice-header">
+                        <span class="invoice-expand-icon">▶</span>
+                        <strong>${invoiceGroup.invoice}</strong>
+                        <div class="invoice-summary">${itemsSummary}</div>
+                    </td>
+                    <td>${invoiceGroup.date}</td>
+                    <td>${invoiceGroup.client}</td>
+                    <td>${itemsCount} article${itemsCount > 1 ? 's' : ''}</td>
+                    <td style="font-weight: 600; color: #28a745;">${formatCurrency(invoiceGroup.total)}</td>
+                    <td onclick="event.stopPropagation();">
+                        <button class="btn-action btn-warning" onclick="editInvoiceGroup('${invoiceGroup.invoice}')" title="Modifier facture">✏️</button>
+                        <button class="btn-action btn-danger" onclick="deleteInvoiceGroup('${invoiceGroup.invoice}')" title="Supprimer facture">🗑️</button>
+                    </td>
+                `;
+                
+                // Ligne des détails (cachée par défaut)
+                const detailsRow = tbody.insertRow();
+                detailsRow.className = 'invoice-details';
+                detailsRow.innerHTML = `
+                    <td colspan="6">
+                        <table class="data-table" style="margin: 0; width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Quantité</th>
+                                    <th>Prix Unitaire</th>
+                                    <th>Total</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${invoiceGroup.items.map(item => `
+                                    <tr>
+                                        <td>${item.product || '-'}</td>
+                                        <td>${item.quantity || '-'}</td>
+                                        <td>${formatCurrency(item.unitPrice || 0)}</td>
+                                        <td>${formatCurrency(item.valeur || 0)}</td>
+                                        <td>
+                                            <button class="btn-action btn-warning" onclick="editSale('${item.id}')" title="Modifier">✏️</button>
+                                            <button class="btn-action btn-danger" onclick="deleteSale('${item.id}')" title="Supprimer">🗑️</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                                <tr class="invoice-total">
+                                    <td colspan="3"><strong>TOTAL FACTURE</strong></td>
+                                    <td><strong>${formatCurrency(invoiceGroup.total)}</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                `;
+                
+                // Événement de clic pour expandir/contracter
+                mainRow.addEventListener('click', function(e) {
+                    if (e.target.closest('button')) return;
+                    toggleInvoiceDetails(this);
+                });
+            });
             
-            // Réinitialiser le tri pour ce tableau
-            const salesTable = tbody.closest('.data-table');
-            if (salesTable) {
-                reinitializeTableSorting(salesTable);
+            // Afficher le nombre total de factures
+            if (sortedInvoices.length > 0) {
+                const totalSales = filteredRecapSales.length;
+                const row = tbody.insertRow(0);
+                row.innerHTML = `<td colspan="6" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedInvoices.length} facture${sortedInvoices.length > 1 ? 's' : ''} (${totalSales} article${totalSales > 1 ? 's' : ''})</td>`;
             }
         }
 
@@ -20750,6 +20886,219 @@ Date [ESPACES] Client [ESPACES] Montant
         window.showModule = showModule;
         window.showSection = showSection;
         window.syncLocalProductsAndInventory = syncLocalProductsAndInventory;
+
+        // ========================================
+        // FONCTIONS GESTION FACTURES GROUPÉES
+        // ========================================
+        
+        // Fonction pour expandir/contracter les détails d'une facture
+        function toggleInvoiceDetails(mainRow) {
+            const isExpanded = mainRow.classList.contains('expanded');
+            const detailsRow = mainRow.nextElementSibling;
+            
+            if (isExpanded) {
+                // Contracter
+                mainRow.classList.remove('expanded');
+                if (detailsRow && detailsRow.classList.contains('invoice-details')) {
+                    detailsRow.style.display = 'none';
+                }
+            } else {
+                // Expandir
+                mainRow.classList.add('expanded');
+                if (detailsRow && detailsRow.classList.contains('invoice-details')) {
+                    detailsRow.style.display = 'table-row';
+                }
+            }
+        }
+        
+        // Fonction pour éditer un groupe de facture (toutes les lignes de la facture)
+        function editInvoiceGroup(invoiceNumber) {
+            // Filtrer toutes les ventes de cette facture
+            const invoiceSales = salesData.filter(sale => sale.invoice === invoiceNumber);
+            
+            if (invoiceSales.length === 0) {
+                showAlert('Aucune vente trouvée pour cette facture', 'warning');
+                return;
+            }
+            
+            // Si une seule ligne, éditer directement
+            if (invoiceSales.length === 1) {
+                editSale(invoiceSales[0].id);
+                return;
+            }
+            
+            // Sinon, afficher un modal avec toutes les lignes
+            const modal = document.createElement('div');
+            modal.className = 'product-modal';
+            modal.innerHTML = `
+                <div class="product-modal-content" style="max-width: 900px;">
+                    <h3 style="margin-bottom: 20px; color: #667eea;">✏️ Édition Facture: ${invoiceNumber}</h3>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <strong>Client:</strong> ${invoiceSales[0].client}<br>
+                        <strong>Date:</strong> ${invoiceSales[0].date}<br>
+                        <strong>Nombre d'articles:</strong> ${invoiceSales.length}
+                    </div>
+                    
+                    <div style="overflow-x: auto; margin-bottom: 20px;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Quantité</th>
+                                    <th>Prix Unitaire</th>
+                                    <th>Total</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${invoiceSales.map(sale => `
+                                    <tr>
+                                        <td>${sale.product || '-'}</td>
+                                        <td>${sale.quantity || '-'}</td>
+                                        <td>${formatCurrency(sale.unitPrice || 0)}</td>
+                                        <td>${formatCurrency(sale.valeur || 0)}</td>
+                                        <td>
+                                            <button class="btn btn-warning" onclick="editSale('${sale.id}'); closeInvoiceGroupModal();" style="margin-right: 5px;">✏️ Modifier</button>
+                                            <button class="btn btn-danger" onclick="deleteSale('${sale.id}'); updateInvoiceGroupModal('${invoiceNumber}');">🗑️ Supprimer</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: #28a745; color: white; font-weight: 600;">
+                                    <td colspan="3"><strong>TOTAL FACTURE</strong></td>
+                                    <td><strong>${formatCurrency(invoiceSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0))}</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="closeInvoiceGroupModal()">✖️ Fermer</button>
+                        <button class="btn btn-info" onclick="addSaleToInvoice('${invoiceNumber}', '${invoiceSales[0].client}', '${invoiceSales[0].date}')">➕ Ajouter Article</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'flex';
+            
+            // Fermeture en cliquant à l'extérieur
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeInvoiceGroupModal();
+                }
+            });
+        }
+        
+        // Fonction pour fermer le modal de groupe de facture
+        function closeInvoiceGroupModal() {
+            const modal = document.querySelector('.product-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        // Fonction pour mettre à jour le modal après suppression d'une ligne
+        function updateInvoiceGroupModal(invoiceNumber) {
+            closeInvoiceGroupModal();
+            setTimeout(() => {
+                editInvoiceGroup(invoiceNumber);
+            }, 100);
+        }
+        
+        // Fonction pour ajouter un article à une facture existante
+        function addSaleToInvoice(invoiceNumber, client, date) {
+            closeInvoiceGroupModal();
+            
+            // Ouvrir la section saisie et pré-remplir les champs
+            showModule('commercial');
+            showSection('saisie');
+            showSaisieSection('saisie-vente');
+            
+            // Pré-remplir les champs après un court délai
+            setTimeout(() => {
+                const clientSelect = document.getElementById('clientSelect');
+                const invoiceInput = document.getElementById('invoiceNumber');
+                const dateInput = document.getElementById('saleDate');
+                
+                if (clientSelect) clientSelect.value = client;
+                if (invoiceInput) invoiceInput.value = invoiceNumber;
+                if (dateInput) dateInput.value = date;
+                
+                showAlert(`Ajout d'un article à la facture ${invoiceNumber}`, 'info');
+            }, 200);
+        }
+        
+        // Fonction pour supprimer un groupe de facture complet
+        async function deleteInvoiceGroup(invoiceNumber) {
+            if (!confirm(`⚠️ ATTENTION ⚠️\n\nVoulez-vous vraiment supprimer TOUTE la facture "${invoiceNumber}" ?\n\nCette action supprimera toutes les lignes de vente de cette facture et ne peut pas être annulée.`)) {
+                return;
+            }
+            
+            try {
+                // Filtrer toutes les ventes de cette facture
+                const invoiceSales = salesData.filter(sale => sale.invoice === invoiceNumber);
+                
+                if (invoiceSales.length === 0) {
+                    showAlert('Aucune vente trouvée pour cette facture', 'warning');
+                    return;
+                }
+                
+                // Supprimer toutes les ventes de la facture
+                let deletedCount = 0;
+                for (const sale of invoiceSales) {
+                    const index = salesData.findIndex(s => s.id === sale.id);
+                    if (index !== -1) {
+                        salesData.splice(index, 1);
+                        deletedCount++;
+                        
+                        // Supprimer aussi de Firebase si connecté
+                        if (db) {
+                            try {
+                                await db.collection('sales').doc(sale.id).delete();
+                            } catch (error) {
+                                console.warn('Erreur suppression Firebase:', error);
+                            }
+                        }
+                    }
+                }
+                
+                // Sauvegarder localement
+                saveToLocalStorage();
+                
+                // Mettre à jour l'affichage
+                updateAllDisplays();
+                
+                showAlert(`Facture "${invoiceNumber}" supprimée (${deletedCount} article${deletedCount > 1 ? 's' : ''})`, 'success');
+                
+            } catch (error) {
+                console.error('Erreur lors de la suppression de la facture:', error);
+                showAlert('Erreur lors de la suppression de la facture', 'error');
+            }
+        }
+        
+        // Fonction utilitaire pour mettre à jour tous les affichages
+        function updateAllDisplays() {
+            // Mettre à jour les filtres
+            populateFilters();
+            populateRecapFilters();
+            
+            // Mettre à jour les affichages
+            applyFilters();
+            applyRecapFilters();
+            
+            // Mettre à jour les KPIs
+            updateKPIs();
+            
+            // Mettre à jour les graphiques
+            updateCharts();
+            
+            // Mettre à jour la vue clients
+            updateClientsOverview();
+        }
 
     </script>
 
