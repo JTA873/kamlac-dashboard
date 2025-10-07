@@ -4752,6 +4752,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     <span class="icon">📦</span>
                     <span>Excel Mouvements</span>
                 </div>
+                <div class="floating-menu-item" onclick="openQuickInventoryExport()">
+                    <span class="icon">📋</span>
+                    <span>Excel Inventaire</span>
+                </div>
             </div>
         </div>
         
@@ -17774,6 +17778,88 @@ Date [ESPACES] Client [ESPACES] Montant
             }
         }
 
+        // Export Excel de l'inventaire
+        function exportInventoryToExcel() {
+            try {
+                const wb = XLSX.utils.book_new();
+                
+                // Données de l'inventaire
+                const inventoryData = [
+                    ['Produit', 'Stock Actuel', 'Unité', 'Valeur Estimée', 'Statut', 'Total Vendus', 'CA Généré']
+                ];
+                
+                if (currentStockLevels && Object.keys(currentStockLevels).length > 0) {
+                    Object.entries(currentStockLevels).forEach(([product, stock]) => {
+                        const quantity = stock.quantity || 0;
+                        const unit = stock.unit || 'Unités';
+                        const value = stock.value || 0;
+                        let status = 'Stock Normal';
+                        
+                        if (quantity < 0) {
+                            status = 'Stock Négatif';
+                        } else if (quantity === 0) {
+                            status = 'Rupture';
+                        } else if (quantity <= 10) {
+                            status = 'Stock Faible';
+                        }
+                        
+                        // Calculer les ventes pour ce produit
+                        let totalSold = 0;
+                        let totalRevenue = 0;
+                        
+                        if (salesData && salesData.length > 0) {
+                            salesData.forEach(sale => {
+                                if (sale.product === product) {
+                                    totalSold += parseFloat(sale.quantity) || 0;
+                                    totalRevenue += parseFloat(sale.total) || 0;
+                                }
+                            });
+                        }
+                        
+                        inventoryData.push([
+                            product,
+                            quantity,
+                            unit,
+                            value,
+                            status,
+                            totalSold,
+                            totalRevenue
+                        ]);
+                    });
+                }
+                
+                const ws = XLSX.utils.aoa_to_sheet(inventoryData);
+                
+                // Ajuster la largeur des colonnes
+                const colWidths = [
+                    { wch: 25 }, // Produit
+                    { wch: 12 }, // Stock Actuel
+                    { wch: 10 }, // Unité
+                    { wch: 15 }, // Valeur Estimée
+                    { wch: 15 }, // Statut
+                    { wch: 12 }, // Total Vendus
+                    { wch: 15 }  // CA Généré
+                ];
+                ws['!cols'] = colWidths;
+                
+                XLSX.utils.book_append_sheet(wb, ws, 'Inventaire');
+                
+                // Nom du fichier avec date
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('fr-FR').replace(/\//g, '-');
+                const filename = `KAMLAC_Inventaire_${dateStr}.xlsx`;
+                
+                // Télécharger le fichier
+                XLSX.writeFile(wb, filename);
+                
+                showAlert('📦 Export inventaire terminé !', 'success');
+                
+            } catch (error) {
+                console.error('Erreur export inventaire:', error);
+                showAlert('❌ Erreur lors de l\'export de l\'inventaire.', 'error');
+            }
+        }
+
         // Export PDF des en-cours par client
         function exportOutstandingToPDF() {
             try {
@@ -18904,6 +18990,18 @@ Date [ESPACES] Client [ESPACES] Montant
             
             // Lancer l'export
             exportStockMovementsToExcel();
+        }
+
+        function openQuickInventoryExport() {
+            toggleFloatingMenu(); // Fermer le menu
+            
+            // S'assurer que les niveaux de stock sont calculés
+            if (!currentStockLevels || Object.keys(currentStockLevels).length === 0) {
+                calculateCurrentStockLevels();
+            }
+            
+            // Lancer l'export de l'inventaire
+            exportInventoryToExcel();
         }
 
         function closeMiniChat() {
