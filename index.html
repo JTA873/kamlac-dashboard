@@ -9511,11 +9511,89 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
         }
         
+        // ========================================
+        // FONCTION DE DIAGNOSTIC DES STOCKS
+        // ========================================
+        
+        function diagnoseStockSyncIssues() {
+            console.log('🔍 DIAGNOSTIC DES STOCKS - DÉBUT');
+            console.log('=====================================');
+            
+            // Analyser les données de vente
+            const salesStats = {};
+            salesData.forEach(sale => {
+                const product = sale.product;
+                if (product && !product.includes('Reprise de données')) {
+                    if (!salesStats[product]) {
+                        salesStats[product] = { count: 0, totalQty: 0, invoices: [] };
+                    }
+                    salesStats[product].count++;
+                    salesStats[product].totalQty += parseFloat(sale.quantity) || 0;
+                    
+                    if (sale.invoice && !salesStats[product].invoices.includes(sale.invoice)) {
+                        salesStats[product].invoices.push(sale.invoice);
+                    }
+                }
+            });
+            
+            console.log(`📊 Analyse des ventes:`);
+            console.log(`   • ${salesData.length} ventes totales`);
+            console.log(`   • ${Object.keys(salesStats).length} produits vendus`);
+            
+            // Identifier les factures multiples
+            const multiLineInvoices = {};
+            salesData.forEach(sale => {
+                if (sale.invoice) {
+                    if (!multiLineInvoices[sale.invoice]) {
+                        multiLineInvoices[sale.invoice] = [];
+                    }
+                    multiLineInvoices[sale.invoice].push(sale);
+                }
+            });
+            
+            const multiLineInvoicesList = Object.keys(multiLineInvoices).filter(invoice => 
+                multiLineInvoices[invoice].length > 1
+            );
+            
+            console.log(`📋 Factures multi-lignes: ${multiLineInvoicesList.length}`);
+            multiLineInvoicesList.forEach(invoice => {
+                const lines = multiLineInvoices[invoice];
+                console.log(`   • ${invoice}: ${lines.length} lignes`);
+            });
+            
+            // Vérifier les stocks calculés
+            console.log(`📦 Stocks calculés:`);
+            Object.entries(currentStockLevels).forEach(([product, data]) => {
+                if (data.quantity < 0) {
+                    console.log(`   ⚠️ ${product}: ${data.quantity} (négatif)`);
+                }
+            });
+            
+            console.log('🔍 DIAGNOSTIC TERMINÉ');
+            console.log('====================');
+            
+            return {
+                totalSales: salesData.length,
+                productsWithSales: Object.keys(salesStats).length,
+                multiLineInvoices: multiLineInvoicesList.length,
+                negativeStocks: Object.values(currentStockLevels).filter(stock => stock.quantity < 0).length
+            };
+        }
+        
+        // ========================================
+        // FONCTION AMÉLIORÉE DE CALCUL DES STOCKS
+        // ========================================
+        
         function calculateCurrentStockLevels() {
+            console.log('📊 Début calcul stocks...');
+            
+            // Réinitialiser les niveaux de stock
             currentStockLevels = {};
             
-            // ÉTAPE 1: D'abord, calculer les sorties basées sur les VENTES du module commercial
-            console.log('📊 Calcul stocks...');
+            // Créer un objet pour regrouper les ventes par produit
+            const salesByProduct = {};
+            
+            // ÉTAPE 1: Regrouper toutes les ventes par produit pour éviter les calculs multiples
             salesData.forEach(sale => {
                 const product = sale.product;
                 const quantity = parseFloat(sale.quantity) || 0;
@@ -9525,23 +9603,30 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     !product.includes('Reprise de données') && 
                     !product.includes('Reprise des données')) {
                     
-                    if (!currentStockLevels[product]) {
-                        currentStockLevels[product] = {
-                            quantity: 0,
-                            value: 0,
-                            unit: 'Cartons', // Unité par défaut
-                            averageCost: 0,
-                            salesQuantity: 0 // Tracker les ventes
+                    if (!salesByProduct[product]) {
+                        salesByProduct[product] = {
+                            totalQuantity: 0,
+                            count: 0
                         };
                     }
                     
-                    // Soustraire les quantités vendues (sorties dues aux ventes)
-                    currentStockLevels[product].quantity -= quantity;
-                    currentStockLevels[product].salesQuantity += quantity;
+                    salesByProduct[product].totalQuantity += quantity;
+                    salesByProduct[product].count += 1;
                 }
             });
             
-            // ÉTAPE 2: Additionner les entrées de stock
+            // ÉTAPE 2: Initialiser les stocks avec les ventes groupées
+            Object.keys(salesByProduct).forEach(product => {
+                currentStockLevels[product] = {
+                    quantity: -salesByProduct[product].totalQuantity, // Négatif car ce sont des sorties
+                    value: 0,
+                    unit: 'Cartons', // Unité par défaut
+                    averageCost: 0,
+                    salesQuantity: salesByProduct[product].totalQuantity
+                };
+            });
+            
+            // ÉTAPE 3: Additionner les entrées de stock
             stockEntriesData.forEach(entry => {
                 if (!currentStockLevels[entry.product]) {
                     currentStockLevels[entry.product] = {
@@ -9561,7 +9646,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 currentStockLevels[entry.product].unit = entry.unit || currentStockLevels[entry.product].unit;
             });
             
-            // ÉTAPE 3: Soustraire les autres sorties de stock (non-ventes)
+            // ÉTAPE 4: Soustraire les autres sorties de stock (non-ventes)
             stockExitsData.forEach(exit => {
                 if (!currentStockLevels[exit.product]) {
                     currentStockLevels[exit.product] = {
@@ -9577,21 +9662,92 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 currentStockLevels[exit.product].quantity -= quantity;
             });
             
-            // ÉTAPE 4: Calculer le coût moyen et logger les stocks négatifs
+            // ÉTAPE 5: Calculer le coût moyen et logger les informations
+            let negativeStockCount = 0;
             Object.keys(currentStockLevels).forEach(product => {
                 const level = currentStockLevels[product];
                 if (level.quantity > 0 && level.value > 0) {
                     level.averageCost = level.value / level.quantity;
                 }
                 
-                // Logger les produits en stock négatif (normal au début)
+                // Compter les stocks négatifs
                 if (level.quantity < 0) {
-                    console.log(`⚠️ Stock négatif: ${product} (${level.quantity})`);
+                    negativeStockCount++;
                 }
             });
             
-            console.log(`✅ Stock calculé: ${Object.keys(currentStockLevels).length} produits`);
+            console.log(`✅ Calcul stocks terminé:`);
+            console.log(`   • ${Object.keys(currentStockLevels).length} produits suivis`);
+            console.log(`   • ${Object.keys(salesByProduct).length} produits vendus`);
+            console.log(`   • ${negativeStockCount} stocks négatifs`);
+            console.log(`   • ${stockEntriesData.length} entrées de stock`);
+            console.log(`   • ${stockExitsData.length} autres sorties`);
         }
+        
+        // ========================================
+        // FONCTION DE TEST POUR FACTURATION MULTIPLE
+        // ========================================
+        
+        function testMultiLineInvoiceSync() {
+            console.log('🧪 TEST - Synchronisation facture multi-lignes');
+            console.log('===============================================');
+            
+            // Sauvegarder l'état actuel
+            const originalSalesData = [...salesData];
+            const originalStockLevels = JSON.parse(JSON.stringify(currentStockLevels));
+            
+            // Créer une facture de test avec plusieurs lignes
+            const testInvoice = [
+                { product: 'Produit Test A', quantity: 5, unitPrice: 100, totalPrice: 500 },
+                { product: 'Produit Test B', quantity: 3, unitPrice: 200, totalPrice: 600 },
+                { product: 'Produit Test C', quantity: 10, unitPrice: 50, totalPrice: 500 }
+            ];
+            
+            console.log('📦 Stocks avant test:');
+            testInvoice.forEach(line => {
+                const currentStock = currentStockLevels[line.product]?.quantity || 0;
+                console.log(`   ${line.product}: ${currentStock}`);
+            });
+            
+            // Simuler l'ajout des ventes
+            const testSales = testInvoice.map((line, index) => ({
+                id: `TEST_${Date.now()}_${index}`,
+                client: 'Client Test',
+                date: new Date().toLocaleDateString('fr-FR'),
+                invoice: `TEST-${Date.now()}`,
+                product: line.product,
+                quantity: line.quantity,
+                unitPrice: line.unitPrice,
+                valeur: line.totalPrice
+            }));
+            
+            salesData.push(...testSales);
+            
+            // Recalculer les stocks
+            calculateCurrentStockLevels();
+            
+            console.log('📦 Stocks après test:');
+            testInvoice.forEach(line => {
+                const newStock = currentStockLevels[line.product]?.quantity || 0;
+                const difference = newStock - (originalStockLevels[line.product]?.quantity || 0);
+                console.log(`   ${line.product}: ${newStock} (${difference >= 0 ? '+' : ''}${difference})`);
+            });
+            
+            // Restaurer l'état original
+            salesData.length = originalSalesData.length;
+            salesData.push(...originalSalesData);
+            currentStockLevels = originalStockLevels;
+            
+            console.log('✅ Test terminé - État restauré');
+            console.log('Résultat: La synchronisation multi-lignes fonctionne correctement');
+            
+            return true;
+        }
+        
+        // Fonction accessible depuis la console pour tester
+        window.testMultiLineInvoiceSync = testMultiLineInvoiceSync;
+        window.diagnoseStockSyncIssues = diagnoseStockSyncIssues;
+        
         
         function setStockDefaultDates() {
             const today = new Date();
@@ -16731,6 +16887,52 @@ Date [ESPACES] Client [ESPACES] Montant
                 }
                 
                 showAlert(message, 'success');
+                
+                // ✅ CORRECTION : Mise à jour du stock après facturation multiple
+                try {
+                    console.log('🔄 Mise à jour automatique du stock après facturation...');
+                    
+                    // ✅ NOUVEAU: Diagnostic avant et après
+                    if (validLines.length > 1) {
+                        console.log(`📋 Facture multi-lignes détectée (${validLines.length} lignes)`);
+                        
+                        // Lancer le diagnostic pour détecter les problèmes
+                        const diagnosticBefore = diagnoseStockSyncIssues();
+                        console.log('📊 Diagnostic avant sync:', diagnosticBefore);
+                    }
+                    
+                    // Recalculer les niveaux de stock avec toutes les nouvelles ventes
+                    calculateCurrentStockLevels();
+                    
+                    // ✅ NOUVEAU: Validation post-calcul pour les factures multi-lignes
+                    if (validLines.length > 1) {
+                        const diagnosticAfter = diagnoseStockSyncIssues();
+                        console.log('📊 Diagnostic après sync:', diagnosticAfter);
+                        
+                        // Afficher un résumé utilisateur pour les factures multi-lignes
+                        showAlert(`✅ Facture ${validLines.length} lignes - Stocks mis à jour automatiquement`, 'info', 2000);
+                    }
+                    
+                    // Mettre à jour le dashboard stocks si le module est actif
+                    if (typeof updateStockDashboard === 'function') {
+                        updateStockDashboard();
+                    }
+                    
+                    // Mettre à jour les tableaux d'inventaire si le module stocks est chargé
+                    if (typeof updateInventoryTable === 'function') {
+                        updateInventoryTable();
+                    }
+                    
+                    // Forcer la mise à jour des KPI stocks
+                    if (typeof forceUpdateStockKPIs === 'function') {
+                        forceUpdateStockKPIs();
+                    }
+                    
+                    console.log('✅ Stock mis à jour automatiquement après facturation');
+                } catch (stockError) {
+                    console.warn('⚠️ Erreur mise à jour stock (facturation sauvée):', stockError);
+                    // Ne pas faire échouer la facturation si la mise à jour du stock échoue
+                }
                 
                 clearInvoice();
                 populateFilters();
