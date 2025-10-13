@@ -13506,10 +13506,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
 
         // Gestion de la liste des produits - SOURCE UNIQUE
         function updateProductsList() {
-            // SEULE source de vérité : productsData (en filtrant les produits masqués)
-            const visibleProducts = productsData.filter(product => !product.hidden);
-            
-            productsList = visibleProducts.map(product => ({
+            // SEULE source de vérité : productsData (les produits masqués sont maintenant archivés)
+            productsList = productsData.map(product => ({
                 id: product.id,
                 name: product.reference, // Le nom affiché est la référence
                 reference: product.reference,
@@ -13517,7 +13515,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 displayText: `${product.reference} - ${formatCurrency(product.price || 0)}`
             })).sort((a, b) => a.name.localeCompare(b.name));
             
-            console.log(`✅ Liste produits mise à jour: ${productsList.length} produits visibles (${productsData.filter(p => p.hidden).length} masqués)`);
+            console.log(`✅ Liste produits mise à jour: ${productsList.length} produits actifs`);
             
             // Synchroniser automatiquement l'inventaire après chaque mise à jour
             synchronizeInventoryFromProducts();
@@ -13528,10 +13526,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
             let hasChanges = false;
             
-            // Pour chaque produit VISIBLE dans productsData, s'assurer qu'il existe dans l'inventaire
-            const visibleProducts = productsData.filter(product => !product.hidden);
-            
-            visibleProducts.forEach(product => {
+            // Pour chaque produit dans productsData (maintenant tous actifs), s'assurer qu'il existe dans l'inventaire
+            productsData.forEach(product => {
                 const existingInventoryItem = inventoryData.find(item => 
                     item.linkedProductId === product.id || 
                     (item.product && item.product.toLowerCase() === product.reference.toLowerCase())
@@ -13565,22 +13561,6 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     existingInventoryItem.syncedFrom = 'Module Produits';
                     hasChanges = true;
                     console.log(`✅ Nom produit mis à jour dans l'inventaire: ${product.reference}`);
-                }
-            });
-            
-            // Marquer les inventaires des produits masqués (optionnel : les laisser mais les identifier)
-            const hiddenProducts = productsData.filter(product => product.hidden);
-            hiddenProducts.forEach(product => {
-                const inventoryItem = inventoryData.find(item => 
-                    item.linkedProductId === product.id || 
-                    (item.product && item.product.toLowerCase() === product.reference.toLowerCase())
-                );
-                
-                if (inventoryItem && !inventoryItem.hiddenProduct) {
-                    inventoryItem.hiddenProduct = true;
-                    inventoryItem.hiddenDate = product.hiddenDate;
-                    hasChanges = true;
-                    console.log(`📦 Inventaire marqué comme masqué: ${product.reference}`);
                 }
             });
             
@@ -16018,40 +15998,161 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             }
         }
         
-        // === FONCTION MASQUER PRODUIT ===
+        // === FONCTION MASQUER PRODUIT AVEC ARCHIVAGE ===
         async function hideProduct(productId, productName) {
             try {
-                console.log(`🫥 Masquage du produit: ${productName}`);
+                console.log(`🫥 Masquage et archivage du produit: ${productName}`);
                 
-                // Trouver le produit et ajouter la propriété hidden
+                // Trouver le produit
                 const productIndex = productsData.findIndex(p => p.id.toString() === productId.toString());
-                if (productIndex !== -1) {
-                    productsData[productIndex].hidden = true;
-                    productsData[productIndex].hiddenDate = new Date().toISOString();
-                    
-                    saveToLocalStorage();
-                    
-                    // Mettre à jour dans Firebase si disponible
-                    if (isFirebaseInitialized) {
-                        await db.collection('products').doc(productId.toString()).update({
-                            hidden: true,
-                            hiddenDate: new Date().toISOString()
-                        });
-                    }
-                    
-                    // Mettre à jour les affichages
-                    updateProductsDisplay();
-                    updateProductsList();
-                    updateStockDashboard();
-                    updateSimpleStocksTable();
-                    populateRecapFilters();
-                    applyFilters();
-                    applyRecapFilters();
-                    
-                    showAlert(`Produit "${productName}" masqué avec succès`, 'success');
-                } else {
+                if (productIndex === -1) {
                     showAlert('Erreur : Produit non trouvé', 'error');
+                    return;
                 }
+
+                const product = productsData[productIndex];
+                const archiveDate = new Date().toISOString();
+                const archiveId = `hidden_${productId}_${Date.now()}`;
+
+                // 1. Collecter TOUTES les données liées au produit
+                const relatedData = {
+                    // Données du produit
+                    product: {
+                        ...product,
+                        archivedDate: archiveDate,
+                        originalCollection: 'products'
+                    },
+                    
+                    // Données d'inventaire
+                    inventory: [],
+                    
+                    // Données de ventes
+                    sales: [],
+                    
+                    // Entrées de stock
+                    stockEntries: [],
+                    
+                    // Sorties de stock
+                    stockExits: []
+                };
+
+                // Collecter les données locales
+                relatedData.inventory = (JSON.parse(localStorage.getItem('inventoryData') || '[]'))
+                    .filter(item => item.product === productName || item.linkedProductId === productId)
+                    .map(item => ({ ...item, originalCollection: 'inventory', archivedDate }));
+
+                relatedData.sales = (JSON.parse(localStorage.getItem('salesData') || '[]'))
+                    .filter(sale => sale.product === productName)
+                    .map(sale => ({ ...sale, originalCollection: 'sales', archivedDate }));
+
+                relatedData.stockEntries = (JSON.parse(localStorage.getItem('stockEntriesData') || '[]'))
+                    .filter(entry => entry.product === productName)
+                    .map(entry => ({ ...entry, originalCollection: 'stockEntries', archivedDate }));
+
+                relatedData.stockExits = (JSON.parse(localStorage.getItem('stockExitsData') || '[]'))
+                    .filter(exit => exit.product === productName)
+                    .map(exit => ({ ...exit, originalCollection: 'stockExits', archivedDate }));
+
+                console.log(`📦 Données à archiver:`, {
+                    produit: 1,
+                    inventaire: relatedData.inventory.length,
+                    ventes: relatedData.sales.length,
+                    entrées: relatedData.stockEntries.length,
+                    sorties: relatedData.stockExits.length
+                });
+
+                // 2. Supprimer des collections locales
+                productsData = productsData.filter(p => p.id.toString() !== productId.toString());
+                
+                // Supprimer des données locales
+                let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+                inventoryData = inventoryData.filter(item => item.product !== productName && item.linkedProductId !== productId);
+                localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+
+                let salesDataLocal = JSON.parse(localStorage.getItem('salesData') || '[]');
+                salesDataLocal = salesDataLocal.filter(sale => sale.product !== productName);
+                localStorage.setItem('salesData', JSON.stringify(salesDataLocal));
+
+                let stockEntriesDataLocal = JSON.parse(localStorage.getItem('stockEntriesData') || '[]');
+                stockEntriesDataLocal = stockEntriesDataLocal.filter(entry => entry.product !== productName);
+                localStorage.setItem('stockEntriesData', JSON.stringify(stockEntriesDataLocal));
+
+                let stockExitsDataLocal = JSON.parse(localStorage.getItem('stockExitsData') || '[]');
+                stockExitsDataLocal = stockExitsDataLocal.filter(exit => exit.product !== productName);
+                localStorage.setItem('stockExitsData', JSON.stringify(stockExitsDataLocal));
+
+                // Mettre à jour les variables globales
+                salesData = salesDataLocal;
+                stockEntriesData = stockEntriesDataLocal;
+                stockExitsData = stockExitsDataLocal;
+
+                saveToLocalStorage();
+
+                // 3. Archiver dans Firebase si disponible
+                if (isFirebaseInitialized) {
+                    try {
+                        console.log(`☁️ Archivage Firebase en cours...`);
+                        
+                        // Créer le document d'archive
+                        await db.collection('archive').doc(archiveId).set({
+                            productId: productId.toString(),
+                            productName: productName,
+                            archivedDate: archiveDate,
+                            archivedBy: 'user', // Vous pouvez ajouter l'utilisateur connecté
+                            data: relatedData,
+                            totalItems: relatedData.inventory.length + relatedData.sales.length + 
+                                       relatedData.stockEntries.length + relatedData.stockExits.length + 1
+                        });
+
+                        // Supprimer des collections Firebase
+                        const batch = db.batch();
+                        
+                        // Supprimer le produit
+                        batch.delete(db.collection('products').doc(productId.toString()));
+
+                        // Supprimer l'inventaire
+                        const inventorySnapshot = await db.collection('inventory')
+                            .where('product', '==', productName).get();
+                        inventorySnapshot.forEach(doc => batch.delete(doc.ref));
+
+                        // Supprimer les ventes
+                        const salesSnapshot = await db.collection('sales')
+                            .where('product', '==', productName).get();
+                        salesSnapshot.forEach(doc => batch.delete(doc.ref));
+
+                        // Supprimer les entrées
+                        const entriesSnapshot = await db.collection('stockEntries')
+                            .where('product', '==', productName).get();
+                        entriesSnapshot.forEach(doc => batch.delete(doc.ref));
+
+                        // Supprimer les sorties
+                        const exitsSnapshot = await db.collection('stockExits')
+                            .where('product', '==', productName).get();
+                        exitsSnapshot.forEach(doc => batch.delete(doc.ref));
+
+                        await batch.commit();
+                        
+                        console.log(`✅ Archivage Firebase terminé: ${archiveId}`);
+                    } catch (error) {
+                        console.error('Erreur archivage Firebase:', error);
+                        showAlert('Erreur lors de l\'archivage cloud: ' + error.message, 'warning');
+                    }
+                }
+
+                // 4. Mettre à jour toutes les interfaces
+                updateProductsDisplay();
+                updateProductsList();
+                updateStockDashboard();
+                updateSimpleStocksTable();
+                populateRecapFilters();
+                applyFilters();
+                applyRecapFilters();
+
+                const totalArchived = relatedData.inventory.length + relatedData.sales.length + 
+                                    relatedData.stockEntries.length + relatedData.stockExits.length + 1;
+                
+                showAlert(`Produit "${productName}" archivé avec succès (${totalArchived} éléments)`, 'success');
+                
             } catch (error) {
                 console.error('Erreur masquage produit:', error);
                 showAlert('Erreur lors du masquage: ' + error.message, 'error');
@@ -16236,52 +16337,35 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             const container = document.getElementById('productsGrid');
             container.innerHTML = '';
             
-            // Vérifier s'il faut afficher les produits masqués
-            const showHidden = window.showHiddenProducts || false;
-            
-            // Filtrer les produits selon leur statut masqué
-            const visibleProducts = showHidden ? 
-                productsData : 
-                productsData.filter(product => !product.hidden);
-            
-            const hiddenProducts = productsData.filter(product => product.hidden);
+            // Tous les produits dans productsData sont maintenant visibles (les masqués sont archivés)
+            const visibleProducts = productsData;
             
             // Stats produits
             document.getElementById('productsCount').textContent = visibleProducts.length;
             const uniqueBrands = new Set(visibleProducts.map(p => p.brand).filter(b => b));
             document.getElementById('brandsCount').textContent = uniqueBrands.size;
             
-            // Ajouter un bouton pour afficher/masquer les produits cachés si il y en a
-            if (hiddenProducts.length > 0) {
-                const toggleButton = document.createElement('div');
-                toggleButton.style.cssText = `
-                    margin-bottom: 20px; text-align: center; padding: 15px;
-                    background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;
-                `;
-                toggleButton.innerHTML = `
-                    <p style="margin: 0 0 10px 0; color: #666;">
-                        <strong>${hiddenProducts.length}</strong> produit(s) masqué(s)
-                    </p>
-                    <button onclick="toggleHiddenProducts()" 
-                            style="padding: 8px 16px; background: ${showHidden ? '#dc3545' : '#28a745'}; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                        ${showHidden ? '🫥 Masquer les produits cachés' : '👁️ Afficher les produits cachés'}
-                    </button>
-                `;
-                container.appendChild(toggleButton);
-            }
+            // Ajouter un bouton pour gérer les archives
+            const archiveButton = document.createElement('div');
+            archiveButton.style.cssText = `
+                margin-bottom: 20px; text-align: center; padding: 15px;
+                background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;
+            `;
+            archiveButton.innerHTML = `
+                <p style="margin: 0 0 10px 0; color: #666;">
+                    Gestion des produits archivés
+                </p>
+                <button onclick="showArchivedProductsModal()" 
+                        style="padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    📦 Voir les archives
+                </button>
+            `;
+            container.appendChild(archiveButton);
             
-            // Afficher les produits
+            // Afficher les produits (tous sont maintenant visibles)
             visibleProducts.forEach(product => {
                 const productCard = document.createElement('div');
                 productCard.className = 'product-card';
-                
-                // Style spécial pour les produits masqués
-                const hiddenStyle = product.hidden ? 
-                    'opacity: 0.6; border: 2px dashed #ffc107; background: #fff3cd;' : '';
-                
-                if (product.hidden) {
-                    productCard.style.cssText += hiddenStyle;
-                }
                 
                 // Normaliser l'ID pour éviter les problèmes de type
                 const normalizedId = String(product.id);
@@ -16292,11 +16376,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 productCard.innerHTML = `
                     <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, ${priceColor}, ${priceColor}99);"></div>
                     
-                    ${product.hidden ? `<div style="position: absolute; top: 10px; right: 10px; background: #ffc107; color: #000; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
-                        🫥 MASQUÉ
-                    </div>` : ''}
-                    
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; ${product.hidden ? 'margin-top: 25px;' : ''}">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                         <div style="flex: 1;">
                             <div class="product-name" style="font-size: 1.1rem; font-weight: 700; color: #333; margin-bottom: 5px; line-height: 1.3;">
                                 ${product.reference || 'Sans référence'}
@@ -16313,9 +16393,6 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     <div class="product-details" style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
                         ${product.format ? `<div style="margin-bottom: 5px;"><strong style="color: #333;">📦 Format:</strong> ${product.format}</div>` : ''}
                         ${product.margin ? `<div><strong style="color: #333;">📊 Marge:</strong> ${product.margin}</div>` : ''}
-                        ${product.hidden ? `<div style="margin-top: 8px; padding: 8px; background: rgba(255, 193, 7, 0.1); border-radius: 4px; font-size: 0.8rem;">
-                            <strong style="color: #856404;">🫥 Masqué le:</strong> ${new Date(product.hiddenDate).toLocaleDateString('fr-FR')}
-                        </div>` : ''}
                     </div>
                     
                     <div style="display: flex; gap: 10px; margin-top: auto;">
@@ -16323,70 +16400,311 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                                 style="flex: 1; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
                             ✏️ Modifier
                         </button>
-                        ${product.hidden ? `
-                            <button class="btn" onclick="unhideProduct('${normalizedId}', '${(product.reference || 'Sans référence').replace(/'/g, '\\\'')}')" 
-                                    style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
-                                👁️
-                            </button>
-                        ` : ''}
                         <button class="btn" onclick="deleteProduct('${normalizedId}')" 
                                 style="background: #fff; color: #dc3545; border: 2px solid #dc3545; padding: 10px 15px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
-                            ${product.hidden ? '🗑️' : '⚙️'}
+                            ⚙️
                         </button>
                     </div>
                 `;
                 container.appendChild(productCard);
             });
             
-            console.log('✅ Affichage terminé -', visibleProducts.length, 'cartes créées', hiddenProducts.length ? `(${hiddenProducts.length} masqués)` : '');
+            console.log('✅ Affichage terminé -', visibleProducts.length, 'cartes créées');
             
             // Mettre à jour le filtre des marques
             updateBrandFilter();
         }
         
-        // === FONCTION POUR BASCULER L'AFFICHAGE DES PRODUITS MASQUÉS ===
-        function toggleHiddenProducts() {
-            window.showHiddenProducts = !window.showHiddenProducts;
-            updateProductsDisplay();
+        // === MODAL DES PRODUITS ARCHIVÉS ===
+        async function showArchivedProductsModal() {
+            if (!isFirebaseInitialized) {
+                showAlert('Firebase non disponible pour consulter les archives', 'error');
+                return;
+            }
+
+            try {
+                console.log('📦 Chargement des archives...');
+                
+                // Récupérer toutes les archives
+                const archiveSnapshot = await db.collection('archive')
+                    .orderBy('archivedDate', 'desc')
+                    .get();
+
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                    background: rgba(0,0,0,0.5); z-index: 10000; display: flex;
+                    align-items: center; justify-content: center; overflow: auto;
+                `;
+                
+                let archivesHtml = '';
+                
+                if (archiveSnapshot.empty) {
+                    archivesHtml = `
+                        <div style="text-align: center; padding: 40px; color: #666;">
+                            <h3>📭 Aucun produit archivé</h3>
+                            <p>Tous vos produits sont actuellement actifs.</p>
+                        </div>
+                    `;
+                } else {
+                    archivesHtml = `
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #f8f9fa; position: sticky; top: 0;">
+                                        <th style="padding: 12px; border: 1px solid #dee2e6; text-align: left;">Produit</th>
+                                        <th style="padding: 12px; border: 1px solid #dee2e6; text-align: center;">Archivé le</th>
+                                        <th style="padding: 12px; border: 1px solid #dee2e6; text-align: center;">Éléments</th>
+                                        <th style="padding: 12px; border: 1px solid #dee2e6; text-align: center;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    archiveSnapshot.forEach(doc => {
+                        const archive = doc.data();
+                        const archiveDate = new Date(archive.archivedDate).toLocaleDateString('fr-FR');
+                        
+                        archivesHtml += `
+                            <tr style="border-bottom: 1px solid #dee2e6;">
+                                <td style="padding: 12px; font-weight: 600;">
+                                    ${archive.productName}
+                                    <div style="font-size: 0.8rem; color: #666; font-weight: normal;">
+                                        ID: ${archive.productId}
+                                    </div>
+                                </td>
+                                <td style="padding: 12px; text-align: center; color: #666;">
+                                    ${archiveDate}
+                                </td>
+                                <td style="padding: 12px; text-align: center;">
+                                    <span style="background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                        ${archive.totalItems} éléments
+                                    </span>
+                                </td>
+                                <td style="padding: 12px; text-align: center;">
+                                    <button onclick="restoreFromArchive('${archive.productId}', '${archive.productName.replace(/'/g, '\\\'')}')" 
+                                            style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px;">
+                                        👁️ Restaurer
+                                    </button>
+                                    <button onclick="deleteArchive('${doc.id}', '${archive.productName.replace(/'/g, '\\\'')}')" 
+                                            style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                                        🗑️ Supprimer
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    archivesHtml += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+
+                modal.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 800px; width: 90%; max-height: 80vh; overflow: auto;">
+                        <h3 style="color: #667eea; margin-bottom: 20px; text-align: center;">
+                            📦 Produits Archivés (${archiveSnapshot.size})
+                        </h3>
+                        
+                        ${archivesHtml}
+                        
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button onclick="closeArchivedProductsModal()" 
+                                    style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                ❌ Fermer
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                window.currentArchivedProductsModal = modal;
+                
+            } catch (error) {
+                console.error('Erreur chargement archives:', error);
+                showAlert('Erreur lors du chargement des archives: ' + error.message, 'error');
+            }
         }
         
-        // === FONCTION POUR RÉAFFICHER UN PRODUIT MASQUÉ ===
+        function closeArchivedProductsModal() {
+            if (window.currentArchivedProductsModal) {
+                document.body.removeChild(window.currentArchivedProductsModal);
+                window.currentArchivedProductsModal = null;
+            }
+        }
+        
+        // Alias pour la fonction de restauration depuis le modal
+        async function restoreFromArchive(productId, productName) {
+            await unhideProduct(productId, productName);
+            closeArchivedProductsModal();
+        }
+        
+        // Fonction pour supprimer définitivement une archive
+        async function deleteArchive(archiveId, productName) {
+            if (!confirm(`Supprimer définitivement l'archive de "${productName}" ?\n\n⚠️ Cette action est irréversible !`)) {
+                return;
+            }
+            
+            try {
+                await db.collection('archive').doc(archiveId).delete();
+                showAlert(`Archive de "${productName}" supprimée définitivement`, 'success');
+                
+                // Recharger le modal des archives
+                closeArchivedProductsModal();
+                setTimeout(() => showArchivedProductsModal(), 100);
+                
+            } catch (error) {
+                console.error('Erreur suppression archive:', error);
+                showAlert('Erreur lors de la suppression: ' + error.message, 'error');
+            }
+        }
+        
+        // === FONCTION POUR DÉSARCHIVER UN PRODUIT MASQUÉ ===
         async function unhideProduct(productId, productName) {
             try {
-                console.log(`👁️ Réaffichage du produit: ${productName}`);
+                console.log(`👁️ Désarchivage du produit: ${productName}`);
                 
-                // Trouver le produit et retirer la propriété hidden
-                const productIndex = productsData.findIndex(p => p.id.toString() === productId.toString());
-                if (productIndex !== -1) {
-                    delete productsData[productIndex].hidden;
-                    delete productsData[productIndex].hiddenDate;
+                if (!isFirebaseInitialized) {
+                    showAlert('Firebase non disponible pour le désarchivage', 'error');
+                    return;
+                }
+
+                // 1. Rechercher le produit dans les archives
+                console.log(`🔍 Recherche dans les archives...`);
+                const archiveQuery = await db.collection('archive')
+                    .where('productId', '==', productId.toString())
+                    .orderBy('archivedDate', 'desc')
+                    .limit(1)
+                    .get();
+
+                if (archiveQuery.empty) {
+                    showAlert(`Aucune archive trouvée pour le produit "${productName}"`, 'error');
+                    return;
+                }
+
+                const archiveDoc = archiveQuery.docs[0];
+                const archivedData = archiveDoc.data();
+                
+                console.log(`📦 Archive trouvée:`, {
+                    id: archiveDoc.id,
+                    date: archivedData.archivedDate,
+                    totalItems: archivedData.totalItems
+                });
+
+                // 2. Restaurer les données depuis l'archive
+                const batch = db.batch();
+                let restoredCount = 0;
+
+                // Restaurer le produit
+                if (archivedData.data.product) {
+                    const productData = { ...archivedData.data.product };
+                    delete productData.archivedDate;
+                    delete productData.originalCollection;
                     
-                    saveToLocalStorage();
+                    batch.set(db.collection('products').doc(productId.toString()), productData);
                     
-                    // Mettre à jour dans Firebase si disponible
-                    if (isFirebaseInitialized) {
-                        await db.collection('products').doc(productId.toString()).update({
-                            hidden: firebase.firestore.FieldValue.delete(),
-                            hiddenDate: firebase.firestore.FieldValue.delete()
-                        });
+                    // Ajouter en local
+                    productsData.push(productData);
+                    restoredCount++;
+                }
+
+                // Restaurer l'inventaire
+                if (archivedData.data.inventory?.length > 0) {
+                    let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+                    
+                    for (const item of archivedData.data.inventory) {
+                        const cleanItem = { ...item };
+                        delete cleanItem.archivedDate;
+                        delete cleanItem.originalCollection;
+                        
+                        batch.set(db.collection('inventory').doc(cleanItem.id), cleanItem);
+                        inventoryData.push(cleanItem);
+                        restoredCount++;
                     }
                     
-                    // Mettre à jour les affichages
-                    updateProductsDisplay();
-                    updateProductsList();
-                    updateStockDashboard();
-                    updateSimpleStocksTable();
-                    populateRecapFilters();
-                    applyFilters();
-                    applyRecapFilters();
-                    
-                    showAlert(`Produit "${productName}" réaffiché avec succès`, 'success');
-                } else {
-                    showAlert('Erreur : Produit non trouvé', 'error');
+                    localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
                 }
+
+                // Restaurer les ventes
+                if (archivedData.data.sales?.length > 0) {
+                    let salesDataLocal = JSON.parse(localStorage.getItem('salesData') || '[]');
+                    
+                    for (const sale of archivedData.data.sales) {
+                        const cleanSale = { ...sale };
+                        delete cleanSale.archivedDate;
+                        delete cleanSale.originalCollection;
+                        
+                        batch.set(db.collection('sales').doc(cleanSale.id), cleanSale);
+                        salesDataLocal.push(cleanSale);
+                        restoredCount++;
+                    }
+                    
+                    localStorage.setItem('salesData', JSON.stringify(salesDataLocal));
+                    salesData = salesDataLocal;
+                }
+
+                // Restaurer les entrées de stock
+                if (archivedData.data.stockEntries?.length > 0) {
+                    let stockEntriesDataLocal = JSON.parse(localStorage.getItem('stockEntriesData') || '[]');
+                    
+                    for (const entry of archivedData.data.stockEntries) {
+                        const cleanEntry = { ...entry };
+                        delete cleanEntry.archivedDate;
+                        delete cleanEntry.originalCollection;
+                        
+                        batch.set(db.collection('stockEntries').doc(cleanEntry.id), cleanEntry);
+                        stockEntriesDataLocal.push(cleanEntry);
+                        restoredCount++;
+                    }
+                    
+                    localStorage.setItem('stockEntriesData', JSON.stringify(stockEntriesDataLocal));
+                    stockEntriesData = stockEntriesDataLocal;
+                }
+
+                // Restaurer les sorties de stock
+                if (archivedData.data.stockExits?.length > 0) {
+                    let stockExitsDataLocal = JSON.parse(localStorage.getItem('stockExitsData') || '[]');
+                    
+                    for (const exit of archivedData.data.stockExits) {
+                        const cleanExit = { ...exit };
+                        delete cleanExit.archivedDate;
+                        delete cleanExit.originalCollection;
+                        
+                        batch.set(db.collection('stockExits').doc(cleanExit.id), cleanExit);
+                        stockExitsDataLocal.push(cleanExit);
+                        restoredCount++;
+                    }
+                    
+                    localStorage.setItem('stockExitsData', JSON.stringify(stockExitsDataLocal));
+                    stockExitsData = stockExitsDataLocal;
+                }
+
+                // 3. Exécuter la restauration
+                await batch.commit();
+                
+                // 4. Supprimer l'archive
+                await archiveDoc.ref.delete();
+                
+                console.log(`✅ ${restoredCount} éléments restaurés depuis l'archive`);
+
+                // 5. Sauvegarder et mettre à jour les affichages
+                saveToLocalStorage();
+                
+                updateProductsDisplay();
+                updateProductsList();
+                updateStockDashboard();
+                updateSimpleStocksTable();
+                populateRecapFilters();
+                applyFilters();
+                applyRecapFilters();
+                
+                showAlert(`Produit "${productName}" restauré avec succès (${restoredCount} éléments)`, 'success');
+                
             } catch (error) {
-                console.error('Erreur réaffichage produit:', error);
-                showAlert('Erreur lors du réaffichage: ' + error.message, 'error');
+                console.error('Erreur désarchivage produit:', error);
+                showAlert('Erreur lors du désarchivage: ' + error.message, 'error');
             }
         }
 
