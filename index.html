@@ -16039,19 +16039,19 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 // Collecter les données locales
                 relatedData.inventory = (JSON.parse(localStorage.getItem('inventoryData') || '[]'))
                     .filter(item => item.product === productName || item.linkedProductId === productId)
-                    .map(item => ({ ...item, originalCollection: 'inventory', archivedDate }));
+                    .map(item => ({ ...item, originalCollection: 'inventory', archivedDate: archiveDate }));
 
                 relatedData.sales = (JSON.parse(localStorage.getItem('salesData') || '[]'))
                     .filter(sale => sale.product === productName)
-                    .map(sale => ({ ...sale, originalCollection: 'sales', archivedDate }));
+                    .map(sale => ({ ...sale, originalCollection: 'sales', archivedDate: archiveDate }));
 
                 relatedData.stockEntries = (JSON.parse(localStorage.getItem('stockEntriesData') || '[]'))
                     .filter(entry => entry.product === productName)
-                    .map(entry => ({ ...entry, originalCollection: 'stockEntries', archivedDate }));
+                    .map(entry => ({ ...entry, originalCollection: 'stockEntries', archivedDate: archiveDate }));
 
                 relatedData.stockExits = (JSON.parse(localStorage.getItem('stockExitsData') || '[]'))
                     .filter(exit => exit.product === productName)
-                    .map(exit => ({ ...exit, originalCollection: 'stockExits', archivedDate }));
+                    .map(exit => ({ ...exit, originalCollection: 'stockExits', archivedDate: archiveDate }));
 
                 console.log(`📦 Données à archiver:`, {
                     produit: 1,
