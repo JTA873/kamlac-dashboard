@@ -16038,7 +16038,8 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
 
                 // Collecter les données locales
                 relatedData.inventory = (JSON.parse(localStorage.getItem('inventoryData') || '[]'))
-                    .filter(item => item.product === productName || item.linkedProductId === productId)
+                    .filter(item => item.linkedProductId === productId || 
+                                  (item.product === productName && !item.linkedProductId))
                     .map(item => ({ ...item, originalCollection: 'inventory', archivedDate: archiveDate }));
 
                 relatedData.sales = (JSON.parse(localStorage.getItem('salesData') || '[]'))
@@ -16066,7 +16067,10 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 
                 // Supprimer des données locales
                 let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
-                inventoryData = inventoryData.filter(item => item.product !== productName && item.linkedProductId !== productId);
+                inventoryData = inventoryData.filter(item => 
+                    item.linkedProductId !== productId && 
+                    !(item.product === productName && !item.linkedProductId)
+                );
                 localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
 
                 let salesDataLocal = JSON.parse(localStorage.getItem('salesData') || '[]');
@@ -16110,10 +16114,21 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                         // Supprimer le produit
                         batch.delete(db.collection('products').doc(productId.toString()));
 
-                        // Supprimer l'inventaire
-                        const inventorySnapshot = await db.collection('inventory')
+                        // Supprimer l'inventaire lié par linkedProductId
+                        const inventoryByIdSnapshot = await db.collection('inventory')
+                            .where('linkedProductId', '==', productId.toString()).get();
+                        inventoryByIdSnapshot.forEach(doc => batch.delete(doc.ref));
+                        
+                        // Supprimer aussi l'inventaire lié par nom (pour les anciens sans linkedProductId)
+                        const inventoryByNameSnapshot = await db.collection('inventory')
                             .where('product', '==', productName).get();
-                        inventorySnapshot.forEach(doc => batch.delete(doc.ref));
+                        inventoryByNameSnapshot.forEach(doc => {
+                            // Éviter les doublons : seulement si pas de linkedProductId
+                            const data = doc.data();
+                            if (!data.linkedProductId) {
+                                batch.delete(doc.ref);
+                            }
+                        });
 
                         // Supprimer les ventes
                         const salesSnapshot = await db.collection('sales')
