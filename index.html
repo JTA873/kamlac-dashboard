@@ -4048,75 +4048,86 @@
             <!-- Inventaire Section -->
             <div id="stock-inventory" class="section">
                 <div class="card">
-                    <h2 style="margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.5rem);">📦 État des Stocks</h2>
+                    <h2 style="margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.5rem);">� Tableau de Bord Stocks</h2>
                     
-                    <div class="filters-section">
-                        <div class="filters-grid">
+                    <!-- KPI Summary -->
+                    <div class="stats-row" style="margin-bottom: 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white;">
+                        <div class="stat-item" style="color: white;">
+                            <div class="stat-value" id="stockTotalProducts">0</div>
+                            <div class="stat-label">Produits Référencés</div>
+                        </div>
+                        <div class="stat-item" style="color: white;">
+                            <div class="stat-value" id="stockTotalValue">0 CFA</div>
+                            <div class="stat-label">Valeur Totale Stock</div>
+                        </div>
+                        <div class="stat-item" style="color: white;">
+                            <div class="stat-value" id="stockPositiveCount">0</div>
+                            <div class="stat-label">Stocks Positifs</div>
+                        </div>
+                        <div class="stat-item" style="color: white;">
+                            <div class="stat-value" id="stockAlertCount">0</div>
+                            <div class="stat-label">Alertes & Problèmes</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="filters-section" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
                             <div class="filter-group">
-                                <label for="inventoryProductFilter">Produit</label>
-                                <select id="inventoryProductFilter" onchange="applyInventoryFilters()">
-                                    <option value="">Tous les produits</option>
-                                </select>
+                                <label for="stockProductFilter" style="font-weight: 600; color: #495057;">🔍 Rechercher Produit</label>
+                                <input type="text" id="stockProductFilter" placeholder="Nom du produit..." style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 5px;" oninput="applyStockFilters()">
                             </div>
                             <div class="filter-group">
-                                <label for="inventoryBrandFilter">Marque</label>
-                                <select id="inventoryBrandFilter" onchange="applyInventoryFilters()">
-                                    <option value="">Toutes les marques</option>
-                                </select>
-                            </div>
-                            <div class="filter-group">
-                                <label for="inventoryStatusFilter">Statut</label>
-                                <select id="inventoryStatusFilter" onchange="applyInventoryFilters()">
+                                <label for="stockStatusFilter" style="font-weight: 600; color: #495057;">📊 Statut Stock</label>
+                                <select id="stockStatusFilter" onchange="applyStockFilters()" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 5px;">
                                     <option value="">Tous les statuts</option>
-                                    <option value="OK">Stock OK</option>
-                                    <option value="LOW">Stock Bas</option>
-                                    <option value="OUT">Rupture</option>
+                                    <option value="positive">✅ Stocks Positifs</option>
+                                    <option value="zero">⚠️ Stocks à Zéro</option>
+                                    <option value="negative">🔴 Stocks Négatifs</option>
+                                    <option value="low">🟡 Stocks Faibles</option>
                                 </select>
                             </div>
                             <div class="filter-group">
-                                <button class="btn btn-success" onclick="exportInventoryToExcel()">📊 Export Excel</button>
+                                <label for="stockSortFilter" style="font-weight: 600; color: #495057;">� Trier par</label>
+                                <select id="stockSortFilter" onchange="applyStockFilters()" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 5px;">
+                                    <option value="quantity_asc">Stock Croissant</option>
+                                    <option value="quantity_desc">Stock Décroissant</option>
+                                    <option value="name_asc">Nom A-Z</option>
+                                    <option value="value_desc">Valeur Décroissante</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <button class="btn btn-success" onclick="exportInventoryToExcel()" style="width: 100%; padding: 10px;">📊 Export Excel</button>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="stats-row" style="margin-bottom: 20px;">
-                        <div class="stat-item">
-                            <div class="stat-value" id="totalProductsInStock">0</div>
-                            <div class="stat-label">Produits en Stock</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="totalStockValue">0 CFA</div>
-                            <div class="stat-label">Valeur Totale</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="lowStockProductsCount">0</div>
-                            <div class="stat-label">Alertes Stock Bas</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="outOfStockProductsCount">0</div>
-                            <div class="stat-label">Ruptures</div>
-                        </div>
-                    </div>
-                    
-                    <div style="overflow-x: auto;">
-                        <table class="data-table">
-                            <thead>
+                    <!-- Stock Table -->
+                    <div style="overflow-x: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <table class="data-table" style="width: 100%; border-collapse: collapse; background: white;">
+                            <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                                 <tr>
-                                    <th>Produit</th>
-                                    <th>Stock Actuel</th>
-                                    <th>Valeur Stock</th>
-                                    <th>Statut</th>
-                                    <th>Total Entrées</th>
-                                    <th>Total Sorties</th>
-                                    <th>% Stock Unités</th>
-                                    <th>% Stock Valeur</th>
-                                    <th>Actions</th>
+                                    <th style="padding: 12px 15px; text-align: left; font-weight: 600; white-space: nowrap;">📦 Produit</th>
+                                    <th style="padding: 12px 15px; text-align: center; font-weight: 600; white-space: nowrap;">📊 Stock Actuel</th>
+                                    <th style="padding: 12px 15px; text-align: center; font-weight: 600; white-space: nowrap;">💰 Valeur</th>
+                                    <th style="padding: 12px 15px; text-align: center; font-weight: 600; white-space: nowrap;">🚦 Statut</th>
+                                    <th style="padding: 12px 15px; text-align: center; font-weight: 600; white-space: nowrap;">📥 Entrées</th>
+                                    <th style="padding: 12px 15px; text-align: center; font-weight: 600; white-space: nowrap;">📤 Sorties</th>
+                                    <th style="padding: 12px 15px; text-align: center; font-weight: 600; white-space: nowrap;">📈 Rotation</th>
+                                    <th style="padding: 12px 15px; text-align: center; font-weight: 600; white-space: nowrap;">⚙️ Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="inventoryTableBody">
+                            <tbody id="newStockTableBody" style="background: white;">
                                 <!-- Rempli dynamiquement -->
                             </tbody>
                         </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div id="stockPagination" style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding: 15px;">
+                        <button id="stockPrevBtn" onclick="changeStockPage(-1)" class="btn" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 5px;" disabled>⬅️ Précédent</button>
+                        <span id="stockPageInfo" style="font-weight: 600; color: #495057;">Page 1 sur 1</span>
+                        <button id="stockNextBtn" onclick="changeStockPage(1)" class="btn" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 5px;" disabled>Suivant ➡️</button>
                     </div>
                 </div>
             </div>
@@ -9589,6 +9600,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         function getCanonicalProductName(productName) {
             if (!productName) return productName;
             
+            // Debug de l'état de productsData
+            if (productsData.length === 0) {
+                console.warn(`⚠️ productsData est vide ! Impossible de normaliser "${productName}"`);
+                return productName;
+            } else if (productsData.length < 10) {
+                console.log(`🔍 productsData a seulement ${productsData.length} produits:`, productsData.map(p => p.reference));
+            }
+            
             // D'abord, chercher par linkedProductId dans l'inventaire
             const inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
             const inventoryItem = inventoryData.find(item => item.product === productName);
@@ -9632,6 +9651,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         function calculateCurrentStockLevels() {
             console.log('📊 Début calcul stocks...');
+            
+            // Si productsData est vide, on continue avec les données disponibles
+            if (productsData.length === 0) {
+                console.warn('⚠️ productsData vide, calcul avec données disponibles');
+            } else {
+                console.log(`✅ productsData chargée: ${productsData.length} produits disponibles`);
+            }
             
             // Réinitialiser les niveaux de stock
             currentStockLevels = {};
@@ -10069,214 +10095,372 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         // MISE À JOUR TABLE INVENTAIRE
         // ========================================
         
+        // Variables globales pour la nouvelle gestion des stocks
+        let currentStockPage = 1;
+        const stockItemsPerPage = 50;
+        let filteredStockData = [];
+        
         function updateInventoryTable() {
-            console.log('📦 Mise à jour du tableau d\'inventaire...');
+            console.log('📊 Mise à jour du nouveau tableau de bord stocks...');
             
-            const inventoryTableBody = document.getElementById('inventoryTableBody');
-            if (!inventoryTableBody) {
-                console.log('❌ Tableau d\'inventaire non trouvé');
-                return;
+            // Vérifications préliminaires
+            if (Object.keys(currentStockLevels).length === 0) {
+                console.warn('⚠️ currentStockLevels est vide, recalcul des stocks...');
+                calculateCurrentStockLevels();
             }
             
-            // Vider le tableau
-            inventoryTableBody.innerHTML = '';
+            if (productsData.length === 0) {
+                console.warn('⚠️ productsData est vide, tentative de rechargement...');
+                loadFromLocalStorage();
+                // Si toujours vide après rechargement localStorage
+                if (productsData.length === 0) {
+                    console.error('❌ Impossible de charger productsData');
+                }
+            }
             
-            // Trier les produits par stock (négatifs en premier)
-            const sortedProducts = Object.keys(currentStockLevels)
-                .sort((a, b) => currentStockLevels[a].quantity - currentStockLevels[b].quantity);
+            console.log(`📊 Données disponibles: currentStockLevels=${Object.keys(currentStockLevels).length}, productsData=${productsData.length}`);
             
-            let totalProducts = 0;
-            let negativeStockProducts = 0;
-            let positiveStockProducts = 0;
+            // Préparer les données
+            prepareStockData();
             
-            // Calculer les totaux globaux pour les pourcentages
-            const totalStockUnits = Object.values(currentStockLevels)
-                .reduce((total, stock) => total + Math.max(0, stock.quantity), 0);
+            // Appliquer les filtres
+            applyStockFilters();
             
-            let totalStockValue = 0;
-            Object.keys(currentStockLevels).forEach(productName => {
+            // Mettre à jour les KPI
+            updateStockKPIs();
+        }
+        
+        function prepareStockData() {
+            console.log('🔧 Préparation des données de stock...');
+            console.log(`📊 currentStockLevels: ${Object.keys(currentStockLevels).length} produits`);
+            console.log(`📦 productsData: ${productsData.length} produits`);
+            
+            // Debug: afficher quelques noms pour comprendre
+            const stockNames = Object.keys(currentStockLevels).slice(0, 5);
+            const productNames = productsData.slice(0, 5).map(p => p.reference);
+            console.log('🔍 Premiers noms dans currentStockLevels:', stockNames);
+            console.log('🔍 Premiers noms dans productsData:', productNames);
+            
+            // FILTRER SEULEMENT LES PRODUITS ACTIFS (qui existent dans productsData)
+            const activeProductNames = new Set(productsData.map(p => p.reference));
+            console.log(`📋 Produits actifs référencés: ${activeProductNames.size}`);
+            
+            // Filtrer currentStockLevels pour ne garder que les produits actifs
+            const activeStockEntries = Object.keys(currentStockLevels)
+                .filter(productName => activeProductNames.has(productName));
+            
+            console.log(`🔍 Produits avec stock filtrés: ${activeStockEntries.length}/${Object.keys(currentStockLevels).length}`);
+            
+            // Convertir currentStockLevels en tableau pour manipulation (SEULEMENT LES ACTIFS)
+            const stockArray = activeStockEntries.map(productName => {
                 const stock = currentStockLevels[productName];
+                
+                // Le productName ici EST DÉJÀ le nom canonique depuis calculateCurrentStockLevels
+                // ET il existe dans productsData (grâce au filtre)
                 const linkedProduct = productsData.find(p => p.reference === productName);
-                const costPerUnit = linkedProduct ? (linkedProduct.price || 0) : 0;
-                totalStockValue += Math.max(0, stock.quantity) * costPerUnit;
-            });
-            
-            sortedProducts.forEach(inventoryProductName => {
-                const stock = currentStockLevels[inventoryProductName];
-                const quantity = stock.quantity;
                 
-                // Trouver le produit correspondant dans productsData pour avoir le nom correct
-                const linkedProduct = productsData.find(p => p.reference === inventoryProductName);
-                const displayProductName = linkedProduct ? linkedProduct.reference : inventoryProductName;
-                const costPerUnit = linkedProduct ? (linkedProduct.price || 0) : 0;
-                const stockValue = Math.max(0, quantity) * costPerUnit;
+                // Si pas trouvé, c'est un bug car on a filtré
+                if (!linkedProduct) {
+                    console.error(`❌ BUG: Produit actif non trouvé: "${productName}"`);
+                    return null;
+                }
                 
-                // Statistiques
-                totalProducts++;
-                if (quantity < 0) negativeStockProducts++;
-                else positiveStockProducts++;
+                const displayName = linkedProduct.reference;
+                const costPerUnit = linkedProduct.price || 0;
+                const stockValue = Math.max(0, stock.quantity) * costPerUnit;
                 
-                // Calculer les entrées totales pour ce produit
+                // Calculer les totaux d'entrées et sorties
+                // Attention: utiliser les noms originaux ET canoniques pour les recherches
                 const totalEntries = stockEntriesData
-                    .filter(entry => entry.product === inventoryProductName || entry.product === displayProductName)
+                    .filter(entry => {
+                        const canonicalName = getCanonicalProductName(entry.product);
+                        return canonicalName === productName || entry.product === productName;
+                    })
                     .reduce((total, entry) => total + (parseFloat(entry.quantity) || 0), 0);
                 
-                // Calculer les sorties totales pour ce produit (incluant ventes et sorties)
                 const totalExits = stockExitsData
-                    .filter(exit => exit.product === inventoryProductName || exit.product === displayProductName)
+                    .filter(exit => {
+                        const canonicalName = getCanonicalProductName(exit.product);
+                        return canonicalName === productName || exit.product === productName;
+                    })
                     .reduce((total, exit) => total + (parseFloat(exit.quantity) || 0), 0);
                 
                 const totalSales = salesData
-                    .filter(sale => sale.product === inventoryProductName || sale.product === displayProductName)
+                    .filter(sale => {
+                        const canonicalName = getCanonicalProductName(sale.product);
+                        return canonicalName === productName || sale.product === productName;
+                    })
                     .reduce((total, sale) => total + (parseFloat(sale.quantity) || 0), 0);
                 
                 const totalAllExits = totalExits + totalSales;
+                const rotationRate = totalEntries > 0 ? ((totalAllExits / totalEntries) * 100).toFixed(1) : '0.0';
                 
-                // Calculer les pourcentages
-                const percentUnits = totalStockUnits > 0 ? 
-                    ((Math.max(0, quantity) / totalStockUnits) * 100).toFixed(1) : '0.0';
-                const percentValue = totalStockValue > 0 ? 
-                    ((stockValue / totalStockValue) * 100).toFixed(1) : '0.0';
-                
-                const row = document.createElement('tr');
-                
-                // Style selon le niveau de stock
-                let statusIcon, statusClass, statusText;
-                if (quantity < 0) {
+                // Déterminer le statut
+                let status, statusIcon, statusClass;
+                if (stock.quantity < 0) {
+                    status = 'negative';
                     statusIcon = '🔴';
                     statusClass = 'text-danger';
-                    statusText = 'NÉGATIF';
-                } else if (quantity === 0) {
+                } else if (stock.quantity === 0) {
+                    status = 'zero';
                     statusIcon = '⚠️';
                     statusClass = 'text-warning';
-                    statusText = 'ZÉRO';
-                } else if (quantity <= 10) {
+                } else if (stock.quantity <= 10) {
+                    status = 'low';
                     statusIcon = '🟡';
                     statusClass = 'text-warning';
-                    statusText = 'FAIBLE';
                 } else {
+                    status = 'positive';
                     statusIcon = '🟢';
                     statusClass = 'text-success';
-                    statusText = 'OK';
                 }
                 
+                return {
+                    productName: displayName,
+                    originalName: productName,
+                    quantity: stock.quantity,
+                    stockValue: stockValue,
+                    costPerUnit: costPerUnit,
+                    totalEntries: totalEntries,
+                    totalExits: totalAllExits,
+                    rotationRate: rotationRate,
+                    status: status,
+                    statusIcon: statusIcon,
+                    statusClass: statusClass,
+                    linkedProduct: linkedProduct // Pour debug
+                };
+            }).filter(item => item !== null); // Supprimer les entrées nulles
+            
+            console.log(`✅ ${stockArray.length} produits ACTIFS préparés pour affichage`);
+            console.log(`🔗 ${stockArray.filter(item => item.linkedProduct).length} produits liés à productsData`);
+            console.log(`❌ ${stockArray.filter(item => !item.linkedProduct).length} produits non liés`);
+            
+            // Stocker les données préparées
+            window.preparedStockData = stockArray;
+        }
+        
+        function applyStockFilters() {
+            if (!window.preparedStockData) return;
+            
+            const productFilter = document.getElementById('stockProductFilter')?.value.toLowerCase() || '';
+            const statusFilter = document.getElementById('stockStatusFilter')?.value || '';
+            const sortFilter = document.getElementById('stockSortFilter')?.value || 'quantity_asc';
+            
+            // Filtrer les données
+            filteredStockData = window.preparedStockData.filter(item => {
+                const matchesProduct = item.productName.toLowerCase().includes(productFilter);
+                const matchesStatus = !statusFilter || item.status === statusFilter;
+                
+                return matchesProduct && matchesStatus;
+            });
+            
+            // Trier les données
+            filteredStockData.sort((a, b) => {
+                switch (sortFilter) {
+                    case 'quantity_asc':
+                        return a.quantity - b.quantity;
+                    case 'quantity_desc':
+                        return b.quantity - a.quantity;
+                    case 'name_asc':
+                        return a.productName.localeCompare(b.productName);
+                    case 'value_desc':
+                        return b.stockValue - a.stockValue;
+                    default:
+                        return a.quantity - b.quantity;
+                }
+            });
+            
+            // Réinitialiser la page
+            currentStockPage = 1;
+            
+            // Afficher les données
+            displayStockTable();
+            updateStockPagination();
+        }
+        
+        function displayStockTable() {
+            const tableBody = document.getElementById('newStockTableBody');
+            if (!tableBody) return;
+            
+            tableBody.innerHTML = '';
+            
+            // Calculer les indices de pagination
+            const startIndex = (currentStockPage - 1) * stockItemsPerPage;
+            const endIndex = Math.min(startIndex + stockItemsPerPage, filteredStockData.length);
+            const pageData = filteredStockData.slice(startIndex, endIndex);
+            
+            pageData.forEach(item => {
+                const row = document.createElement('tr');
+                row.style.borderBottom = '1px solid #e9ecef';
+                row.style.transition = 'background-color 0.2s ease';
+                
+                // Hover effect
+                row.onmouseenter = () => row.style.backgroundColor = '#f8f9fa';
+                row.onmouseleave = () => row.style.backgroundColor = 'white';
+                
                 row.innerHTML = `
-                    <td style="font-weight: 500;">${displayProductName}</td>
-                    <td class="${statusClass}" style="font-weight: bold;">
-                        ${quantity.toLocaleString()}
+                    <td style="padding: 12px 15px; font-weight: 500; max-width: 250px; word-wrap: break-word;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.1em;">📦</span>
+                            <span title="${item.productName}">${item.productName}</span>
+                        </div>
                     </td>
-                    <td style="color: #28a745; font-weight: 600;">
-                        ${stockValue.toLocaleString()} CFA
+                    <td style="padding: 12px 15px; text-align: center; font-weight: bold; font-size: 1.1em;" class="${item.statusClass}">
+                        ${item.quantity.toLocaleString()}
                     </td>
-                    <td>
-                        <span style="display: inline-flex; align-items: center; gap: 5px;">
-                            ${statusIcon} <span class="${statusClass}">${statusText}</span>
+                    <td style="padding: 12px 15px; text-align: center; color: #28a745; font-weight: 600;">
+                        ${item.stockValue.toLocaleString()} CFA
+                    </td>
+                    <td style="padding: 12px 15px; text-align: center;">
+                        <span style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 12px; background: ${getStatusBackground(item.status)}; font-size: 0.9em; font-weight: 500;">
+                            ${item.statusIcon} ${getStatusText(item.status)}
                         </span>
                     </td>
-                    <td style="color: #667eea; font-weight: 500;">
-                        📥 ${totalEntries.toLocaleString()}
+                    <td style="padding: 12px 15px; text-align: center; color: #667eea; font-weight: 500;">
+                        📥 ${item.totalEntries.toLocaleString()}
                     </td>
-                    <td style="color: #dc3545; font-weight: 500;">
-                        📤 ${totalAllExits.toLocaleString()}
+                    <td style="padding: 12px 15px; text-align: center; color: #dc3545; font-weight: 500;">
+                        📤 ${item.totalExits.toLocaleString()}
                     </td>
-                    <td style="color: #6c757d; font-size: 0.9rem;">
-                        ${percentUnits}%
+                    <td style="padding: 12px 15px; text-align: center; color: #6f42c1; font-weight: 500;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                            <span>📈</span>
+                            <span>${item.rotationRate}%</span>
+                        </div>
                     </td>
-                    <td style="color: #6c757d; font-size: 0.9rem;">
-                        ${percentValue}%
-                    </td>
-                    <td>
-                        <button onclick="showProductSheet('${displayProductName.replace(/'/g, "\\'")}')" 
-                                class="btn-icon" title="Fiche produit" style="background: #667eea; color: white; padding: 5px 10px; border-radius: 5px;">
+                    <td style="padding: 12px 15px; text-align: center;">
+                        <button onclick="showProductSheet('${item.productName.replace(/'/g, "\\'")}')" 
+                                class="btn-icon" 
+                                title="Voir la fiche produit"
+                                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 12px; border: none; border-radius: 6px; font-size: 0.9em; cursor: pointer; transition: transform 0.2s ease;"
+                                onmouseover="this.style.transform = 'scale(1.05)'"
+                                onmouseout="this.style.transform = 'scale(1)'">
                             📋 Fiche
                         </button>
                     </td>
                 `;
                 
-                inventoryTableBody.appendChild(row);
+                tableBody.appendChild(row);
             });
             
-            console.log(`✅ ${totalProducts} produits affichés dans l'inventaire`);
-            
-            // Réinitialiser le tri pour ce tableau
-            const inventoryTable = inventoryTableBody.closest('.data-table');
-            if (inventoryTable) {
-                reinitializeTableSorting(inventoryTable);
-            }
-            
-            // Calculer les KPI pour l'inventaire
-            const totalValueStocks = Object.keys(currentStockLevels).reduce((total, product) => {
-                const stock = currentStockLevels[product];
-                const quantity = stock.quantity;
-                
-                // Estimer la valeur en utilisant le prix de vente moyen du produit
-                const avgPrice = salesData
-                    .filter(sale => sale.product === product)
-                    .reduce((total, sale, index, array) => {
-                        const price = parseFloat(sale.prix) || 0;
-                        return index === array.length - 1 ? (total + price) / array.length : total + price;
-                    }, 0);
-                
-                return total + (quantity > 0 ? quantity * avgPrice : 0);
-            }, 0);
-            
-            const lowStockCount = Object.keys(currentStockLevels)
-                .filter(product => {
-                    const quantity = currentStockLevels[product].quantity;
-                    return quantity > 0 && quantity <= 10; // Stock bas mais pas rupture
-                }).length;
-                
-            const outOfStockCount = Object.keys(currentStockLevels)
-                .filter(product => currentStockLevels[product].quantity <= 0).length;
-            
-            // Mettre à jour les KPI de l'inventaire
-            const totalProductsElement = document.getElementById('totalProductsInStock');
-            if (totalProductsElement) {
-                totalProductsElement.textContent = totalProducts.toLocaleString();
-            }
-            
-            const totalValueElement = document.getElementById('totalStockValue');
-            if (totalValueElement) {
-                totalValueElement.textContent = `${Math.round(totalValueStocks).toLocaleString()} CFA`;
-            }
-            
-            const lowStockElement = document.getElementById('lowStockProductsCount');
-            if (lowStockElement) {
-                lowStockElement.textContent = lowStockCount.toLocaleString();
-            }
-            
-            const outOfStockElement = document.getElementById('outOfStockProductsCount');
-            if (outOfStockElement) {
-                outOfStockElement.textContent = outOfStockCount.toLocaleString();
-            }
-            
-            console.log(`📊 KPI inventaire mis à jour: ${totalProducts} produits, ${Math.round(totalValueStocks).toLocaleString()} CFA, ${lowStockCount} alertes, ${outOfStockCount} ruptures`);
-            
-            // Mettre à jour les statistiques d'inventaire (ancien code conservé pour compatibilité)
-            const inventoryStats = document.getElementById('inventoryStats');
-            if (inventoryStats) {
-                inventoryStats.innerHTML = `
-                    <div style="display: flex; gap: 20px; justify-content: space-around; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 15px;">
-                        <div style="text-align: center;">
-                            <div style="font-size: 1.2rem; font-weight: bold; color: #333;">${totalProducts}</div>
-                            <div style="font-size: 0.8rem; color: #666;">Total Produits</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 1.2rem; font-weight: bold; color: #dc3545;">${negativeStockProducts}</div>
-                            <div style="font-size: 0.8rem; color: #666;">Stocks Négatifs</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 1.2rem; font-weight: bold; color: #28a745;">${positiveStockProducts}</div>
-                            <div style="font-size: 0.8rem; color: #666;">Stocks Positifs</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 1.2rem; font-weight: bold; color: #007bff;">${salesData.length}</div>
-                            <div style="font-size: 0.8rem; color: #666;">Ventes Totales</div>
-                        </div>
-                    </div>
-                `;
+            console.log(`✅ ${pageData.length} produits affichés (page ${currentStockPage})`);
+        }
+        
+        function getStatusBackground(status) {
+            switch (status) {
+                case 'positive': return 'rgba(40, 167, 69, 0.1)';
+                case 'low': return 'rgba(255, 193, 7, 0.1)';
+                case 'zero': return 'rgba(255, 193, 7, 0.2)';
+                case 'negative': return 'rgba(220, 53, 69, 0.1)';
+                default: return 'rgba(108, 117, 125, 0.1)';
             }
         }
+        
+        function getStatusText(status) {
+            switch (status) {
+                case 'positive': return 'Stock OK';
+                case 'low': return 'Stock Faible';
+                case 'zero': return 'Stock Zéro';
+                case 'negative': return 'Stock Négatif';
+                default: return 'Inconnu';
+            }
+        }
+        
+        function updateStockKPIs() {
+            if (!window.preparedStockData) return;
+            
+            const totalProducts = window.preparedStockData.length;
+            const totalValue = window.preparedStockData.reduce((sum, item) => sum + item.stockValue, 0);
+            const positiveStocks = window.preparedStockData.filter(item => item.quantity > 0).length;
+            const alerts = window.preparedStockData.filter(item => item.status === 'negative' || item.status === 'zero' || item.status === 'low').length;
+            
+            // Mettre à jour les éléments du DOM
+            const elements = {
+                'stockTotalProducts': totalProducts.toLocaleString(),
+                'stockTotalValue': totalValue.toLocaleString() + ' CFA',
+                'stockPositiveCount': positiveStocks.toLocaleString(),
+                'stockAlertCount': alerts.toLocaleString()
+            };
+            
+            Object.entries(elements).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element) element.textContent = value;
+            });
+        }
+        
+        function updateStockPagination() {
+            const totalPages = Math.ceil(filteredStockData.length / stockItemsPerPage);
+            
+            const prevBtn = document.getElementById('stockPrevBtn');
+            const nextBtn = document.getElementById('stockNextBtn');
+            const pageInfo = document.getElementById('stockPageInfo');
+            
+            if (prevBtn) prevBtn.disabled = currentStockPage <= 1;
+            if (nextBtn) nextBtn.disabled = currentStockPage >= totalPages;
+            if (pageInfo) pageInfo.textContent = `Page ${currentStockPage} sur ${totalPages} (${filteredStockData.length} produits)`;
+        }
+        
+        function changeStockPage(direction) {
+            const totalPages = Math.ceil(filteredStockData.length / stockItemsPerPage);
+            const newPage = currentStockPage + direction;
+            
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentStockPage = newPage;
+                displayStockTable();
+                updateStockPagination();
+            }
+        }
+        
+        // ========================================
+        // FONCTION DE DIAGNOSTIC DES NOMS DE PRODUITS
+        // ========================================
+        function diagnosticProductNames() {
+            console.log('🔍 === DIAGNOSTIC DES NOMS DE PRODUITS ===');
+            console.log(`📊 currentStockLevels: ${Object.keys(currentStockLevels).length} entrées`);
+            console.log(`📦 productsData: ${productsData.length} entrées`);
+            
+            const stockNames = Object.keys(currentStockLevels);
+            const productReferences = productsData.map(p => p.reference);
+            
+            console.log('🔍 Premiers 10 noms dans currentStockLevels:');
+            stockNames.slice(0, 10).forEach(name => console.log(`  - "${name}"`));
+            
+            console.log('🔍 Premiers 10 noms dans productsData:');
+            productReferences.slice(0, 10).forEach(name => console.log(`  - "${name}"`));
+            
+            // Vérifier les correspondances
+            let matched = 0;
+            let unmatched = [];
+            
+            stockNames.forEach(stockName => {
+                const found = productsData.find(p => p.reference === stockName);
+                if (found) {
+                    matched++;
+                } else {
+                    unmatched.push(stockName);
+                }
+            });
+            
+            console.log(`✅ ${matched} correspondances trouvées`);
+            console.log(`❌ ${unmatched.length} noms sans correspondance:`);
+            unmatched.slice(0, 10).forEach(name => console.log(`  - "${name}"`));
+            
+            if (unmatched.length > 10) {
+                console.log(`  ... et ${unmatched.length - 10} autres`);
+            }
+            
+            // Vérifier si le problème vient de la normalisation
+            console.log('🔍 Test de normalisation sur quelques exemples:');
+            const sampleSales = salesData.slice(0, 5);
+            sampleSales.forEach(sale => {
+                const original = sale.product;
+                const canonical = getCanonicalProductName(original);
+                console.log(`  "${original}" -> "${canonical}"`);
+            });
+        }
+        
+        // Ajouter la fonction diagnostic au window pour qu'elle soit accessible depuis la console
+        window.diagnosticProductNames = diagnosticProductNames;
 
         function calculateExitTotal() {
             const quantity = parseFloat(document.getElementById('exitQuantity').value) || 0;
@@ -12311,7 +12495,13 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     
                     console.log(`✅ Total produits disponibles: ${productsData.length}`);
                     
-                    // Mettre à jour l'affichage
+                    // Synchroniser l'inventaire automatiquement
+                    await loadInventoryFromFirebase();
+                    
+                    // Recalculer les stocks avec les données mises à jour
+                    calculateCurrentStockLevels();
+                    
+                    // Mettre à jour l'affichage naturellement
                     updateProductsDisplay();
                     updateProductsList();
                 }
@@ -12333,6 +12523,34 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             localStorage.setItem('kamlacNoteCategories', JSON.stringify(noteCategories));
             localStorage.setItem('stockEntries', JSON.stringify(stockEntriesData));
             localStorage.setItem('stockExits', JSON.stringify(stockExitsData));
+        }
+
+        // Fonction pour charger l'inventaire depuis Firebase
+        async function loadInventoryFromFirebase() {
+            if (!isFirebaseInitialized || !db) {
+                return;
+            }
+            
+            try {
+                const snapshot = await db.collection('inventory').get();
+                if (!snapshot.empty) {
+                    const firebaseInventory = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        firebaseInventory.push({
+                            id: doc.id,
+                            product: data.product || data.name,
+                            ...data
+                        });
+                    });
+                    
+                    // Mettre à jour localStorage avec les données Firebase
+                    localStorage.setItem('inventoryData', JSON.stringify(firebaseInventory));
+                    console.log(`✅ ${firebaseInventory.length} éléments d'inventaire synchronisés depuis Firebase`);
+                }
+            } catch (error) {
+                console.log('⚠️ Erreur synchronisation inventaire Firebase:', error.message);
+            }
         }
 
         function updateCloudStatus(status, message) {
