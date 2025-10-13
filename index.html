@@ -4104,10 +4104,12 @@
                                 <tr>
                                     <th>Produit</th>
                                     <th>Stock Actuel</th>
+                                    <th>Valeur Stock</th>
                                     <th>Statut</th>
-                                    <th>Total Vendus</th>
-                                    <th>CA Généré</th>
-                                    <th>Dernier Mouvement</th>
+                                    <th>Total Entrées</th>
+                                    <th>Total Sorties</th>
+                                    <th>% Stock Unités</th>
+                                    <th>% Stock Valeur</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -10036,24 +10038,54 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             let negativeStockProducts = 0;
             let positiveStockProducts = 0;
             
-            sortedProducts.forEach(product => {
-                const stock = currentStockLevels[product];
+            // Calculer les totaux globaux pour les pourcentages
+            const totalStockUnits = Object.values(currentStockLevels)
+                .reduce((total, stock) => total + Math.max(0, stock.quantity), 0);
+            
+            let totalStockValue = 0;
+            Object.keys(currentStockLevels).forEach(productName => {
+                const stock = currentStockLevels[productName];
+                const linkedProduct = productsData.find(p => p.reference === productName);
+                const costPerUnit = linkedProduct ? (linkedProduct.price || 0) : 0;
+                totalStockValue += Math.max(0, stock.quantity) * costPerUnit;
+            });
+            
+            sortedProducts.forEach(inventoryProductName => {
+                const stock = currentStockLevels[inventoryProductName];
                 const quantity = stock.quantity;
+                
+                // Trouver le produit correspondant dans productsData pour avoir le nom correct
+                const linkedProduct = productsData.find(p => p.reference === inventoryProductName);
+                const displayProductName = linkedProduct ? linkedProduct.reference : inventoryProductName;
+                const costPerUnit = linkedProduct ? (linkedProduct.price || 0) : 0;
+                const stockValue = Math.max(0, quantity) * costPerUnit;
                 
                 // Statistiques
                 totalProducts++;
                 if (quantity < 0) negativeStockProducts++;
                 else positiveStockProducts++;
                 
-                // Calculer les ventes totales pour ce produit
+                // Calculer les entrées totales pour ce produit
+                const totalEntries = stockEntriesData
+                    .filter(entry => entry.product === inventoryProductName || entry.product === displayProductName)
+                    .reduce((total, entry) => total + (parseFloat(entry.quantity) || 0), 0);
+                
+                // Calculer les sorties totales pour ce produit (incluant ventes et sorties)
+                const totalExits = stockExitsData
+                    .filter(exit => exit.product === inventoryProductName || exit.product === displayProductName)
+                    .reduce((total, exit) => total + (parseFloat(exit.quantity) || 0), 0);
+                
                 const totalSales = salesData
-                    .filter(sale => sale.product === product)
+                    .filter(sale => sale.product === inventoryProductName || sale.product === displayProductName)
                     .reduce((total, sale) => total + (parseFloat(sale.quantity) || 0), 0);
                 
-                // Calculer le CA total pour ce produit
-                const totalRevenue = salesData
-                    .filter(sale => sale.product === product)
-                    .reduce((total, sale) => total + (parseFloat(sale.valeur) || 0), 0);
+                const totalAllExits = totalExits + totalSales;
+                
+                // Calculer les pourcentages
+                const percentUnits = totalStockUnits > 0 ? 
+                    ((Math.max(0, quantity) / totalStockUnits) * 100).toFixed(1) : '0.0';
+                const percentValue = totalStockValue > 0 ? 
+                    ((stockValue / totalStockValue) * 100).toFixed(1) : '0.0';
                 
                 const row = document.createElement('tr');
                 
@@ -10078,22 +10110,32 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 }
                 
                 row.innerHTML = `
-                    <td style="font-weight: 500;">${product}</td>
+                    <td style="font-weight: 500;">${displayProductName}</td>
                     <td class="${statusClass}" style="font-weight: bold;">
                         ${quantity.toLocaleString()}
+                    </td>
+                    <td style="color: #28a745; font-weight: 600;">
+                        ${stockValue.toLocaleString()} CFA
                     </td>
                     <td>
                         <span style="display: inline-flex; align-items: center; gap: 5px;">
                             ${statusIcon} <span class="${statusClass}">${statusText}</span>
                         </span>
                     </td>
-                    <td style="color: #666;">${totalSales.toLocaleString()}</td>
-                    <td style="color: #666;">${totalRevenue.toLocaleString()} CFA</td>
-                    <td style="font-size: 0.8rem; color: #888;">
-                        ${stock.lastMovement ? new Date(stock.lastMovement).toLocaleDateString() : 'N/A'}
+                    <td style="color: #667eea; font-weight: 500;">
+                        📥 ${totalEntries.toLocaleString()}
+                    </td>
+                    <td style="color: #dc3545; font-weight: 500;">
+                        📤 ${totalAllExits.toLocaleString()}
+                    </td>
+                    <td style="color: #6c757d; font-size: 0.9rem;">
+                        ${percentUnits}%
+                    </td>
+                    <td style="color: #6c757d; font-size: 0.9rem;">
+                        ${percentValue}%
                     </td>
                     <td>
-                        <button onclick="showProductSheet('${product.replace(/'/g, "\\'")}')" 
+                        <button onclick="showProductSheet('${displayProductName.replace(/'/g, "\\'")}')" 
                                 class="btn-icon" title="Fiche produit" style="background: #667eea; color: white; padding: 5px 10px; border-radius: 5px;">
                             📋 Fiche
                         </button>
@@ -13537,7 +13579,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     // Créer l'entrée inventaire manquante
                     const newInventoryItem = {
                         id: `product_${product.id}`,
-                        product: product.reference,
+                        product: product.reference, // Utiliser exactement le même nom que dans productsData
                         quantity: 0,
                         unit: 'Unités',
                         minLevel: 5,
@@ -13553,14 +13595,14 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     hasChanges = true;
                     console.log(`✅ Inventaire synchronisé pour: ${product.reference}`);
                 } else if (existingInventoryItem.product !== product.reference) {
-                    // Mettre à jour le nom si changé
-                    existingInventoryItem.product = product.reference;
+                    // Mettre à jour le nom pour qu'il soit exactement identique à celui du produit
+                    existingInventoryItem.product = product.reference; // Uniformisation du nom
                     existingInventoryItem.linkedProductId = product.id;
                     existingInventoryItem.category = product.format || existingInventoryItem.category;
                     existingInventoryItem.updatedAt = new Date().toISOString();
                     existingInventoryItem.syncedFrom = 'Module Produits';
                     hasChanges = true;
-                    console.log(`✅ Nom produit mis à jour dans l'inventaire: ${product.reference}`);
+                    console.log(`✅ Nom produit uniformisé dans l'inventaire: "${existingInventoryItem.product}" -> "${product.reference}"`);
                 }
             });
             
