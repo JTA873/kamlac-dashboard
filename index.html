@@ -9583,6 +9583,50 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         // ========================================
+        // FONCTION DE NORMALISATION DES NOMS DE PRODUITS
+        // ========================================
+        
+        function getCanonicalProductName(productName) {
+            if (!productName) return productName;
+            
+            // D'abord, chercher par linkedProductId dans l'inventaire
+            const inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+            const inventoryItem = inventoryData.find(item => item.product === productName);
+            
+            if (inventoryItem && inventoryItem.linkedProductId) {
+                const linkedProduct = productsData.find(p => p.id === inventoryItem.linkedProductId);
+                if (linkedProduct) {
+                    console.log(`🔗 Liaison trouvée: "${productName}" -> "${linkedProduct.reference}"`);
+                    return linkedProduct.reference;
+                }
+            }
+            
+            // Sinon, chercher par correspondance exacte du nom
+            const exactMatch = productsData.find(p => p.reference === productName);
+            if (exactMatch) {
+                return exactMatch.reference;
+            }
+            
+            // Sinon, chercher par correspondance approximative
+            const normalizedSearchName = productName.toLowerCase().trim().replace(/\s+/g, ' ');
+            const fuzzyMatch = productsData.find(p => {
+                const normalizedProductName = p.reference.toLowerCase().trim().replace(/\s+/g, ' ');
+                return normalizedProductName === normalizedSearchName ||
+                       normalizedProductName.includes(normalizedSearchName) ||
+                       normalizedSearchName.includes(normalizedProductName);
+            });
+            
+            if (fuzzyMatch) {
+                console.log(`🔄 Normalisation: "${productName}" -> "${fuzzyMatch.reference}"`);
+                return fuzzyMatch.reference;
+            }
+            
+            // Si aucune correspondance, retourner le nom original
+            console.warn(`⚠️ Aucune correspondance trouvée pour: "${productName}"`);
+            return productName;
+        }
+        
+        // ========================================
         // FONCTION AMÉLIORÉE DE CALCUL DES STOCKS
         // ========================================
         
@@ -9595,25 +9639,26 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Créer un objet pour regrouper les ventes par produit
             const salesByProduct = {};
             
-            // ÉTAPE 1: Regrouper toutes les ventes par produit pour éviter les calculs multiples
+            // ÉTAPE 1: Regrouper toutes les ventes par produit avec normalisation des noms
             salesData.forEach(sale => {
-                const product = sale.product;
+                const originalProductName = sale.product;
+                const canonicalProductName = getCanonicalProductName(originalProductName);
                 const quantity = parseFloat(sale.quantity) || 0;
                 
                 // FILTRER LES DONNÉES ABERRANTES
-                if (product && quantity > 0 && quantity < 1000000 && 
-                    !product.includes('Reprise de données') && 
-                    !product.includes('Reprise des données')) {
+                if (canonicalProductName && quantity > 0 && quantity < 1000000 && 
+                    !canonicalProductName.includes('Reprise de données') && 
+                    !canonicalProductName.includes('Reprise des données')) {
                     
-                    if (!salesByProduct[product]) {
-                        salesByProduct[product] = {
+                    if (!salesByProduct[canonicalProductName]) {
+                        salesByProduct[canonicalProductName] = {
                             totalQuantity: 0,
                             count: 0
                         };
                     }
                     
-                    salesByProduct[product].totalQuantity += quantity;
-                    salesByProduct[product].count += 1;
+                    salesByProduct[canonicalProductName].totalQuantity += quantity;
+                    salesByProduct[canonicalProductName].count += 1;
                 }
             });
             
@@ -9628,10 +9673,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 };
             });
             
-            // ÉTAPE 3: Additionner les entrées de stock
+            // ÉTAPE 3: Additionner les entrées de stock avec normalisation des noms
             stockEntriesData.forEach(entry => {
-                if (!currentStockLevels[entry.product]) {
-                    currentStockLevels[entry.product] = {
+                const originalProductName = entry.product;
+                const canonicalProductName = getCanonicalProductName(originalProductName);
+                
+                if (!currentStockLevels[canonicalProductName]) {
+                    currentStockLevels[canonicalProductName] = {
                         quantity: 0,
                         value: 0,
                         unit: entry.unit || 'Cartons',
@@ -9643,15 +9691,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 const quantity = parseFloat(entry.quantity) || 0;
                 const cost = parseFloat(entry.unitCost) || 0;
                 
-                currentStockLevels[entry.product].quantity += quantity;
-                currentStockLevels[entry.product].value += quantity * cost;
-                currentStockLevels[entry.product].unit = entry.unit || currentStockLevels[entry.product].unit;
+                currentStockLevels[canonicalProductName].quantity += quantity;
+                currentStockLevels[canonicalProductName].value += quantity * cost;
+                currentStockLevels[canonicalProductName].unit = entry.unit || currentStockLevels[canonicalProductName].unit;
             });
             
-            // ÉTAPE 4: Soustraire les autres sorties de stock (non-ventes)
+            // ÉTAPE 4: Soustraire les autres sorties de stock (non-ventes) avec normalisation des noms
             stockExitsData.forEach(exit => {
-                if (!currentStockLevels[exit.product]) {
-                    currentStockLevels[exit.product] = {
+                const originalProductName = exit.product;
+                const canonicalProductName = getCanonicalProductName(originalProductName);
+                
+                if (!currentStockLevels[canonicalProductName]) {
+                    currentStockLevels[canonicalProductName] = {
                         quantity: 0,
                         value: 0,
                         unit: exit.unit || 'Cartons',
@@ -9661,7 +9712,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 }
                 
                 const quantity = parseFloat(exit.quantity) || 0;
-                currentStockLevels[exit.product].quantity -= quantity;
+                currentStockLevels[canonicalProductName].quantity -= quantity;
             });
             
             // ÉTAPE 5: Calculer le coût moyen et logger les informations
