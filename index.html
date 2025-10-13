@@ -9600,12 +9600,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         function getCanonicalProductName(productName) {
             if (!productName) return productName;
             
-            // Debug de l'état de productsData
+            // Vérifier que productsData est disponible
             if (productsData.length === 0) {
-                console.warn(`⚠️ productsData est vide ! Impossible de normaliser "${productName}"`);
                 return productName;
-            } else if (productsData.length < 10) {
-                console.log(`🔍 productsData a seulement ${productsData.length} produits:`, productsData.map(p => p.reference));
             }
             
             // D'abord, chercher par linkedProductId dans l'inventaire
@@ -9615,7 +9612,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             if (inventoryItem && inventoryItem.linkedProductId) {
                 const linkedProduct = productsData.find(p => p.id === inventoryItem.linkedProductId);
                 if (linkedProduct) {
-                    console.log(`🔗 Liaison trouvée: "${productName}" -> "${linkedProduct.reference}"`);
                     return linkedProduct.reference;
                 }
             }
@@ -9636,12 +9632,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             });
             
             if (fuzzyMatch) {
-                console.log(`🔄 Normalisation: "${productName}" -> "${fuzzyMatch.reference}"`);
                 return fuzzyMatch.reference;
             }
             
-            // Si aucune correspondance, retourner le nom original
-            console.warn(`⚠️ Aucune correspondance trouvée pour: "${productName}"`);
+            // Si aucune correspondance, retourner le nom original (anciens produits)
             return productName;
         }
         
@@ -10131,19 +10125,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         function prepareStockData() {
-            console.log('🔧 Préparation des données de stock...');
-            console.log(`📊 currentStockLevels: ${Object.keys(currentStockLevels).length} produits`);
-            console.log(`📦 productsData: ${productsData.length} produits`);
-            
-            // Debug: afficher quelques noms pour comprendre
-            const stockNames = Object.keys(currentStockLevels).slice(0, 5);
-            const productNames = productsData.slice(0, 5).map(p => p.reference);
-            console.log('🔍 Premiers noms dans currentStockLevels:', stockNames);
-            console.log('🔍 Premiers noms dans productsData:', productNames);
-            
             // FILTRER SEULEMENT LES PRODUITS ACTIFS (qui existent dans productsData)
             const activeProductNames = new Set(productsData.map(p => p.reference));
-            console.log(`📋 Produits actifs référencés: ${activeProductNames.size}`);
+            console.log(`� Produits actifs référencés: ${activeProductNames.size}`);
             
             // Filtrer currentStockLevels pour ne garder que les produits actifs
             const activeStockEntries = Object.keys(currentStockLevels)
@@ -10156,17 +10140,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 const stock = currentStockLevels[productName];
                 
                 // Le productName ici EST DÉJÀ le nom canonique depuis calculateCurrentStockLevels
-                // ET il existe dans productsData (grâce au filtre)
+                // Donc on cherche directement par reference
                 const linkedProduct = productsData.find(p => p.reference === productName);
                 
-                // Si pas trouvé, c'est un bug car on a filtré
-                if (!linkedProduct) {
-                    console.error(`❌ BUG: Produit actif non trouvé: "${productName}"`);
-                    return null;
-                }
-                
-                const displayName = linkedProduct.reference;
-                const costPerUnit = linkedProduct.price || 0;
+                const displayName = linkedProduct ? linkedProduct.reference : productName;
+                const costPerUnit = linkedProduct ? (linkedProduct.price || 0) : 0;
                 const stockValue = Math.max(0, stock.quantity) * costPerUnit;
                 
                 // Calculer les totaux d'entrées et sorties
@@ -10229,9 +10207,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     statusClass: statusClass,
                     linkedProduct: linkedProduct // Pour debug
                 };
-            }).filter(item => item !== null); // Supprimer les entrées nulles
+            });
             
-            console.log(`✅ ${stockArray.length} produits ACTIFS préparés pour affichage`);
+            console.log(`✅ ${stockArray.length} produits préparés pour affichage`);
             console.log(`🔗 ${stockArray.filter(item => item.linkedProduct).length} produits liés à productsData`);
             console.log(`❌ ${stockArray.filter(item => !item.linkedProduct).length} produits non liés`);
             
@@ -10414,54 +10392,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         // ========================================
         // FONCTION DE DIAGNOSTIC DES NOMS DE PRODUITS
         // ========================================
-        function diagnosticProductNames() {
-            console.log('🔍 === DIAGNOSTIC DES NOMS DE PRODUITS ===');
-            console.log(`📊 currentStockLevels: ${Object.keys(currentStockLevels).length} entrées`);
-            console.log(`📦 productsData: ${productsData.length} entrées`);
-            
-            const stockNames = Object.keys(currentStockLevels);
-            const productReferences = productsData.map(p => p.reference);
-            
-            console.log('🔍 Premiers 10 noms dans currentStockLevels:');
-            stockNames.slice(0, 10).forEach(name => console.log(`  - "${name}"`));
-            
-            console.log('🔍 Premiers 10 noms dans productsData:');
-            productReferences.slice(0, 10).forEach(name => console.log(`  - "${name}"`));
-            
-            // Vérifier les correspondances
-            let matched = 0;
-            let unmatched = [];
-            
-            stockNames.forEach(stockName => {
-                const found = productsData.find(p => p.reference === stockName);
-                if (found) {
-                    matched++;
-                } else {
-                    unmatched.push(stockName);
-                }
-            });
-            
-            console.log(`✅ ${matched} correspondances trouvées`);
-            console.log(`❌ ${unmatched.length} noms sans correspondance:`);
-            unmatched.slice(0, 10).forEach(name => console.log(`  - "${name}"`));
-            
-            if (unmatched.length > 10) {
-                console.log(`  ... et ${unmatched.length - 10} autres`);
-            }
-            
-            // Vérifier si le problème vient de la normalisation
-            console.log('🔍 Test de normalisation sur quelques exemples:');
-            const sampleSales = salesData.slice(0, 5);
-            sampleSales.forEach(sale => {
-                const original = sale.product;
-                const canonical = getCanonicalProductName(original);
-                console.log(`  "${original}" -> "${canonical}"`);
-            });
-        }
         
-        // Ajouter la fonction diagnostic au window pour qu'elle soit accessible depuis la console
-        window.diagnosticProductNames = diagnosticProductNames;
-
         function calculateExitTotal() {
             const quantity = parseFloat(document.getElementById('exitQuantity').value) || 0;
             const unitCost = parseFloat(document.getElementById('exitUnitCost').value) || 0;
