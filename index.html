@@ -16831,7 +16831,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 // 1. Rechercher le produit dans les archives
                 console.log(`🔍 Recherche dans les archives...`);
                 const archiveQuery = await db.collection('archive')
-                    .where('productId', '==', productId.toString())
+                    .where('productId', '==', productId)
                     .orderBy('archivedDate', 'desc')
                     .limit(1)
                     .get();
@@ -16844,14 +16844,9 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 const archiveDoc = archiveQuery.docs[0];
                 const archivedData = archiveDoc.data();
                 
-                console.log(`📦 Archive trouvée:`, {
-                    id: archiveDoc.id,
-                    date: archivedData.archivedDate,
-                    totalItems: archivedData.totalItems
-                });
+                console.log(`📦 Archive trouvée:`, archivedData);
 
-                // 2. Restaurer les données depuis l'archive
-                const batch = db.batch();
+                // 2. Restaurer les données directement dans les tableaux locaux
                 let restoredCount = 0;
 
                 // Restaurer le produit
@@ -16860,11 +16855,18 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     delete productData.archivedDate;
                     delete productData.originalCollection;
                     
-                    batch.set(db.collection('products').doc(productId.toString()), productData);
-                    
-                    // Ajouter en local
+                    // Ajouter directement dans productsData
                     productsData.push(productData);
                     restoredCount++;
+                    
+                    // Sauvegarder dans Firebase avec un nouvel ID
+                    if (isFirebaseInitialized) {
+                        try {
+                            await db.collection('products').add(productData);
+                        } catch (error) {
+                            console.warn('Erreur sauvegarde Firebase produit:', error);
+                        }
+                    }
                 }
 
                 // Restaurer l'inventaire
@@ -16876,9 +16878,17 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                         delete cleanItem.archivedDate;
                         delete cleanItem.originalCollection;
                         
-                        batch.set(db.collection('inventory').doc(cleanItem.id), cleanItem);
                         inventoryData.push(cleanItem);
                         restoredCount++;
+                        
+                        // Sauvegarder dans Firebase avec un nouvel ID
+                        if (isFirebaseInitialized) {
+                            try {
+                                await db.collection('inventory').add(cleanItem);
+                            } catch (error) {
+                                console.warn('Erreur sauvegarde Firebase inventaire:', error);
+                            }
+                        }
                     }
                     
                     localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
@@ -16893,9 +16903,17 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                         delete cleanSale.archivedDate;
                         delete cleanSale.originalCollection;
                         
-                        batch.set(db.collection('sales').doc(cleanSale.id), cleanSale);
                         salesDataLocal.push(cleanSale);
                         restoredCount++;
+                        
+                        // Sauvegarder dans Firebase avec un nouvel ID
+                        if (isFirebaseInitialized) {
+                            try {
+                                await db.collection('sales').add(cleanSale);
+                            } catch (error) {
+                                console.warn('Erreur sauvegarde Firebase ventes:', error);
+                            }
+                        }
                     }
                     
                     localStorage.setItem('salesData', JSON.stringify(salesDataLocal));
@@ -16911,9 +16929,17 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                         delete cleanEntry.archivedDate;
                         delete cleanEntry.originalCollection;
                         
-                        batch.set(db.collection('stockEntries').doc(cleanEntry.id), cleanEntry);
                         stockEntriesDataLocal.push(cleanEntry);
                         restoredCount++;
+                        
+                        // Sauvegarder dans Firebase avec un nouvel ID
+                        if (isFirebaseInitialized) {
+                            try {
+                                await db.collection('stockEntries').add(cleanEntry);
+                            } catch (error) {
+                                console.warn('Erreur sauvegarde Firebase entrées:', error);
+                            }
+                        }
                     }
                     
                     localStorage.setItem('stockEntriesData', JSON.stringify(stockEntriesDataLocal));
@@ -16929,24 +16955,29 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                         delete cleanExit.archivedDate;
                         delete cleanExit.originalCollection;
                         
-                        batch.set(db.collection('stockExits').doc(cleanExit.id), cleanExit);
                         stockExitsDataLocal.push(cleanExit);
                         restoredCount++;
+                        
+                        // Sauvegarder dans Firebase avec un nouvel ID
+                        if (isFirebaseInitialized) {
+                            try {
+                                await db.collection('stockExits').add(cleanExit);
+                            } catch (error) {
+                                console.warn('Erreur sauvegarde Firebase sorties:', error);
+                            }
+                        }
                     }
                     
                     localStorage.setItem('stockExitsData', JSON.stringify(stockExitsDataLocal));
                     stockExitsData = stockExitsDataLocal;
                 }
 
-                // 3. Exécuter la restauration
-                await batch.commit();
-                
-                // 4. Supprimer l'archive
+                // 3. Supprimer l'archive
                 await archiveDoc.ref.delete();
                 
                 console.log(`✅ ${restoredCount} éléments restaurés depuis l'archive`);
 
-                // 5. Sauvegarder et mettre à jour les affichages
+                // 4. Sauvegarder et mettre à jour les affichages
                 saveToLocalStorage();
                 
                 updateProductsDisplay();
