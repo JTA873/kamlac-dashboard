@@ -13506,8 +13506,10 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
 
         // Gestion de la liste des produits - SOURCE UNIQUE
         function updateProductsList() {
-            // SEULE source de vérité : productsData
-            productsList = productsData.map(product => ({
+            // SEULE source de vérité : productsData (en filtrant les produits masqués)
+            const visibleProducts = productsData.filter(product => !product.hidden);
+            
+            productsList = visibleProducts.map(product => ({
                 id: product.id,
                 name: product.reference, // Le nom affiché est la référence
                 reference: product.reference,
@@ -13515,7 +13517,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 displayText: `${product.reference} - ${formatCurrency(product.price || 0)}`
             })).sort((a, b) => a.name.localeCompare(b.name));
             
-            console.log(`✅ Liste produits mise à jour: ${productsList.length} produits disponibles`);
+            console.log(`✅ Liste produits mise à jour: ${productsList.length} produits visibles (${productsData.filter(p => p.hidden).length} masqués)`);
             
             // Synchroniser automatiquement l'inventaire après chaque mise à jour
             synchronizeInventoryFromProducts();
@@ -13526,8 +13528,10 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             let inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
             let hasChanges = false;
             
-            // Pour chaque produit dans productsData, s'assurer qu'il existe dans l'inventaire
-            productsData.forEach(product => {
+            // Pour chaque produit VISIBLE dans productsData, s'assurer qu'il existe dans l'inventaire
+            const visibleProducts = productsData.filter(product => !product.hidden);
+            
+            visibleProducts.forEach(product => {
                 const existingInventoryItem = inventoryData.find(item => 
                     item.linkedProductId === product.id || 
                     (item.product && item.product.toLowerCase() === product.reference.toLowerCase())
@@ -13561,6 +13565,22 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     existingInventoryItem.syncedFrom = 'Module Produits';
                     hasChanges = true;
                     console.log(`✅ Nom produit mis à jour dans l'inventaire: ${product.reference}`);
+                }
+            });
+            
+            // Marquer les inventaires des produits masqués (optionnel : les laisser mais les identifier)
+            const hiddenProducts = productsData.filter(product => product.hidden);
+            hiddenProducts.forEach(product => {
+                const inventoryItem = inventoryData.find(item => 
+                    item.linkedProductId === product.id || 
+                    (item.product && item.product.toLowerCase() === product.reference.toLowerCase())
+                );
+                
+                if (inventoryItem && !inventoryItem.hiddenProduct) {
+                    inventoryItem.hiddenProduct = true;
+                    inventoryItem.hiddenDate = product.hiddenDate;
+                    hasChanges = true;
+                    console.log(`📦 Inventaire marqué comme masqué: ${product.reference}`);
                 }
             });
             
@@ -15887,112 +15907,241 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         async function deleteProduct(productId) {
-            if (confirm('Supprimer ce produit et TOUTES ses données liées (ventes, entrées, sorties) définitivement ?')) {
-                // Debug pour identifier le problème
-                console.log(`🔍 Recherche du produit avec ID: "${productId}" (type: ${typeof productId})`);
-                console.log(`📋 Produits disponibles:`, productsData.map(p => `ID: "${p.id}" (type: ${typeof p.id}), nom: "${p.reference || p.name}"`));
-                
-                // 1. Trouver le produit à supprimer pour récupérer son nom
-                // Essayer avec conversion de type pour gérer les différences string/number
-                let productToDelete = productsData.find(p => p.id === productId);
-                if (!productToDelete) {
-                    // Essayer en convertissant en string
-                    productToDelete = productsData.find(p => p.id.toString() === productId.toString());
+            // 1. Trouver le produit à supprimer pour récupérer son nom
+            console.log(`🔍 Recherche du produit avec ID: "${productId}" (type: ${typeof productId})`);
+            console.log(`📋 Produits disponibles:`, productsData.map(p => `ID: "${p.id}" (type: ${typeof p.id}), nom: "${p.reference || p.name}"`));
+            
+            // Essayer avec conversion de type pour gérer les différences string/number
+            let productToDelete = productsData.find(p => p.id === productId);
+            if (!productToDelete) {
+                // Essayer en convertissant en string
+                productToDelete = productsData.find(p => p.id.toString() === productId.toString());
+            }
+            if (!productToDelete) {
+                // Essayer en convertissant en number si possible
+                const numericId = parseInt(productId);
+                if (!isNaN(numericId)) {
+                    productToDelete = productsData.find(p => p.id === numericId);
                 }
-                if (!productToDelete) {
-                    // Essayer en convertissant en number si possible
-                    const numericId = parseInt(productId);
-                    if (!isNaN(numericId)) {
-                        productToDelete = productsData.find(p => p.id === numericId);
+            }
+            
+            if (!productToDelete) {
+                console.error(`❌ Produit non trouvé avec ID: "${productId}"`);
+                console.log(`📋 IDs disponibles:`, productsData.map(p => p.id));
+                showAlert(`Produit non trouvé (ID: ${productId}). Vérifiez la console pour plus de détails.`, 'error');
+                return;
+            }
+
+            const productName = productToDelete.reference || productToDelete.name;
+            
+            // Afficher le modal de choix d'action
+            showProductActionModal(productId, productName);
+        }
+        
+        // === MODAL DE CHOIX D'ACTION POUR LES PRODUITS ===
+        function showProductActionModal(productId, productName) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); z-index: 10000; display: flex;
+                align-items: center; justify-content: center;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;">
+                    <h3 style="color: #667eea; margin-bottom: 20px; text-align: center;">
+                        🛠️ Actions pour "${productName}"
+                    </h3>
+                    
+                    <div style="margin-bottom: 25px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="margin: 0 0 10px 0; color: #28a745;">🫥 Masquer le produit</h4>
+                        <p style="margin: 0; font-size: 14px; color: #666;">
+                            Le produit sera caché de tous les affichages mais toutes ses données seront conservées.
+                        </p>
+                        <button onclick="hideProduct('${productId}', '${productName}'); closeProductActionModal();" 
+                                style="margin-top: 10px; padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            🫥 Masquer uniquement
+                        </button>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px; padding: 15px; background: #fff3cd; border-radius: 8px;">
+                        <h4 style="margin: 0 0 10px 0; color: #856404;">🗑️ Suppression sélective</h4>
+                        <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
+                            Choisissez quelles données supprimer avec le produit :
+                        </p>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                <input type="checkbox" id="deleteStock_${productId}" style="margin-right: 8px;">
+                                <span>📦 Supprimer l'historique stock (entrées/sorties/inventaire)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                <input type="checkbox" id="deleteCommercial_${productId}" style="margin-right: 8px;">
+                                <span>💰 Supprimer l'historique commercial (ventes)</span>
+                            </label>
+                        </div>
+                        
+                        <button onclick="selectiveDeleteProduct('${productId}', '${productName}'); closeProductActionModal();" 
+                                style="padding: 8px 16px; background: #ffc107; color: #000; border: none; border-radius: 6px; cursor: pointer;">
+                            🗑️ Suppression sélective
+                        </button>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px; padding: 15px; background: #f8d7da; border-radius: 8px;">
+                        <h4 style="margin: 0 0 10px 0; color: #721c24;">💀 Suppression complète</h4>
+                        <p style="margin: 0; font-size: 14px; color: #666;">
+                            ⚠️ DANGER : Supprime le produit ET toutes ses données (stock + commercial). Action irréversible !
+                        </p>
+                        <button onclick="if(confirm('ÊTES-VOUS SÛR ? Cette action supprimera DÉFINITIVEMENT le produit et TOUTES ses données !')) { completeDeleteProduct('${productId}', '${productName}'); closeProductActionModal(); }" 
+                                style="margin-top: 10px; padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            💀 Suppression complète
+                        </button>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button onclick="closeProductActionModal()" 
+                                style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            ❌ Annuler
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            window.currentProductActionModal = modal;
+        }
+        
+        function closeProductActionModal() {
+            if (window.currentProductActionModal) {
+                document.body.removeChild(window.currentProductActionModal);
+                window.currentProductActionModal = null;
+            }
+        }
+        
+        // === FONCTION MASQUER PRODUIT ===
+        async function hideProduct(productId, productName) {
+            try {
+                console.log(`🫥 Masquage du produit: ${productName}`);
+                
+                // Trouver le produit et ajouter la propriété hidden
+                const productIndex = productsData.findIndex(p => p.id.toString() === productId.toString());
+                if (productIndex !== -1) {
+                    productsData[productIndex].hidden = true;
+                    productsData[productIndex].hiddenDate = new Date().toISOString();
+                    
+                    saveToLocalStorage();
+                    
+                    // Mettre à jour dans Firebase si disponible
+                    if (isFirebaseInitialized) {
+                        await db.collection('products').doc(productId.toString()).update({
+                            hidden: true,
+                            hiddenDate: new Date().toISOString()
+                        });
                     }
+                    
+                    // Mettre à jour les affichages
+                    updateProductsDisplay();
+                    updateProductsList();
+                    updateStockDashboard();
+                    updateSimpleStocksTable();
+                    populateRecapFilters();
+                    applyFilters();
+                    applyRecapFilters();
+                    
+                    showAlert(`Produit "${productName}" masqué avec succès`, 'success');
+                } else {
+                    showAlert('Erreur : Produit non trouvé', 'error');
                 }
+            } catch (error) {
+                console.error('Erreur masquage produit:', error);
+                showAlert('Erreur lors du masquage: ' + error.message, 'error');
+            }
+        }
+        
+        // === FONCTION SUPPRESSION SÉLECTIVE ===
+        async function selectiveDeleteProduct(productId, productName) {
+            const deleteStock = document.getElementById(`deleteStock_${productId}`).checked;
+            const deleteCommercial = document.getElementById(`deleteCommercial_${productId}`).checked;
+            
+            if (!deleteStock && !deleteCommercial) {
+                showAlert('Veuillez sélectionner au moins une donnée à supprimer, ou utilisez "Masquer" à la place', 'warning');
+                return;
+            }
+            
+            const confirmMessage = `Confirmer la suppression sélective de "${productName}" :\n` +
+                (deleteStock ? '✅ Historique stock (entrées/sorties/inventaire)\n' : '') +
+                (deleteCommercial ? '✅ Historique commercial (ventes)\n' : '') +
+                '\n⚠️ Cette action est irréversible !';
                 
-                if (!productToDelete) {
-                    console.error(`❌ Produit non trouvé avec ID: "${productId}"`);
-                    console.log(`📋 IDs disponibles:`, productsData.map(p => p.id));
-                    showAlert(`Produit non trouvé (ID: ${productId}). Vérifiez la console pour plus de détails.`, 'error');
-                    return;
-                }
+            if (!confirm(confirmMessage)) return;
+            
+            try {
+                console.log(`🗑️ Suppression sélective du produit: ${productName}`);
+                console.log(`Stock: ${deleteStock}, Commercial: ${deleteCommercial}`);
                 
-                const productName = productToDelete.reference || productToDelete.name;
-                console.log(`✅ Produit trouvé: "${productName}"`);
+                let deletedCount = 0;
                 
-                // 2. Supprimer de la mémoire locale
+                // Supprimer le produit lui-même
                 productsData = productsData.filter(p => p.id.toString() !== productId.toString());
+                deletedCount++;
                 
-                // Supprimer aussi des données locales liées
-                salesData = salesData.filter(sale => sale.product !== productName);
-                stockEntriesData = stockEntriesData.filter(entry => entry.product !== productName);
-                stockExitsData = stockExitsData.filter(exit => exit.product !== productName);
+                // Supprimer les données sélectionnées
+                if (deleteStock) {
+                    salesData = salesData.filter(sale => sale.product !== productName);
+                    stockEntriesData = stockEntriesData.filter(entry => entry.product !== productName);
+                    stockExitsData = stockExitsData.filter(exit => exit.product !== productName);
+                }
+                
+                if (deleteCommercial) {
+                    salesData = salesData.filter(sale => sale.product !== productName);
+                }
                 
                 saveToLocalStorage();
                 
-                // 3. Supprimer de Firebase (products, inventory, sales, stockEntries, stockExits)
+                // Supprimer de Firebase si disponible
                 if (isFirebaseInitialized) {
-                    try {
-                        console.log(`🗑️ Suppression définitive du produit et données liées: ${productName}`);
-                        
-                        // Créer un batch pour toutes les suppressions
-                        const batch = db.batch();
-                        let totalDeleted = 0;
-                        
-                        // Supprimer de la collection products
-                        const productRef = db.collection('products').doc(productId.toString());
-                        batch.delete(productRef);
-                        totalDeleted++;
-                        console.log(`✅ Produit marqué pour suppression de 'products'`);
-                        
-                        // Supprimer de la collection inventory
+                    const batch = db.batch();
+                    
+                    // Supprimer le produit
+                    const productRef = db.collection('products').doc(productId.toString());
+                    batch.delete(productRef);
+                    
+                    if (deleteStock) {
+                        // Supprimer inventory
                         const inventorySnapshot = await db.collection('inventory').where('product', '==', productName).get();
                         inventorySnapshot.forEach(doc => {
                             batch.delete(doc.ref);
-                            totalDeleted++;
-                            console.log(`✅ Inventaire marqué pour suppression: ${doc.id}`);
+                            deletedCount++;
                         });
                         
-                        // Supprimer de la collection sales (ventes)
-                        const salesSnapshot = await db.collection('sales').where('product', '==', productName).get();
-                        salesSnapshot.forEach(doc => {
-                            batch.delete(doc.ref);
-                            totalDeleted++;
-                            console.log(`✅ Vente marquée pour suppression: ${doc.id}`);
-                        });
-                        
-                        // Supprimer de la collection stockEntries (entrées)
+                        // Supprimer stockEntries
                         const entriesSnapshot = await db.collection('stockEntries').where('product', '==', productName).get();
                         entriesSnapshot.forEach(doc => {
                             batch.delete(doc.ref);
-                            totalDeleted++;
-                            console.log(`✅ Entrée de stock marquée pour suppression: ${doc.id}`);
+                            deletedCount++;
                         });
                         
-                        // Supprimer de la collection stockExits (sorties)
+                        // Supprimer stockExits
                         const exitsSnapshot = await db.collection('stockExits').where('product', '==', productName).get();
                         exitsSnapshot.forEach(doc => {
                             batch.delete(doc.ref);
-                            totalDeleted++;
-                            console.log(`✅ Sortie de stock marquée pour suppression: ${doc.id}`);
+                            deletedCount++;
                         });
-                        
-                        // Exécuter toutes les suppressions en une fois
-                        if (totalDeleted > 0) {
-                            await batch.commit();
-                            console.log(`✅ ${totalDeleted} élément(s) supprimé(s) au total`);
-                            showAlert(`Produit "${productName}" et ${totalDeleted} élément(s) liés supprimés définitivement`, 'success');
-                        } else {
-                            console.log(`⚠️ Aucun élément trouvé pour la suppression`);
-                            showAlert(`Produit "${productName}" supprimé (aucune donnée liée trouvée)`, 'success');
-                        }
-                        
-                    } catch (error) {
-                        console.error('Erreur suppression produit et données liées:', error);
-                        showAlert('Erreur lors de la suppression: ' + error.message, 'error');
                     }
-                } else {
-                    showAlert('Produit supprimé localement (Firebase non disponible)', 'warning');
+                    
+                    if (deleteCommercial) {
+                        // Supprimer sales
+                        const salesSnapshot = await db.collection('sales').where('product', '==', productName).get();
+                        salesSnapshot.forEach(doc => {
+                            batch.delete(doc.ref);
+                            deletedCount++;
+                        });
+                    }
+                    
+                    await batch.commit();
                 }
                 
-                // Mettre à jour toutes les interfaces
+                // Mettre à jour les affichages
                 updateProductsDisplay();
                 updateProductsList();
                 updateStockDashboard();
@@ -16000,6 +16149,86 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 populateRecapFilters();
                 applyFilters();
                 applyRecapFilters();
+                
+                const stockMsg = deleteStock ? ' + historique stock' : '';
+                const commercialMsg = deleteCommercial ? ' + historique commercial' : '';
+                showAlert(`Produit "${productName}" supprimé${stockMsg}${commercialMsg} (${deletedCount} éléments)`, 'success');
+                
+            } catch (error) {
+                console.error('Erreur suppression sélective:', error);
+                showAlert('Erreur lors de la suppression: ' + error.message, 'error');
+            }
+        }
+        
+        // === FONCTION SUPPRESSION COMPLÈTE (ancienne fonction) ===
+        async function completeDeleteProduct(productId, productName) {
+            try {
+                console.log(`💀 Suppression complète du produit: ${productName}`);
+                
+                // Supprimer de la mémoire locale
+                productsData = productsData.filter(p => p.id.toString() !== productId.toString());
+                salesData = salesData.filter(sale => sale.product !== productName);
+                stockEntriesData = stockEntriesData.filter(entry => entry.product !== productName);
+                stockExitsData = stockExitsData.filter(exit => exit.product !== productName);
+                
+                saveToLocalStorage();
+                
+                // Supprimer de Firebase si disponible
+                if (isFirebaseInitialized) {
+                    const batch = db.batch();
+                    let totalDeleted = 0;
+                    
+                    // Supprimer de la collection products
+                    const productRef = db.collection('products').doc(productId.toString());
+                    batch.delete(productRef);
+                    totalDeleted++;
+                    
+                    // Supprimer de la collection inventory
+                    const inventorySnapshot = await db.collection('inventory').where('product', '==', productName).get();
+                    inventorySnapshot.forEach(doc => {
+                        batch.delete(doc.ref);
+                        totalDeleted++;
+                    });
+                    
+                    // Supprimer de la collection sales
+                    const salesSnapshot = await db.collection('sales').where('product', '==', productName).get();
+                    salesSnapshot.forEach(doc => {
+                        batch.delete(doc.ref);
+                        totalDeleted++;
+                    });
+                    
+                    // Supprimer de la collection stockEntries
+                    const entriesSnapshot = await db.collection('stockEntries').where('product', '==', productName).get();
+                    entriesSnapshot.forEach(doc => {
+                        batch.delete(doc.ref);
+                        totalDeleted++;
+                    });
+                    
+                    // Supprimer de la collection stockExits
+                    const exitsSnapshot = await db.collection('stockExits').where('product', '==', productName).get();
+                    exitsSnapshot.forEach(doc => {
+                        batch.delete(doc.ref);
+                        totalDeleted++;
+                    });
+                    
+                    await batch.commit();
+                    showAlert(`Produit "${productName}" et ${totalDeleted} éléments liés supprimés définitivement`, 'success');
+                } else {
+                    showAlert('Produit supprimé localement (Firebase non disponible)', 'warning');
+                }
+                
+                // Mettre à jour les affichages
+                updateProductsDisplay();
+                updateProductsList();
+                updateStockDashboard();
+                updateSimpleStocksTable();
+                populateRecapFilters();
+                applyFilters();
+                applyRecapFilters();
+                
+            } catch (error) {
+                console.error('Erreur suppression complète:', error);
+                showAlert('Erreur lors de la suppression: ' + error.message, 'error');
             }
         }
 
@@ -16007,15 +16236,53 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             const container = document.getElementById('productsGrid');
             container.innerHTML = '';
             
+            // Vérifier s'il faut afficher les produits masqués
+            const showHidden = window.showHiddenProducts || false;
+            
+            // Filtrer les produits selon leur statut masqué
+            const visibleProducts = showHidden ? 
+                productsData : 
+                productsData.filter(product => !product.hidden);
+            
+            const hiddenProducts = productsData.filter(product => product.hidden);
+            
             // Stats produits
-            document.getElementById('productsCount').textContent = productsData.length;
-            const uniqueBrands = new Set(productsData.map(p => p.brand).filter(b => b));
+            document.getElementById('productsCount').textContent = visibleProducts.length;
+            const uniqueBrands = new Set(visibleProducts.map(p => p.brand).filter(b => b));
             document.getElementById('brandsCount').textContent = uniqueBrands.size;
             
+            // Ajouter un bouton pour afficher/masquer les produits cachés si il y en a
+            if (hiddenProducts.length > 0) {
+                const toggleButton = document.createElement('div');
+                toggleButton.style.cssText = `
+                    margin-bottom: 20px; text-align: center; padding: 15px;
+                    background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;
+                `;
+                toggleButton.innerHTML = `
+                    <p style="margin: 0 0 10px 0; color: #666;">
+                        <strong>${hiddenProducts.length}</strong> produit(s) masqué(s)
+                    </p>
+                    <button onclick="toggleHiddenProducts()" 
+                            style="padding: 8px 16px; background: ${showHidden ? '#dc3545' : '#28a745'}; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        ${showHidden ? '🫥 Masquer les produits cachés' : '👁️ Afficher les produits cachés'}
+                    </button>
+                `;
+                container.appendChild(toggleButton);
+            }
+            
             // Afficher les produits
-            productsData.forEach(product => {
+            visibleProducts.forEach(product => {
                 const productCard = document.createElement('div');
                 productCard.className = 'product-card';
+                
+                // Style spécial pour les produits masqués
+                const hiddenStyle = product.hidden ? 
+                    'opacity: 0.6; border: 2px dashed #ffc107; background: #fff3cd;' : '';
+                
+                if (product.hidden) {
+                    productCard.style.cssText += hiddenStyle;
+                }
+                
                 // Normaliser l'ID pour éviter les problèmes de type
                 const normalizedId = String(product.id);
                 
@@ -16025,7 +16292,11 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 productCard.innerHTML = `
                     <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, ${priceColor}, ${priceColor}99);"></div>
                     
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                    ${product.hidden ? `<div style="position: absolute; top: 10px; right: 10px; background: #ffc107; color: #000; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
+                        🫥 MASQUÉ
+                    </div>` : ''}
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; ${product.hidden ? 'margin-top: 25px;' : ''}">
                         <div style="flex: 1;">
                             <div class="product-name" style="font-size: 1.1rem; font-weight: 700; color: #333; margin-bottom: 5px; line-height: 1.3;">
                                 ${product.reference || 'Sans référence'}
@@ -16042,6 +16313,9 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     <div class="product-details" style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
                         ${product.format ? `<div style="margin-bottom: 5px;"><strong style="color: #333;">📦 Format:</strong> ${product.format}</div>` : ''}
                         ${product.margin ? `<div><strong style="color: #333;">📊 Marge:</strong> ${product.margin}</div>` : ''}
+                        ${product.hidden ? `<div style="margin-top: 8px; padding: 8px; background: rgba(255, 193, 7, 0.1); border-radius: 4px; font-size: 0.8rem;">
+                            <strong style="color: #856404;">🫥 Masqué le:</strong> ${new Date(product.hiddenDate).toLocaleDateString('fr-FR')}
+                        </div>` : ''}
                     </div>
                     
                     <div style="display: flex; gap: 10px; margin-top: auto;">
@@ -16049,19 +16323,71 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                                 style="flex: 1; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
                             ✏️ Modifier
                         </button>
-                        <button class="btn" onclick="if(confirm('Supprimer ce produit ?')) deleteProduct('${normalizedId}')" 
+                        ${product.hidden ? `
+                            <button class="btn" onclick="unhideProduct('${normalizedId}', '${(product.reference || 'Sans référence').replace(/'/g, '\\\'')}')" 
+                                    style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
+                                👁️
+                            </button>
+                        ` : ''}
+                        <button class="btn" onclick="deleteProduct('${normalizedId}')" 
                                 style="background: #fff; color: #dc3545; border: 2px solid #dc3545; padding: 10px 15px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
-                            🗑️
+                            ${product.hidden ? '🗑️' : '⚙️'}
                         </button>
                     </div>
                 `;
                 container.appendChild(productCard);
             });
             
-            console.log('✅ Affichage terminé -', productsData.length, 'cartes créées');
+            console.log('✅ Affichage terminé -', visibleProducts.length, 'cartes créées', hiddenProducts.length ? `(${hiddenProducts.length} masqués)` : '');
             
             // Mettre à jour le filtre des marques
             updateBrandFilter();
+        }
+        
+        // === FONCTION POUR BASCULER L'AFFICHAGE DES PRODUITS MASQUÉS ===
+        function toggleHiddenProducts() {
+            window.showHiddenProducts = !window.showHiddenProducts;
+            updateProductsDisplay();
+        }
+        
+        // === FONCTION POUR RÉAFFICHER UN PRODUIT MASQUÉ ===
+        async function unhideProduct(productId, productName) {
+            try {
+                console.log(`👁️ Réaffichage du produit: ${productName}`);
+                
+                // Trouver le produit et retirer la propriété hidden
+                const productIndex = productsData.findIndex(p => p.id.toString() === productId.toString());
+                if (productIndex !== -1) {
+                    delete productsData[productIndex].hidden;
+                    delete productsData[productIndex].hiddenDate;
+                    
+                    saveToLocalStorage();
+                    
+                    // Mettre à jour dans Firebase si disponible
+                    if (isFirebaseInitialized) {
+                        await db.collection('products').doc(productId.toString()).update({
+                            hidden: firebase.firestore.FieldValue.delete(),
+                            hiddenDate: firebase.firestore.FieldValue.delete()
+                        });
+                    }
+                    
+                    // Mettre à jour les affichages
+                    updateProductsDisplay();
+                    updateProductsList();
+                    updateStockDashboard();
+                    updateSimpleStocksTable();
+                    populateRecapFilters();
+                    applyFilters();
+                    applyRecapFilters();
+                    
+                    showAlert(`Produit "${productName}" réaffiché avec succès`, 'success');
+                } else {
+                    showAlert('Erreur : Produit non trouvé', 'error');
+                }
+            } catch (error) {
+                console.error('Erreur réaffichage produit:', error);
+                showAlert('Erreur lors du réaffichage: ' + error.message, 'error');
+            }
         }
 
         // Mettre à jour le filtre des marques
