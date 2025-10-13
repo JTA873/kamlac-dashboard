@@ -16830,10 +16830,10 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
 
                 // 1. Rechercher le produit dans les archives
                 console.log(`🔍 Recherche dans les archives...`);
+                
+                // Requête simplifiée sans orderBy pour éviter l'index composite
                 const archiveQuery = await db.collection('archive')
                     .where('productId', '==', productId.toString())
-                    .orderBy('archivedDate', 'desc')
-                    .limit(1)
                     .get();
 
                 if (archiveQuery.empty) {
@@ -16841,7 +16841,14 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     return;
                 }
 
-                const archiveDoc = archiveQuery.docs[0];
+                // Trier côté client pour prendre la plus récente
+                const sortedDocs = archiveQuery.docs.sort((a, b) => {
+                    const aDate = a.data().archivedDate || '';
+                    const bDate = b.data().archivedDate || '';
+                    return bDate.localeCompare(aDate);
+                });
+
+                const archiveDoc = sortedDocs[0];
                 const archivedData = archiveDoc.data();
                 
                 console.log(`📦 Archive trouvée:`, {
