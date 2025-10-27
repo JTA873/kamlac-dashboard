@@ -735,6 +735,18 @@
             .dashboard-container.sidebar-open {
                 margin-left: 0;
             }
+            
+            /* Corrections spécifiques pour mobile */
+            #adminModule,
+            #formationModule {
+                margin-left: 0 !important;
+                padding: 10px !important;
+                width: 100% !important;
+            }
+            
+            .formation-section {
+                padding: 20px 10px !important;
+            }
         }
 
         .balance-badge {
@@ -1331,6 +1343,41 @@
         
         .transaction-payment:hover {
             border-left-color: #117a8b;
+        }
+
+        /* Styles pour les groupes de ventes et encaissements */
+        .sale-group-details, .payment-group-details {
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .sale-group-header:hover, .payment-group-header:hover {
+            background: linear-gradient(135deg, #d1e7dd 0%, #f0f8ff 100%) !important;
+        }
+
+        .sale-item-detail:hover, .payment-item-detail:hover {
+            transform: translateX(5px);
+        }
+
+        .sale-group-item {
+            box-shadow: 0 2px 8px rgba(25, 118, 210, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .sale-group-item:hover {
+            box-shadow: 0 4px 16px rgba(25, 118, 210, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .payment-group-item {
+            box-shadow: 0 2px 8px rgba(56, 142, 60, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .payment-group-item:hover {
+            box-shadow: 0 4px 16px rgba(56, 142, 60, 0.15);
+            transform: translateY(-2px);
         }
         
         .client-header {
@@ -2310,11 +2357,23 @@
             padding: 20px;
             border-radius: 10px;
             transition: all 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
         }
         
         .module.active {
             display: block;
             animation: slideIn 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        
+        /* Styles spécifiques pour les modules Admin et Formation */
+        #adminModule,
+        #formationModule {
+            max-width: none;
+            margin: 0;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         /* === FONDS DE COULEUR PAR MODULE === */
@@ -2409,6 +2468,17 @@
         #sidebar-admin-section .sidebar-section-title {
             background: linear-gradient(135deg, #fff3e0, #ffcc80);
             color: #e65100;
+        }
+
+        /* Module Formation - Violet */
+        #sidebar-formation-section {
+            border-left: 4px solid #9c27b0;
+            background: linear-gradient(135deg, rgba(243, 229, 245, 0.3), rgba(252, 239, 254, 0.3));
+        }
+
+        #sidebar-formation-section .sidebar-section-title {
+            background: linear-gradient(135deg, #f3e5f5, #ce93d8);
+            color: #6a1b9a;
         }
 
         /* === HARMONIE ONGLETS MODULES === */
@@ -2797,6 +2867,424 @@
             font-weight: 600;
             text-align: center;
         }
+
+        /* === STYLES MODULE FORMATION === */
+        .formation-section {
+            display: none;
+            padding: 30px 20px;
+            max-width: 100%;
+            margin: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .formation-section.active {
+            display: block;
+        }
+        
+        .formation-hero {
+            text-align: center;
+            padding: 50px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .formation-hero h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+        
+        .formation-subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+        }
+        
+        .formation-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+        
+        .formation-quick-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .formation-quick-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+        
+        .formation-card-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        .formation-quick-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        
+        .formation-quick-card p {
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+        
+        .formation-card-cta {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .formation-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .formation-header h2 {
+            font-size: 2.5rem;
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+        
+        .formation-header p {
+            font-size: 1.2rem;
+            color: #64748b;
+        }
+        
+        .formation-steps {
+            display: grid;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .formation-step {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            position: relative;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .formation-step-number {
+            position: absolute;
+            top: -20px;
+            left: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.3rem;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .formation-step h3 {
+            margin-top: 15px;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            color: #2d3748;
+        }
+        
+        .formation-visual {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            border: 2px dashed #cbd5e1;
+        }
+        
+        .formation-big-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            display: block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .formation-button-demo {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            margin: 15px 0;
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .formation-button-demo:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .formation-button-demo.success {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+        }
+        
+        .formation-form-demo {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 5px solid #667eea;
+        }
+        
+        .formation-form-demo h4 {
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+        
+        .formation-field {
+            margin-bottom: 15px;
+        }
+        
+        .formation-field label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+        }
+        
+        .formation-input {
+            background: white;
+            padding: 12px 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            color: #1f2937;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .formation-tip {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #3b82f6;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #1e40af;
+        }
+        
+        .formation-success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 1px solid #10b981;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #047857;
+        }
+        
+        .formation-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #f59e0b;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #92400e;
+        }
+        
+        .formation-info {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #3b82f6;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #1e40af;
+        }
+        
+        .formation-important-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #f59e0b;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 30px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        
+        .formation-important-icon {
+            font-size: 1.5rem;
+            color: #d97706;
+            margin-top: 2px;
+        }
+        
+        .formation-workflow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .formation-workflow-step {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border: 2px solid #e5e7eb;
+            min-width: 150px;
+            transition: all 0.3s ease;
+        }
+        
+        .formation-workflow-step:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+        
+        .formation-workflow-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .formation-workflow-step h4 {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            color: #2d3748;
+        }
+        
+        .formation-workflow-step p {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        
+        .formation-workflow-arrow {
+            font-size: 2rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .formation-tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .formation-tip-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border-left: 5px solid #3b82f6;
+            transition: all 0.3s ease;
+        }
+        
+        .formation-tip-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+        }
+        
+        .formation-tip-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .formation-tip-card h4 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 12px;
+        }
+        
+        .formation-tip-card p {
+            color: #64748b;
+            line-height: 1.6;
+        }
+        
+        .formation-troubleshooting {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+        
+        .formation-troubleshooting h3 {
+            color: #dc2626;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .formation-problem {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .formation-problem h4 {
+            color: #991b1b;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .formation-solution {
+            color: #059669;
+            font-weight: 500;
+            margin-top: 8px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .formation-hero h1 {
+                font-size: 2rem;
+            }
+            
+            .formation-header h2 {
+                font-size: 1.8rem;
+            }
+            
+            .formation-quick-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .formation-workflow {
+                flex-direction: column;
+            }
+            
+            .formation-workflow-arrow {
+                transform: rotate(90deg);
+            }
+            
+            .formation-tips-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -2909,6 +3397,14 @@
                     <span class="section-text">Module Admin</span>
                 </div>
             </div>
+
+            <!-- Module Formation -->
+            <div class="sidebar-section" id="sidebar-formation-section">
+                <div class="sidebar-section-title" onclick="showModule('formation')" style="cursor: pointer;">
+                    <span>🎓</span>
+                    <span class="section-text">Formation</span>
+                </div>
+            </div>
         </nav>
 
     </div>
@@ -2934,6 +3430,7 @@
             <button class="module-tab active" onclick="showModule('commercial')">💼 Module Commercial</button>
             <button class="module-tab" onclick="showModule('stocks')">📦 Module Stocks</button>
             <button class="module-tab" onclick="showModule('admin')">🔐 Module Admin</button>
+            <button class="module-tab" onclick="showModule('formation')">🎓 Formation</button>
         </div>
         
         <!-- Module Commercial -->
@@ -4822,6 +5319,339 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         </div>
     </div>
 
+    <!-- Module Formation -->
+    <div id="formationModule" class="module">
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showFormationSection('guide-rapide')">🚀 Guide Rapide</button>
+            <button class="nav-tab" onclick="showFormationSection('ventes')">💰 Ventes</button>
+            <button class="nav-tab" onclick="showFormationSection('stock')">📦 Stock</button>
+            <button class="nav-tab" onclick="showFormationSection('encaissements')">💵 Encaissements</button>
+            <button class="nav-tab" onclick="showFormationSection('interface')">📱 Interface</button>
+            <button class="nav-tab" onclick="showFormationSection('depannage')">🔧 Dépannage</button>
+        </div>
+
+        <!-- Section Guide Rapide -->
+        <div id="formation-guide-rapide" class="formation-section active">
+            <div class="formation-hero">
+                <h1>🚀 Bienvenue dans KAMLAC</h1>
+                <p class="formation-subtitle">Maîtrisez votre application en 4 étapes simples</p>
+            </div>
+
+            <div class="formation-quick-grid">
+                <div class="formation-quick-card" onclick="showFormationSection('stock')">
+                    <div class="formation-card-icon">📦</div>
+                    <h3>1. Ajoutez du Stock</h3>
+                    <p>Enregistrez vos produits</p>
+                    <div class="formation-card-cta">Apprendre →</div>
+                </div>
+                <div class="formation-quick-card" onclick="showFormationSection('ventes')">
+                    <div class="formation-card-icon">💰</div>
+                    <h3>2. Créez une Vente</h3>
+                    <p>Vendez à vos clients</p>
+                    <div class="formation-card-cta">Apprendre →</div>
+                </div>
+                <div class="formation-quick-card" onclick="showFormationSection('encaissements')">
+                    <div class="formation-card-icon">💵</div>
+                    <h3>3. Encaissez</h3>
+                    <p>Enregistrez les paiements</p>
+                    <div class="formation-card-cta">Apprendre →</div>
+                </div>
+                <div class="formation-quick-card" onclick="showFormationSection('interface')">
+                    <div class="formation-card-icon">📊</div>
+                    <h3>4. Analysez</h3>
+                    <p>Consultez vos résultats</p>
+                    <div class="formation-card-cta">Apprendre →</div>
+                </div>
+            </div>
+
+            <div class="formation-important-box">
+                <div class="formation-important-icon">⚠️</div>
+                <div>
+                    <strong>Important :</strong> Vos données sont automatiquement sauvegardées. Vous n'avez pas besoin de sauvegarder manuellement.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Ventes -->
+        <div id="formation-ventes" class="formation-section">
+            <div class="formation-header">
+                <h2>💰 Comment Enregistrer une Vente</h2>
+                <p>Suivez ces étapes visuelles pour créer votre première vente</p>
+            </div>
+
+            <div class="formation-steps">
+                <div class="formation-step">
+                    <div class="formation-step-number">1</div>
+                    <h3>🧭 Naviguer vers les Ventes</h3>
+                    <div class="formation-visual">
+                        <div class="formation-big-icon">💼</div>
+                        <p>Cliquez sur l'onglet <strong>"Commercial"</strong> en haut de l'écran</p>
+                    </div>
+                    <div class="formation-tip">
+                        💡 <strong>Astuce :</strong> L'onglet Commercial est toujours visible en haut de votre écran
+                    </div>
+                </div>
+
+                <div class="formation-step">
+                    <div class="formation-step-number">2</div>
+                    <h3>➕ Créer une Nouvelle Vente</h3>
+                    <div class="formation-visual">
+                        <div class="formation-big-icon">🎯</div>
+                        <div class="formation-button-demo">➕ Nouvelle Vente</div>
+                        <p>Cliquez sur ce bouton vert</p>
+                    </div>
+                </div>
+
+                <div class="formation-step">
+                    <div class="formation-step-number">3</div>
+                    <h3>📝 Remplir les Informations</h3>
+                    <div class="formation-form-demo">
+                        <div class="formation-field">
+                            <label>👤 Client *</label>
+                            <div class="formation-input">Marie Dupont</div>
+                        </div>
+                        <div class="formation-field">
+                            <label>📅 Date *</label>
+                            <div class="formation-input">27/10/2025</div>
+                        </div>
+                        <div class="formation-field">
+                            <label>🏷️ Produit</label>
+                            <div class="formation-input">Smartphone Galaxy</div>
+                        </div>
+                        <div class="formation-field">
+                            <label>📦 Quantité</label>
+                            <div class="formation-input">2</div>
+                        </div>
+                        <div class="formation-field">
+                            <label>💰 Prix Unitaire</label>
+                            <div class="formation-input">150 000 CFA</div>
+                        </div>
+                    </div>
+                    <div class="formation-success">
+                        ✨ <strong>Magie !</strong> Le total se calcule automatiquement : 2 × 150 000 = 300 000 CFA
+                    </div>
+                </div>
+
+                <div class="formation-step">
+                    <div class="formation-step-number">4</div>
+                    <h3>💾 Sauvegarder</h3>
+                    <div class="formation-visual">
+                        <div class="formation-big-icon">✅</div>
+                        <div class="formation-button-demo success">💾 Enregistrer</div>
+                        <p>Et voilà ! Votre vente est sauvegardée</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="formation-warning">
+                ⚠️ <strong>Important :</strong> Dès que vous enregistrez une vente, le stock diminue automatiquement. Assurez-vous d'avoir le produit en stock !
+            </div>
+        </div>
+
+        <!-- Section Stock -->
+        <div id="formation-stock" class="formation-section">
+            <div class="formation-header">
+                <h2>📦 Comment Gérer votre Stock</h2>
+                <p>Maintenez votre inventaire à jour facilement</p>
+            </div>
+
+            <div class="formation-workflow">
+                <div class="formation-workflow-step">
+                    <div class="formation-workflow-icon">📦</div>
+                    <h4>Stock</h4>
+                    <p>Onglet principal</p>
+                </div>
+                <div class="formation-workflow-arrow">→</div>
+                <div class="formation-workflow-step">
+                    <div class="formation-workflow-icon">➕</div>
+                    <h4>Nouvelle Entrée</h4>
+                    <p>Ajouter du stock</p>
+                </div>
+                <div class="formation-workflow-arrow">→</div>
+                <div class="formation-workflow-step">
+                    <div class="formation-workflow-icon">📝</div>
+                    <h4>Formulaire</h4>
+                    <p>Remplir les infos</p>
+                </div>
+                <div class="formation-workflow-arrow">→</div>
+                <div class="formation-workflow-step">
+                    <div class="formation-workflow-icon">💾</div>
+                    <h4>Sauvegarder</h4>
+                    <p>Stock mis à jour !</p>
+                </div>
+            </div>
+
+            <div class="formation-tips-grid">
+                <div class="formation-tip-card">
+                    <div class="formation-tip-icon">📥</div>
+                    <h4>Entrées de Stock</h4>
+                    <p>Chaque fois que vous recevez de la marchandise, créez une entrée. Indiquez le fournisseur et le coût d'achat.</p>
+                </div>
+                <div class="formation-tip-card">
+                    <div class="formation-tip-icon">📤</div>
+                    <h4>Sorties Automatiques</h4>
+                    <p>Les ventes créent automatiquement des sorties de stock. Pas besoin de les saisir manuellement !</p>
+                </div>
+                <div class="formation-tip-card">
+                    <div class="formation-tip-icon">📊</div>
+                    <h4>Inventaire en Temps Réel</h4>
+                    <p>Consultez l'onglet "Inventaire" pour voir en temps réel ce qui vous reste en stock.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Encaissements -->
+        <div id="formation-encaissements" class="formation-section">
+            <div class="formation-header">
+                <h2>💵 Suivi des Encaissements</h2>
+                <p>Ne perdez jamais une trace de vos rentrées d'argent</p>
+            </div>
+
+            <div class="formation-step">
+                <h3>💡 Pourquoi séparer Ventes et Encaissements ?</h3>
+                <div class="formation-info">
+                    🎯 <strong>Vente ≠ Encaissement</strong><br>
+                    • <strong>Vente :</strong> Ce que vous avez vendu (peut être à crédit)<br>
+                    • <strong>Encaissement :</strong> L'argent que vous avez vraiment reçu
+                </div>
+            </div>
+
+            <div class="formation-workflow">
+                <div class="formation-workflow-step">
+                    <div class="formation-workflow-icon">💼</div>
+                    <h4>Commercial</h4>
+                </div>
+                <div class="formation-workflow-arrow">→</div>
+                <div class="formation-workflow-step">
+                    <div class="formation-workflow-icon">💵</div>
+                    <h4>Encaissements</h4>
+                </div>
+                <div class="formation-workflow-arrow">→</div>
+                <div class="formation-workflow-step">
+                    <div class="formation-workflow-icon">➕</div>
+                    <h4>Nouvel Encaissement</h4>
+                </div>
+            </div>
+
+            <div class="formation-form-demo">
+                <h4>📝 Exemple d'Encaissement</h4>
+                <div class="formation-field">
+                    <label>👤 Client</label>
+                    <div class="formation-input">Marie Dupont</div>
+                </div>
+                <div class="formation-field">
+                    <label>💰 Montant</label>
+                    <div class="formation-input">300 000 CFA</div>
+                </div>
+                <div class="formation-field">
+                    <label>💳 Mode de Paiement</label>
+                    <div class="formation-input">Espèces</div>
+                </div>
+                <div class="formation-field">
+                    <label>🧾 Référence Facture</label>
+                    <div class="formation-input">F001</div>
+                </div>
+            </div>
+
+            <div class="formation-success">
+                🔗 <strong>Astuce Pro :</strong> Utilisez la même référence de facture pour lier ventes et encaissements. Cela vous permet de voir facilement qui a payé quoi !
+            </div>
+        </div>
+
+        <!-- Section Interface -->
+        <div id="formation-interface" class="formation-section">
+            <div class="formation-header">
+                <h2>📱 Comprendre l'Interface</h2>
+                <p>Naviguez comme un pro dans KAMLAC</p>
+            </div>
+
+            <div class="formation-tips-grid">
+                <div class="formation-tip-card">
+                    <div class="formation-tip-icon">📊</div>
+                    <h4>Tableau de Bord</h4>
+                    <p>Votre "cockpit" principal. Voir d'un coup d'œil vos performances, graphiques de ventes et top produits.</p>
+                </div>
+                <div class="formation-tip-card">
+                    <div class="formation-tip-icon">👆</div>
+                    <h4>Groupes Cliquables</h4>
+                    <p>Cliquez sur une ligne groupée pour voir tous les détails. Les groupes simplifient l'affichage.</p>
+                </div>
+                <div class="formation-tip-card">
+                    <div class="formation-tip-icon">✏️</div>
+                    <h4>Boutons d'Action</h4>
+                    <p>✏️ = Modifier | 🗑️ = Supprimer. Ces boutons apparaissent sur chaque groupe.</p>
+                </div>
+                <div class="formation-tip-card">
+                    <div class="formation-tip-icon">🔍</div>
+                    <h4>Filtres Intelligents</h4>
+                    <p>Utilisez les filtres en haut des tableaux pour trouver rapidement ce que vous cherchez.</p>
+                </div>
+            </div>
+
+            <div class="formation-workflow">
+                <div class="formation-workflow-step">
+                    <div class="formation-workflow-icon">🏠</div>
+                    <h4>Accueil</h4>
+                    <p>Tableaux de bord</p>
+                </div>
+                <div class="formation-workflow-arrow">→</div>
+                <div class="formation-workflow-step">
+                    <div class="formation-workflow-icon">💼</div>
+                    <h4>Commercial</h4>
+                    <p>Ventes & Encaissements</p>
+                </div>
+                <div class="formation-workflow-arrow">→</div>
+                <div class="formation-workflow-step">
+                    <div class="formation-workflow-icon">📦</div>
+                    <h4>Stock</h4>
+                    <p>Inventaire & Mouvements</p>
+                </div>
+                <div class="formation-workflow-arrow">→</div>
+                <div class="formation-workflow-step">
+                    <div class="formation-workflow-icon">⚙️</div>
+                    <h4>Admin</h4>
+                    <p>Configuration</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Dépannage -->
+        <div id="formation-depannage" class="formation-section">
+            <div class="formation-header">
+                <h2>🔧 Résolution de Problèmes</h2>
+                <p>Solutions rapides aux situations courantes</p>
+            </div>
+
+            <div class="formation-troubleshooting">
+                <h3>🚨 Problèmes Fréquents & Solutions</h3>
+                
+                <div class="formation-problem">
+                    <h4>❌ Les données ne s'affichent pas</h4>
+                    <div class="formation-solution">✅ Appuyez sur F5 pour actualiser ou changez d'onglet puis revenez</div>
+                </div>
+
+                <div class="formation-problem">
+                    <h4>❌ Un groupe ne s'ouvre pas quand je clique</h4>
+                    <div class="formation-solution">✅ Cliquez bien sur la ligne du groupe, pas sur les boutons ✏️ ou 🗑️</div>
+                </div>
+
+                <div class="formation-problem">
+                    <h4>❌ Le total ne se calcule pas automatiquement</h4>
+                    <div class="formation-solution">✅ Vérifiez que vous avez saisi des nombres (pas de texte) dans quantité et prix</div>
+                </div>
+
+                <div class="formation-problem">
+                    <h4>❌ Je ne trouve pas mes données</h4>
+                    <div class="formation-solution">✅ Vérifiez les filtres de date en haut des tableaux</div>
+                </div>
+            </div>
+
+            <div class="formation-info">
+                💾 <strong>Bonne nouvelle :</strong> Vos données sont automatiquement sauvegardées à chaque action. Vous ne risquez jamais de les perdre !
+            </div>
+        </div>
+    </div>
+
     <script>
         // Variables globales
         let salesData = [];
@@ -5207,6 +6037,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // Pour l'admin, activer le titre de section (pas de sous-menu)
                 const adminTitle = document.querySelector('#sidebar-admin-section .sidebar-section-title');
                 if (adminTitle) adminTitle.classList.add('active');
+            } else if (moduleId === 'formation') {
+                // Pour la formation, activer le titre de section (pas de sous-menu)
+                const formationTitle = document.querySelector('#sidebar-formation-section .sidebar-section-title');
+                if (formationTitle) formationTitle.classList.add('active');
             }
 
             // Fermer la sidebar après sélection (effet de repliement)
@@ -5272,6 +6106,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 initializeCommercialModule();
             } else if (moduleId === 'admin') {
                 initializeAdminModule();
+            } else if (moduleId === 'formation') {
+                initializeFormationModule();
             }
 
             // Mettre à jour la sidebar
@@ -18457,29 +19293,174 @@ Date [ESPACES] Client [ESPACES] Montant
                         <div class="client-transactions">
                             <div class="transactions-section">
                                 <h4>📦 Dernières Ventes (${client.salesDetails.length})</h4>
-                                ${client.salesDetails.slice(0, 5).map(sale => `
-                                    <div class="transaction-item transaction-sale" onclick="editSale(${sale.id})" title="Cliquer pour modifier">
-                                        <strong>${sale.date}</strong><br>
-                                        ${sale.product || 'Produit non spécifié'}<br>
-                                        Qté: ${sale.quantity || '-'} | ${formatCurrency(sale.valeur)}
-                                        ${sale.invoice ? `<br><small>Fact: ${sale.invoice}</small>` : ''}
-                                        <div style="text-align: right; margin-top: 4px; font-size: 10px; color: #667eea;">✏️ Modifier</div>
-                                    </div>
-                                `).join('')}
-                                ${client.salesDetails.length > 5 ? `<div style="text-align: center; color: #666; font-size: 11px;">... et ${client.salesDetails.length - 5} autres</div>` : ''}
+                                ${(() => {
+                                    // Grouper les ventes par référence de facture
+                                    const salesGroups = {};
+                                    client.salesDetails.forEach(sale => {
+                                        const groupKey = sale.invoice || `Sans_facture_${sale.date}_${sale.id}`;
+                                        if (!salesGroups[groupKey]) {
+                                            salesGroups[groupKey] = {
+                                                reference: sale.invoice || 'Sans facture',
+                                                date: sale.date,
+                                                items: [],
+                                                totalValue: 0,
+                                                totalQuantity: 0
+                                            };
+                                        }
+                                        salesGroups[groupKey].items.push(sale);
+                                        salesGroups[groupKey].totalValue += sale.valeur || 0;
+                                        salesGroups[groupKey].totalQuantity += sale.quantity || 0;
+                                        // Garder la date la plus récente
+                                        if (new Date(sale.date) > new Date(salesGroups[groupKey].date)) {
+                                            salesGroups[groupKey].date = sale.date;
+                                        }
+                                    });
+
+                                    // Trier les groupes par date (plus récent en premier)
+                                    const sortedGroups = Object.values(salesGroups).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                                    return sortedGroups.slice(0, 5).map(group => {
+                                        const groupId = `sales-group-${client.name.replace(/[^a-zA-Z0-9]/g, '')}-${group.reference.replace(/[^a-zA-Z0-9]/g, '')}`;
+                                        return `
+                                            <div class="sale-group-item" style="border: 1px solid #e3f2fd; border-radius: 8px; margin-bottom: 8px; overflow: hidden;">
+                                                <div class="sale-group-header" onclick="toggleSaleGroupDetails('${groupId}')" style="padding: 12px; background: linear-gradient(135deg, #e3f2fd 0%, #f8f9ff 100%); cursor: pointer; border-bottom: 1px solid #e0e0e0;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                        <div>
+                                                            <strong style="color: #1976d2;">📄 ${group.reference}</strong>
+                                                            <div style="font-size: 12px; color: #666; margin-top: 2px;">
+                                                                ${group.date} • ${group.items.length} article${group.items.length > 1 ? 's' : ''}
+                                                            </div>
+                                                        </div>
+                                                        <div style="text-align: right;">
+                                                            <div style="font-weight: bold; color: #1976d2; font-size: 14px;">
+                                                                ${formatCurrency(group.totalValue)}
+                                                            </div>
+                                                            <div style="font-size: 11px; color: #666;">
+                                                                Qté: ${Math.round(group.totalQuantity)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div style="font-size: 11px; color: #888; margin-top: 4px;">
+                                                        ▼ Cliquez pour voir le détail
+                                                    </div>
+                                                </div>
+                                                <div class="sale-group-details" id="${groupId}" style="display: none; background: #f8f9ff;">
+                                                    ${group.items.map(sale => `
+                                                        <div class="sale-item-detail" onclick="editSale(${sale.id})" style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f0f7ff'" onmouseout="this.style.backgroundColor='transparent'">
+                                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                                <div style="flex: 1;">
+                                                                    <div style="font-weight: 500; color: #333; font-size: 13px;">
+                                                                        ${sale.product || 'Produit non spécifié'}
+                                                                    </div>
+                                                                    <div style="font-size: 11px; color: #666; margin-top: 2px;">
+                                                                        Qté: ${sale.quantity || '-'} | Prix unit: ${sale.unitPrice ? formatCurrency(sale.unitPrice) : '-'}
+                                                                    </div>
+                                                                </div>
+                                                                <div style="text-align: right;">
+                                                                    <div style="font-weight: bold; color: #1976d2;">
+                                                                        ${formatCurrency(sale.valeur)}
+                                                                    </div>
+                                                                    <div style="font-size: 10px; color: #667eea; margin-top: 2px;">
+                                                                        ✏️ Modifier
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('');
+                                })()}
+                                ${client.salesDetails.length > 0 && Object.values(client.salesDetails.reduce((groups, sale) => {
+                                    const key = sale.invoice || `Sans_facture_${sale.date}_${sale.id}`;
+                                    groups[key] = true;
+                                    return groups;
+                                }, {})).length > 5 ? `<div style="text-align: center; color: #666; font-size: 11px;">... et d'autres factures</div>` : ''}
                             </div>
                             <div class="transactions-section">
                                 <h4>💰 Derniers Encaissements (${client.paymentsDetails.length})</h4>
-                                ${client.paymentsDetails.slice(0, 5).map(payment => `
-                                    <div class="transaction-item transaction-payment" onclick="editPayment(${payment.id})" title="Cliquer pour modifier">
-                                        <strong>${payment.date}</strong><br>
-                                        ${formatCurrency(payment.amount)}<br>
-                                        ${payment.method}
-                                        ${payment.reference ? `<br><small>${payment.reference}</small>` : ''}
-                                        <div style="text-align: right; margin-top: 4px; font-size: 10px; color: #667eea;">✏️ Modifier</div>
-                                    </div>
-                                `).join('')}
-                                ${client.paymentsDetails.length > 5 ? `<div style="text-align: center; color: #666; font-size: 11px;">... et ${client.paymentsDetails.length - 5} autres</div>` : ''}
+                                ${(() => {
+                                    // Grouper les encaissements par référence
+                                    const paymentsGroups = {};
+                                    client.paymentsDetails.forEach(payment => {
+                                        const groupKey = payment.reference || `Sans_ref_${payment.date}_${payment.id}`;
+                                        if (!paymentsGroups[groupKey]) {
+                                            paymentsGroups[groupKey] = {
+                                                reference: payment.reference || 'Sans référence',
+                                                date: payment.date,
+                                                method: payment.method,
+                                                items: [],
+                                                totalAmount: 0
+                                            };
+                                        }
+                                        paymentsGroups[groupKey].items.push(payment);
+                                        paymentsGroups[groupKey].totalAmount += payment.amount || 0;
+                                        // Garder la date la plus récente
+                                        if (new Date(payment.date) > new Date(paymentsGroups[groupKey].date)) {
+                                            paymentsGroups[groupKey].date = payment.date;
+                                            paymentsGroups[groupKey].method = payment.method;
+                                        }
+                                    });
+
+                                    // Trier les groupes par date (plus récent en premier)
+                                    const sortedGroups = Object.values(paymentsGroups).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                                    return sortedGroups.slice(0, 5).map(group => {
+                                        const groupId = `payments-group-${client.name.replace(/[^a-zA-Z0-9]/g, '')}-${group.reference.replace(/[^a-zA-Z0-9]/g, '')}`;
+                                        return `
+                                            <div class="payment-group-item" style="border: 1px solid #e8f5e8; border-radius: 8px; margin-bottom: 8px; overflow: hidden;">
+                                                <div class="payment-group-header" onclick="togglePaymentGroupDetails('${groupId}')" style="padding: 12px; background: linear-gradient(135deg, #e8f5e8 0%, #f8fff8 100%); cursor: pointer; border-bottom: 1px solid #e0e0e0;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                        <div>
+                                                            <strong style="color: #388e3c;">💰 ${group.reference}</strong>
+                                                            <div style="font-size: 12px; color: #666; margin-top: 2px;">
+                                                                ${group.date} • ${group.method} • ${group.items.length} encaissement${group.items.length > 1 ? 's' : ''}
+                                                            </div>
+                                                        </div>
+                                                        <div style="text-align: right;">
+                                                            <div style="font-weight: bold; color: #388e3c; font-size: 14px;">
+                                                                ${formatCurrency(group.totalAmount)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div style="font-size: 11px; color: #888; margin-top: 4px;">
+                                                        ▼ Cliquez pour voir le détail
+                                                    </div>
+                                                </div>
+                                                <div class="payment-group-details" id="${groupId}" style="display: none; background: #f8fff8;">
+                                                    ${group.items.map(payment => `
+                                                        <div class="payment-item-detail" onclick="editPayment(${payment.id})" style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f0fff0'" onmouseout="this.style.backgroundColor='transparent'">
+                                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                                <div style="flex: 1;">
+                                                                    <div style="font-weight: 500; color: #333; font-size: 13px;">
+                                                                        ${payment.method}
+                                                                    </div>
+                                                                    <div style="font-size: 11px; color: #666; margin-top: 2px;">
+                                                                        ${payment.date}${payment.notes ? ` • ${payment.notes}` : ''}
+                                                                    </div>
+                                                                </div>
+                                                                <div style="text-align: right;">
+                                                                    <div style="font-weight: bold; color: #388e3c;">
+                                                                        ${formatCurrency(payment.amount)}
+                                                                    </div>
+                                                                    <div style="font-size: 10px; color: #667eea; margin-top: 2px;">
+                                                                        ✏️ Modifier
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('');
+                                })()}
+                                ${client.paymentsDetails.length > 0 && Object.values(client.paymentsDetails.reduce((groups, payment) => {
+                                    const key = payment.reference || `Sans_ref_${payment.date}_${payment.id}`;
+                                    groups[key] = true;
+                                    return groups;
+                                }, {})).length > 5 ? `<div style="text-align: center; color: #666; font-size: 11px;">... et d'autres références</div>` : ''}
                             </div>
                         </div>
                     </div>
@@ -18508,6 +19489,44 @@ Date [ESPACES] Client [ESPACES] Montant
                     setTimeout(() => {
                         detailsElement.classList.add('expanded');
                     }, 10);
+                }
+            }
+        }
+
+        // Fonction pour afficher/masquer les détails d'un groupe de ventes
+        function toggleSaleGroupDetails(groupId) {
+            const detailsElement = document.getElementById(groupId);
+            if (detailsElement) {
+                if (detailsElement.style.display === 'none' || detailsElement.style.display === '') {
+                    detailsElement.style.display = 'block';
+                    // Animation d'ouverture
+                    setTimeout(() => {
+                        detailsElement.style.opacity = '1';
+                        detailsElement.style.transform = 'translateY(0)';
+                    }, 10);
+                } else {
+                    detailsElement.style.display = 'none';
+                    detailsElement.style.opacity = '0';
+                    detailsElement.style.transform = 'translateY(-10px)';
+                }
+            }
+        }
+
+        // Fonction pour afficher/masquer les détails d'un groupe d'encaissements
+        function togglePaymentGroupDetails(groupId) {
+            const detailsElement = document.getElementById(groupId);
+            if (detailsElement) {
+                if (detailsElement.style.display === 'none' || detailsElement.style.display === '') {
+                    detailsElement.style.display = 'block';
+                    // Animation d'ouverture
+                    setTimeout(() => {
+                        detailsElement.style.opacity = '1';
+                        detailsElement.style.transform = 'translateY(0)';
+                    }, 10);
+                } else {
+                    detailsElement.style.display = 'none';
+                    detailsElement.style.opacity = '0';
+                    detailsElement.style.transform = 'translateY(-10px)';
                 }
             }
         }
@@ -20804,6 +21823,66 @@ Date [ESPACES] Client [ESPACES] Montant
             document.getElementById('adminContent').style.display = 'none';
             document.getElementById('adminPinError').style.display = 'none';
             document.getElementById('adminPinInput').value = '';
+        }
+        
+        // ========================================
+        // FONCTIONS MODULE FORMATION
+        // ========================================
+        
+        function initializeFormationModule() {
+            console.log('🎓 Initialisation du module Formation');
+            // Afficher la première section par défaut
+            showFormationSection('guide-rapide');
+        }
+        
+        function showFormationSection(sectionId) {
+            console.log(`🎓 Navigation vers la section Formation: ${sectionId}`);
+            
+            // Masquer toutes les sections de formation
+            const formationSections = document.querySelectorAll('.formation-section');
+            formationSections.forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Désactiver tous les onglets de formation
+            const formationTabs = document.querySelectorAll('#formationModule .nav-tab');
+            formationTabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Afficher la section sélectionnée
+            const selectedSection = document.getElementById(`formation-${sectionId}`);
+            if (selectedSection) {
+                selectedSection.classList.add('active');
+            }
+            
+            // Activer l'onglet correspondant
+            const activeTab = document.querySelector(`[onclick="showFormationSection('${sectionId}')"]`);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+            
+            // Ajouter une animation d'entrée
+            if (selectedSection) {
+                selectedSection.style.opacity = '0';
+                selectedSection.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    selectedSection.style.transition = 'all 0.3s ease';
+                    selectedSection.style.opacity = '1';
+                    selectedSection.style.transform = 'translateY(0)';
+                }, 50);
+            }
+        }
+        
+        // Fonction pour naviguer vers une section spécifique depuis les cartes du guide rapide
+        function navigateToFormationSection(sectionId) {
+            showFormationSection(sectionId);
+            
+            // Scroll vers le haut pour une meilleure expérience
+            const formationModule = document.getElementById('formationModule');
+            if (formationModule) {
+                formationModule.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
         
         // ===== FONCTIONS DE GESTION DES ONGLETS DE DEBUG =====
