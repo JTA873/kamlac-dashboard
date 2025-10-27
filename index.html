@@ -5556,19 +5556,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // Ajouter les ventes comme sorties
             salesData.forEach(sale => {
-                // DEBUG: Afficher la structure d'une vente
-                if (salesData.indexOf(sale) === 0) {
-                    console.log('🔍 Structure d\'une vente:', {
-                        date: sale.date,
-                        product: sale.product,
-                        quantity: sale.quantity,
-                        unitPrice: sale.unitPrice,
-                        valeur: sale.valeur,
-                        invoice: sale.invoice,
-                        client: sale.client
-                    });
-                }
-                
                 allMovements.push({
                     date: sale.date,
                     type: 'Sortie (Vente)',
@@ -5585,7 +5572,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // Ajouter les entrées de stock
             stockEntriesData.forEach(entry => {
-                // Normaliser le type selon nos catégories définies
                 let specificType = entry.type || 'Autre';
                 if (specificType === 'Retour') specificType = 'Retour client';
                 if (specificType === 'Ajustement') specificType = 'Ajustement inventaire';
@@ -5606,7 +5592,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // Ajouter les autres sorties
             stockExitsData.forEach(exit => {
-                // Normaliser le type selon nos catégories définies
                 let specificType = exit.type || 'Autre';
                 if (specificType === 'Production') specificType = 'Consommation production';
                 if (specificType === 'Perte') specificType = 'Perte/Casse';
@@ -5627,8 +5612,29 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 });
             });
             
-            // Trier par date (plus récent en premier)
-            allMovements.sort((a, b) => {
+            // Grouper les mouvements par référence/date/type
+            const movementGroups = {};
+            
+            allMovements.forEach(movement => {
+                const groupKey = `${movement.reference}_${movement.date}_${movement.type}`;
+                if (!movementGroups[groupKey]) {
+                    movementGroups[groupKey] = {
+                        reference: movement.reference,
+                        date: movement.date,
+                        type: movement.type,
+                        items: [],
+                        totalQuantity: 0,
+                        totalCost: 0,
+                        isEntry: movement.quantity > 0
+                    };
+                }
+                movementGroups[groupKey].items.push(movement);
+                movementGroups[groupKey].totalQuantity += Math.abs(movement.quantity);
+                movementGroups[groupKey].totalCost += movement.totalCost || 0;
+            });
+            
+            // Convertir en tableau et trier par date (plus récent d'abord)
+            const sortedMovementGroups = Object.values(movementGroups).sort((a, b) => {
                 const dateA = parseDate(a.date) || new Date(0);
                 const dateB = parseDate(b.date) || new Date(0);
                 return dateB - dateA;
@@ -5637,16 +5643,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Calculer les statistiques
             let totalEntries = 0;
             let totalExits = 0;
-            let totalEntriesQuantity = 0;
-            let totalExitsQuantity = 0;
             
-            allMovements.forEach(movement => {
-                if (movement.quantity > 0) {
+            sortedMovementGroups.forEach(group => {
+                if (group.isEntry) {
                     totalEntries++;
-                    totalEntriesQuantity += movement.quantity;
                 } else {
                     totalExits++;
-                    totalExitsQuantity += Math.abs(movement.quantity);
                 }
             });
             
@@ -5655,78 +5657,107 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const allEntriesCount = document.getElementById('allEntriesCount');
             const allExitsCount = document.getElementById('allExitsCount');
             
-            if (allMovementsCount) allMovementsCount.textContent = allMovements.length.toLocaleString();
+            if (allMovementsCount) allMovementsCount.textContent = sortedMovementGroups.length.toLocaleString();
             if (allEntriesCount) allEntriesCount.textContent = totalEntries.toLocaleString();
             if (allExitsCount) allExitsCount.textContent = totalExits.toLocaleString();
             
-            // Remplir le tableau (limiter à 100 lignes pour les performances)
-            const displayMovements = allMovements.slice(0, 100);
-            
-            displayMovements.forEach(movement => {
-                const row = document.createElement('tr');
+            sortedMovementGroups.forEach((movementGroup, index) => {
+                // Ligne principale du groupe de mouvements (groupée)
+                const mainRow = tableBody.insertRow();
+                mainRow.className = 'invoice-group';
+                mainRow.setAttribute('data-movement-group', movementGroup.reference);
                 
-                const isEntry = movement.quantity > 0;
-                const typeClass = isEntry ? 'text-success' : 'text-danger';
-                const quantityDisplay = Math.abs(movement.quantity).toLocaleString();
+                const itemsCount = movementGroup.items.length;
+                const itemsSummary = itemsCount === 1 ? 
+                    `1 mouvement` : 
+                    `${itemsCount} mouvements`;
+                
+                const isEntry = movementGroup.isEntry;
                 const typeIcon = isEntry ? '📥' : '📤';
                 const amountStyle = isEntry ? 'color: #28a745; font-weight: 600;' : 'color: #dc3545; font-weight: 600;';
                 
-                // Ajouter les attributs pour le système de hover et le clic
-                row.setAttribute('data-product', movement.product);
-                row.style.cursor = 'pointer';
-                row.onclick = function(e) {
-                    // Éviter le clic si on clique sur le bouton supprimer
-                    if (e.target.closest('button')) return;
-                    if (movement.source === 'sales') {
-                        // Pour les ventes, ouvrir la fiche produit
-                        showProductSheet(movement.product);
-                    } else {
-                        editMovement(movement.source, movement.id);
-                    }
-                };
-                
-                row.innerHTML = `
-                    <td>${movement.date}</td>
-                    <td style="font-weight: 600;"><span style="${isEntry ? 'color: #28a745;' : 'color: #dc3545;'}">${typeIcon} ${movement.type}</span></td>
-                    <td style="font-weight: 500;">${movement.product}</td>
-                    <td style="${amountStyle}">${quantityDisplay}</td>
-                    <td>${movement.unit}</td>
-                    <td>${movement.unitCost.toLocaleString()} CFA</td>
-                    <td style="${amountStyle}">${movement.totalCost.toLocaleString()} CFA</td>
-                    <td style="color: #666; font-size: 0.9rem;">${movement.reference}</td>
+                mainRow.innerHTML = `
+                    <td>${movementGroup.date}</td>
+                    <td style="font-weight: 600;"><span style="${isEntry ? 'color: #28a745;' : 'color: #dc3545;'}">${typeIcon} ${movementGroup.type}</span></td>
+                    <td>${itemsCount} produit${itemsCount > 1 ? 's' : ''}</td>
+                    <td style="${amountStyle}">${movementGroup.totalQuantity.toLocaleString()}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td style="${amountStyle}">${movementGroup.totalCost.toLocaleString()} CFA</td>
+                    <td class="invoice-header">
+                        <span class="invoice-expand-icon">▶</span>
+                        <strong>${movementGroup.reference}</strong>
+                        <div class="invoice-summary">${itemsSummary}</div>
+                    </td>
                     <td onclick="event.stopPropagation();">
-                        ${movement.source === 'sales' ? 
-                            '<span style="color: #666; font-size: 0.85rem; font-style: italic;">Géré depuis Ventes</span>' 
-                            : 
-                            `<button onclick="deleteMovement('${movement.source}', '${movement.id}')" 
-                                    class="btn-action btn-danger" title="Supprimer">
-                                🗑️
-                            </button>`
-                        }
+                        <button class="btn-action btn-warning" onclick="editMovementGroup('${movementGroup.reference}', '${movementGroup.date}', '${movementGroup.type}')" title="Modifier groupe">✏️</button>
+                        <button class="btn-action btn-danger" onclick="deleteMovementGroup('${movementGroup.reference}', '${movementGroup.date}', '${movementGroup.type}')" title="Supprimer groupe">🗑️</button>
                     </td>
                 `;
                 
-                tableBody.appendChild(row);
+                // Ligne des détails (cachée par défaut)
+                const detailsRow = tableBody.insertRow();
+                detailsRow.className = 'invoice-details';
+                detailsRow.innerHTML = `
+                    <td colspan="9">
+                        <table class="data-table" style="margin: 0; width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Produit</th>
+                                    <th>Quantité</th>
+                                    <th>Unité</th>
+                                    <th>Coût Unit.</th>
+                                    <th>Coût Total</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${movementGroup.items.map(item => `
+                                    <tr>
+                                        <td>${item.date}</td>
+                                        <td>${item.product}</td>
+                                        <td style="${amountStyle}">${Math.abs(item.quantity).toLocaleString()}</td>
+                                        <td>${item.unit}</td>
+                                        <td>${item.unitCost.toLocaleString()} CFA</td>
+                                        <td style="${amountStyle}">${item.totalCost.toLocaleString()} CFA</td>
+                                        <td>
+                                            ${item.source === 'sales' ? 
+                                                '<span style="color: #666; font-size: 0.85rem; font-style: italic;">Géré depuis Ventes</span>' 
+                                                : 
+                                                `<button class="btn-action btn-warning" onclick="editMovement('${item.source}', '${item.id}')" title="Modifier">✏️</button>
+                                                 <button class="btn-action btn-danger" onclick="deleteMovement('${item.source}', '${item.id}')" title="Supprimer">🗑️</button>`
+                                            }
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                                <tr class="invoice-total">
+                                    <td colspan="2"><strong>TOTAL GROUPE</strong></td>
+                                    <td><strong style="${amountStyle}">${movementGroup.totalQuantity.toLocaleString()}</strong></td>
+                                    <td colspan="2"></td>
+                                    <td><strong style="${amountStyle}">${movementGroup.totalCost.toLocaleString()} CFA</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                `;
+                
+                // Événement de clic pour expandir/contracter
+                mainRow.addEventListener('click', function(e) {
+                    if (e.target.closest('button')) return;
+                    toggleInvoiceDetails(this);
+                });
             });
             
-            if (allMovements.length > 100) {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td colspan="9" style="text-align: center; color: #666; font-style: italic; padding: 20px;">
-                        ... et ${(allMovements.length - 100).toLocaleString()} autres mouvements
-                        <br><small>Affichage limité aux 100 mouvements les plus récents</small>
-                    </td>
-                `;
-                tableBody.appendChild(row);
+            // Afficher le nombre total de groupes
+            if (sortedMovementGroups.length > 0) {
+                const totalMovements = allMovements.length;
+                const row = tableBody.insertRow(0);
+                row.innerHTML = `<td colspan="9" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedMovementGroups.length} groupe${sortedMovementGroups.length > 1 ? 's' : ''} (${totalMovements} mouvement${totalMovements > 1 ? 's' : ''})</td>`;
             }
             
-            // Initialiser le tri pour ce tableau
-            const allMovementsTable = document.querySelector('#allMovementsTableBody').closest('table');
-            if (allMovementsTable) {
-                reinitializeTableSorting(allMovementsTable);
-            }
-            
-            console.log(`✅ ${displayMovements.length} mouvements affichés sur ${allMovements.length} total`);
+            console.log(`✅ ${sortedMovementGroups.length} groupes de mouvements affichés`);
         }
         
         // FONCTIONS DE FILTRAGE POUR LES MOUVEMENTS
@@ -7500,6 +7531,38 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Vider le tableau
             tableBody.innerHTML = '';
             
+            // Grouper les entrées par référence/date/type
+            const entryGroups = {};
+            
+            stockEntriesData.forEach(entry => {
+                let specificType = entry.type || 'Autre';
+                if (specificType === 'Retour') specificType = 'Retour client';
+                if (specificType === 'Ajustement') specificType = 'Ajustement inventaire';
+                
+                const groupKey = `${entry.reference || 'Sans référence'}_${entry.date}_${specificType}`;
+                if (!entryGroups[groupKey]) {
+                    entryGroups[groupKey] = {
+                        reference: entry.reference || 'Sans référence',
+                        date: entry.date,
+                        type: specificType,
+                        supplier: entry.supplier || entry.fournisseur || 'Non spécifié',
+                        items: [],
+                        totalQuantity: 0,
+                        totalCost: 0
+                    };
+                }
+                entryGroups[groupKey].items.push(entry);
+                entryGroups[groupKey].totalQuantity += parseFloat(entry.quantity) || 0;
+                entryGroups[groupKey].totalCost += parseFloat(entry.totalCost) || 0;
+            });
+            
+            // Convertir en tableau et trier par date (plus récent d'abord)
+            const sortedEntryGroups = Object.values(entryGroups).sort((a, b) => {
+                const dateA = parseDate(a.date) || new Date(0);
+                const dateB = parseDate(b.date) || new Date(0);
+                return dateB - dateA;
+            });
+            
             // Statistiques
             const totalEntries = stockEntriesData.length;
             const totalQuantity = stockEntriesData.reduce((sum, entry) => sum + (parseFloat(entry.quantity) || 0), 0);
@@ -7508,58 +7571,100 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const entriesMovementsCount = document.getElementById('entriesMovementsCount');
             const totalEntriesQuantity = document.getElementById('totalEntriesQuantity');
             
-            if (entriesMovementsCount) entriesMovementsCount.textContent = totalEntries.toLocaleString();
+            if (entriesMovementsCount) entriesMovementsCount.textContent = sortedEntryGroups.length.toLocaleString();
             if (totalEntriesQuantity) totalEntriesQuantity.textContent = totalQuantity.toLocaleString();
             
-            // Remplir le tableau
-            stockEntriesData
-                .sort((a, b) => {
-                    const dateA = parseDate(a.date) || new Date(0);
-                    const dateB = parseDate(b.date) || new Date(0);
-                    return dateB - dateA;
-                })
-                .forEach(entry => {
-                    const row = document.createElement('tr');
-                    
-                    // Normaliser le type selon nos catégories définies
-                    let specificType = entry.type || 'Autre';
-                    if (specificType === 'Retour') specificType = 'Retour client';
-                    if (specificType === 'Ajustement') specificType = 'Ajustement inventaire';
-                    
-                    // Ajouter les attributs pour le système de hover et le clic
-                    row.setAttribute('data-product', entry.product);
-                    row.style.cursor = 'pointer';
-                    row.onclick = function(e) {
-                        // Éviter le clic si on clique sur le bouton supprimer
-                        if (e.target.closest('button')) return;
-                        editStockEntry(entry.id);
-                    };
-                    
-                    row.innerHTML = `
-                        <td>${entry.date}</td>
-                        <td style="font-weight: 500;">${entry.product}</td>
-                        <td style="font-weight: bold; color: #28a745;">${(parseFloat(entry.quantity) || 0).toLocaleString()}</td>
-                        <td>${entry.unit || 'Cartons'}</td>
-                        <td>${(parseFloat(entry.unitCost) || 0).toLocaleString()} CFA</td>
-                        <td style="font-weight: 500;">${(parseFloat(entry.totalCost) || 0).toLocaleString()} CFA</td>
-                        <td style="color: #666; font-weight: 500;">${specificType}</td>
-                        <td style="color: #666;">${entry.supplier || entry.fournisseur || 'Non spécifié'}</td>
-                        <td style="color: #666;">${entry.reference || 'Non spécifiée'}</td>
-                        <td onclick="event.stopPropagation();">
-                            <button onclick="deleteStockEntry('${entry.id}')" class="btn-action btn-danger" title="Supprimer">🗑️</button>
-                        </td>
-                    `;
-                    
-                    tableBody.appendChild(row);
+            sortedEntryGroups.forEach((entryGroup, index) => {
+                // Ligne principale du groupe d'entrées (groupée)
+                const mainRow = tableBody.insertRow();
+                mainRow.className = 'invoice-group';
+                mainRow.setAttribute('data-entry-group', entryGroup.reference);
+                
+                const itemsCount = entryGroup.items.length;
+                const itemsSummary = itemsCount === 1 ? 
+                    `1 entrée` : 
+                    `${itemsCount} entrées`;
+                
+                mainRow.innerHTML = `
+                    <td>${entryGroup.date}</td>
+                    <td>${itemsCount} produit${itemsCount > 1 ? 's' : ''}</td>
+                    <td style="font-weight: 600; color: #28a745;">${entryGroup.totalQuantity.toLocaleString()}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td style="font-weight: 600; color: #28a745;">${entryGroup.totalCost.toLocaleString()} CFA</td>
+                    <td style="font-weight: 500; color: #666;">${entryGroup.type}</td>
+                    <td style="color: #666;">${entryGroup.supplier}</td>
+                    <td class="invoice-header">
+                        <span class="invoice-expand-icon">▶</span>
+                        <strong>${entryGroup.reference}</strong>
+                        <div class="invoice-summary">${itemsSummary}</div>
+                    </td>
+                    <td onclick="event.stopPropagation();">
+                        <button class="btn-action btn-warning" onclick="editEntryGroup('${entryGroup.reference}', '${entryGroup.date}', '${entryGroup.type}')" title="Modifier groupe">✏️</button>
+                        <button class="btn-action btn-danger" onclick="deleteEntryGroup('${entryGroup.reference}', '${entryGroup.date}', '${entryGroup.type}')" title="Supprimer groupe">🗑️</button>
+                    </td>
+                `;
+                
+                // Ligne des détails (cachée par défaut)
+                const detailsRow = tableBody.insertRow();
+                detailsRow.className = 'invoice-details';
+                detailsRow.innerHTML = `
+                    <td colspan="10">
+                        <table class="data-table" style="margin: 0; width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Produit</th>
+                                    <th>Quantité</th>
+                                    <th>Unité</th>
+                                    <th>Coût Unit.</th>
+                                    <th>Coût Total</th>
+                                    <th>Fournisseur</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${entryGroup.items.map(item => `
+                                    <tr>
+                                        <td>${item.date}</td>
+                                        <td>${item.product}</td>
+                                        <td style="font-weight: bold; color: #28a745;">${(parseFloat(item.quantity) || 0).toLocaleString()}</td>
+                                        <td>${item.unit || 'Cartons'}</td>
+                                        <td>${(parseFloat(item.unitCost) || 0).toLocaleString()} CFA</td>
+                                        <td style="font-weight: 500; color: #28a745;">${(parseFloat(item.totalCost) || 0).toLocaleString()} CFA</td>
+                                        <td>${item.supplier || item.fournisseur || 'Non spécifié'}</td>
+                                        <td>
+                                            <button class="btn-action btn-warning" onclick="editStockEntry('${item.id}')" title="Modifier">✏️</button>
+                                            <button class="btn-action btn-danger" onclick="deleteStockEntry('${item.id}')" title="Supprimer">🗑️</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                                <tr class="invoice-total">
+                                    <td colspan="2"><strong>TOTAL GROUPE</strong></td>
+                                    <td><strong style="color: #28a745;">${entryGroup.totalQuantity.toLocaleString()}</strong></td>
+                                    <td colspan="2"></td>
+                                    <td><strong style="color: #28a745;">${entryGroup.totalCost.toLocaleString()} CFA</strong></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                `;
+                
+                // Événement de clic pour expandir/contracter
+                mainRow.addEventListener('click', function(e) {
+                    if (e.target.closest('button')) return;
+                    toggleInvoiceDetails(this);
                 });
+            });
             
-            // Initialiser le tri pour ce tableau
-            const entriesTable = document.querySelector('#entriesMovementsTableBody').closest('table');
-            if (entriesTable) {
-                reinitializeTableSorting(entriesTable);
+            // Afficher le nombre total de groupes
+            if (sortedEntryGroups.length > 0) {
+                const row = tableBody.insertRow(0);
+                row.innerHTML = `<td colspan="10" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedEntryGroups.length} groupe${sortedEntryGroups.length > 1 ? 's' : ''} (${totalEntries} entrée${totalEntries > 1 ? 's' : ''})</td>`;
             }
             
-            console.log(`✅ ${totalEntries} entrées affichées`);
+            console.log(`✅ ${sortedEntryGroups.length} groupes d'entrées affichés`);
         }
         
         // NOUVELLE FONCTION : Mettre à jour le tableau des sorties seulement
@@ -7589,6 +7694,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     totalCost: parseFloat(sale.valeur) || 0,
                     reference: sale.invoice || `Vente #${sale.id}`,
                     type: 'Vente',
+                    destination: sale.client,
                     id: sale.id,
                     source: 'sales'
                 });
@@ -7596,7 +7702,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // Ajouter les autres sorties
             stockExitsData.forEach(exit => {
-                // Normaliser le type selon nos catégories définies
                 let specificType = exit.type || 'Autre';
                 if (specificType === 'Production') specificType = 'Consommation production';
                 if (specificType === 'Perte') specificType = 'Perte/Casse';
@@ -7618,6 +7723,34 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 });
             });
             
+            // Grouper les sorties par référence/date/type
+            const exitGroups = {};
+            
+            allExits.forEach(exit => {
+                const groupKey = `${exit.reference}_${exit.date}_${exit.type}`;
+                if (!exitGroups[groupKey]) {
+                    exitGroups[groupKey] = {
+                        reference: exit.reference,
+                        date: exit.date,
+                        type: exit.type,
+                        destination: exit.destination || 'Non spécifié',
+                        items: [],
+                        totalQuantity: 0,
+                        totalCost: 0
+                    };
+                }
+                exitGroups[groupKey].items.push(exit);
+                exitGroups[groupKey].totalQuantity += exit.quantity;
+                exitGroups[groupKey].totalCost += exit.totalCost || 0;
+            });
+            
+            // Convertir en tableau et trier par date (plus récent d'abord)
+            const sortedExitGroups = Object.values(exitGroups).sort((a, b) => {
+                const dateA = parseDate(a.date) || new Date(0);
+                const dateB = parseDate(b.date) || new Date(0);
+                return dateB - dateA;
+            });
+            
             // Statistiques
             const totalExits = allExits.length;
             const totalQuantity = allExits.reduce((sum, exit) => sum + exit.quantity, 0);
@@ -7626,68 +7759,107 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const exitsMovementsCount = document.getElementById('exitsMovementsCount');
             const totalExitsQuantity = document.getElementById('totalExitsQuantity');
             
-            if (exitsMovementsCount) exitsMovementsCount.textContent = totalExits.toLocaleString();
+            if (exitsMovementsCount) exitsMovementsCount.textContent = sortedExitGroups.length.toLocaleString();
             if (totalExitsQuantity) totalExitsQuantity.textContent = totalQuantity.toLocaleString();
             
-            // Remplir le tableau
-            allExits
-                .sort((a, b) => {
-                    const dateA = parseDate(a.date) || new Date(0);
-                    const dateB = parseDate(b.date) || new Date(0);
-                    return dateB - dateA;
-                })
-                .slice(0, 100) // Limiter à 100 lignes
-                .forEach(exit => {
-                    const row = document.createElement('tr');
-                    
-                    const typeClass = exit.source === 'sales' ? 'text-primary' : 'text-warning';
-                    
-                    // Ajouter les attributs pour le système de hover et le clic
-                    row.setAttribute('data-product', exit.product);
-                    row.style.cursor = 'pointer';
-                    row.onclick = function(e) {
-                        // Éviter le clic si on clique sur le bouton supprimer
-                        if (e.target.closest('button')) return;
-                        if (exit.source === 'sales') {
-                            // Pour les ventes, ouvrir la fiche produit
-                            showProductSheet(exit.product);
-                        } else {
-                            editStockExit(exit.id, exit.source);
-                        }
-                    };
-                    
-                    row.innerHTML = `
-                        <td>${exit.date}</td>
-                        <td style="font-weight: 500;">${exit.product}</td>
-                        <td style="font-weight: bold; color: #dc3545;">${exit.quantity.toLocaleString()}</td>
-                        <td>${exit.unit}</td>
-                        <td>${exit.unitCost.toLocaleString()} CFA</td>
-                        <td style="font-weight: 500;">${exit.totalCost.toLocaleString()} CFA</td>
-                        <td><span class="${typeClass}" style="font-weight: 500;">${exit.type}</span></td>
-                        <td style="color: #666;">${exit.destination || exit.client || 'Non spécifié'}</td>
-                        <td style="color: #666; font-size: 0.9rem;">${exit.reference || 'Non spécifiée'}</td>
-                        <td onclick="event.stopPropagation();">
-                            ${exit.source === 'sales' ? 
-                                '<span style="color: #666; font-size: 0.85rem; font-style: italic;">Géré depuis Ventes</span>' 
-                                : 
-                                `<button onclick="deleteStockExit('${exit.id}', '${exit.source}')" 
-                                        class="btn-action btn-danger" title="Supprimer">
-                                    🗑️
-                                </button>`
-                            }
-                        </td>
-                    `;
-                    
-                    tableBody.appendChild(row);
+            sortedExitGroups.forEach((exitGroup, index) => {
+                // Ligne principale du groupe de sorties (groupée)
+                const mainRow = tableBody.insertRow();
+                mainRow.className = 'invoice-group';
+                mainRow.setAttribute('data-exit-group', exitGroup.reference);
+                
+                const itemsCount = exitGroup.items.length;
+                const itemsSummary = itemsCount === 1 ? 
+                    `1 sortie` : 
+                    `${itemsCount} sorties`;
+                
+                const isVente = exitGroup.type === 'Vente';
+                const typeClass = isVente ? 'text-primary' : 'text-warning';
+                
+                mainRow.innerHTML = `
+                    <td>${exitGroup.date}</td>
+                    <td>${itemsCount} produit${itemsCount > 1 ? 's' : ''}</td>
+                    <td style="font-weight: 600; color: #dc3545;">${exitGroup.totalQuantity.toLocaleString()}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td style="font-weight: 600; color: #dc3545;">${exitGroup.totalCost.toLocaleString()} CFA</td>
+                    <td><span class="${typeClass}" style="font-weight: 500;">${exitGroup.type}</span></td>
+                    <td style="color: #666;">${exitGroup.destination}</td>
+                    <td class="invoice-header">
+                        <span class="invoice-expand-icon">▶</span>
+                        <strong>${exitGroup.reference}</strong>
+                        <div class="invoice-summary">${itemsSummary}</div>
+                    </td>
+                    <td onclick="event.stopPropagation();">
+                        <button class="btn-action btn-warning" onclick="editExitGroup('${exitGroup.reference}', '${exitGroup.date}', '${exitGroup.type}')" title="Modifier groupe">✏️</button>
+                        <button class="btn-action btn-danger" onclick="deleteExitGroup('${exitGroup.reference}', '${exitGroup.date}', '${exitGroup.type}')" title="Supprimer groupe">🗑️</button>
+                    </td>
+                `;
+                
+                // Ligne des détails (cachée par défaut)
+                const detailsRow = tableBody.insertRow();
+                detailsRow.className = 'invoice-details';
+                detailsRow.innerHTML = `
+                    <td colspan="10">
+                        <table class="data-table" style="margin: 0; width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Produit</th>
+                                    <th>Quantité</th>
+                                    <th>Unité</th>
+                                    <th>Coût Unit.</th>
+                                    <th>Coût Total</th>
+                                    <th>Destination</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${exitGroup.items.map(item => `
+                                    <tr>
+                                        <td>${item.date}</td>
+                                        <td>${item.product}</td>
+                                        <td style="font-weight: bold; color: #dc3545;">${item.quantity.toLocaleString()}</td>
+                                        <td>${item.unit}</td>
+                                        <td>${item.unitCost.toLocaleString()} CFA</td>
+                                        <td style="font-weight: 500; color: #dc3545;">${item.totalCost.toLocaleString()} CFA</td>
+                                        <td>${item.destination || 'Non spécifié'}</td>
+                                        <td>
+                                            ${item.source === 'sales' ? 
+                                                '<span style="color: #666; font-size: 0.85rem; font-style: italic;">Géré depuis Ventes</span>' 
+                                                : 
+                                                `<button class="btn-action btn-warning" onclick="editStockExit('${item.id}', '${item.source}')" title="Modifier">✏️</button>
+                                                 <button class="btn-action btn-danger" onclick="deleteStockExit('${item.id}', '${item.source}')" title="Supprimer">🗑️</button>`
+                                            }
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                                <tr class="invoice-total">
+                                    <td colspan="2"><strong>TOTAL GROUPE</strong></td>
+                                    <td><strong style="color: #dc3545;">${exitGroup.totalQuantity.toLocaleString()}</strong></td>
+                                    <td colspan="2"></td>
+                                    <td><strong style="color: #dc3545;">${exitGroup.totalCost.toLocaleString()} CFA</strong></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                `;
+                
+                // Événement de clic pour expandir/contracter
+                mainRow.addEventListener('click', function(e) {
+                    if (e.target.closest('button')) return;
+                    toggleInvoiceDetails(this);
                 });
+            });
             
-            // Initialiser le tri pour ce tableau
-            const exitsTable = document.querySelector('#exitsMovementsTableBody').closest('table');
-            if (exitsTable) {
-                reinitializeTableSorting(exitsTable);
+            // Afficher le nombre total de groupes
+            if (sortedExitGroups.length > 0) {
+                const row = tableBody.insertRow(0);
+                row.innerHTML = `<td colspan="10" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedExitGroups.length} groupe${sortedExitGroups.length > 1 ? 's' : ''} (${totalExits} sortie${totalExits > 1 ? 's' : ''})</td>`;
             }
             
-            console.log(`✅ ${Math.min(totalExits, 100)} sorties affichées sur ${totalExits} total`);
+            console.log(`✅ ${sortedExitGroups.length} groupes de sorties affichés`);
         }
         
         // NOUVELLE FONCTION: Navigation vers les mouvements d'un produit spécifique
@@ -15622,7 +15794,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 invoiceGroups[invoiceKey].total += sale.valeur || 0;
             });
             
-            // Convertir en tableau et trier par date
+            // Convertir en tableau et trier par date (plus récent d'abord)
             const sortedInvoices = Object.values(invoiceGroups).sort((a, b) => {
                 const dateA = parseDate(a.date);
                 const dateB = parseDate(b.date);
@@ -15713,46 +15885,109 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             const tbody = document.getElementById('paymentsRecapTableBody');
             tbody.innerHTML = '';
             
-            const sortedPayments = filteredRecapPayments.sort((a, b) => {
+            // Grouper les encaissements par référence/client/date
+            const paymentGroups = {};
+            
+            filteredRecapPayments.forEach(payment => {
+                const groupKey = `${payment.reference || 'SANS_REF'}_${payment.client}_${payment.date}`;
+                if (!paymentGroups[groupKey]) {
+                    paymentGroups[groupKey] = {
+                        reference: payment.reference || 'Sans référence',
+                        date: payment.date,
+                        client: payment.client,
+                        method: payment.method,
+                        items: [],
+                        total: 0
+                    };
+                }
+                paymentGroups[groupKey].items.push(payment);
+                paymentGroups[groupKey].total += payment.amount || 0;
+            });
+            
+            // Convertir en tableau et trier par date (plus récent d'abord)
+            const sortedPaymentGroups = Object.values(paymentGroups).sort((a, b) => {
                 const dateA = parseDate(a.date);
                 const dateB = parseDate(b.date);
                 return dateB - dateA;
-            }); // Suppression de la limite .slice(0, 100)
-            
-            sortedPayments.forEach(payment => {
-                const row = tbody.insertRow();
-                
-                // Ajouter les attributs pour le système de hover et le clic
-                row.setAttribute('data-product', payment.client);
-                row.style.cursor = 'pointer';
-                row.onclick = function(e) {
-                    // Éviter le clic si on clique sur un bouton
-                    if (e.target.closest('button')) return;
-                    editPayment(payment.id);
-                };
-                
-                row.innerHTML = `
-                    <td>${payment.date}</td>
-                    <td>${payment.client}</td>
-                    <td>${formatCurrency(payment.amount)}</td>
-                    <td>${payment.method}</td>
-                    <td>${payment.reference || '-'}</td>
-                    <td onclick="event.stopPropagation();">
-                        <button class="btn-action btn-danger" onclick="deletePayment('${payment.id}')" title="Supprimer">🗑️</button>
-                    </td>
-                `;
             });
             
-            // Afficher le nombre total de lignes
-            if (sortedPayments.length > 50) {
-                const row = tbody.insertRow(0);
-                row.innerHTML = `<td colspan="6" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedPayments.length} encaissements affichés</td>`;
-            }
+            sortedPaymentGroups.forEach((paymentGroup, index) => {
+                // Ligne principale du groupe d'encaissements (groupée)
+                const mainRow = tbody.insertRow();
+                mainRow.className = 'invoice-group';
+                mainRow.setAttribute('data-payment-group', paymentGroup.reference);
+                
+                const itemsCount = paymentGroup.items.length;
+                const itemsSummary = itemsCount === 1 ? 
+                    `1 encaissement` : 
+                    `${itemsCount} encaissements`;
+                
+                mainRow.innerHTML = `
+                    <td>${paymentGroup.date}</td>
+                    <td>${paymentGroup.client}</td>
+                    <td style="font-weight: 600; color: #28a745;">${formatCurrency(paymentGroup.total)}</td>
+                    <td>${paymentGroup.method}</td>
+                    <td class="invoice-header">
+                        <span class="invoice-expand-icon">▶</span>
+                        <strong>${paymentGroup.reference}</strong>
+                        <div class="invoice-summary">${itemsSummary}</div>
+                    </td>
+                    <td onclick="event.stopPropagation();">
+                        <button class="btn-action btn-warning" onclick="editPaymentGroup('${paymentGroup.reference}', '${paymentGroup.client}', '${paymentGroup.date}')" title="Modifier groupe">✏️</button>
+                        <button class="btn-action btn-danger" onclick="deletePaymentGroup('${paymentGroup.reference}', '${paymentGroup.client}', '${paymentGroup.date}')" title="Supprimer groupe">🗑️</button>
+                    </td>
+                `;
+                
+                // Ligne des détails (cachée par défaut)
+                const detailsRow = tbody.insertRow();
+                detailsRow.className = 'invoice-details';
+                detailsRow.innerHTML = `
+                    <td colspan="6">
+                        <table class="data-table" style="margin: 0; width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Montant</th>
+                                    <th>Mode</th>
+                                    <th>Référence</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${paymentGroup.items.map(item => `
+                                    <tr>
+                                        <td>${item.date}</td>
+                                        <td>${formatCurrency(item.amount || 0)}</td>
+                                        <td>${item.method || '-'}</td>
+                                        <td>${item.reference || '-'}</td>
+                                        <td>
+                                            <button class="btn-action btn-warning" onclick="editPayment('${item.id}')" title="Modifier">✏️</button>
+                                            <button class="btn-action btn-danger" onclick="deletePayment('${item.id}')" title="Supprimer">🗑️</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                                <tr class="invoice-total">
+                                    <td><strong>TOTAL GROUPE</strong></td>
+                                    <td><strong>${formatCurrency(paymentGroup.total)}</strong></td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                `;
+                
+                // Événement de clic pour expandir/contracter
+                mainRow.addEventListener('click', function(e) {
+                    if (e.target.closest('button')) return;
+                    toggleInvoiceDetails(this);
+                });
+            });
             
-            // Réinitialiser le tri pour ce tableau
-            const paymentsTable = tbody.closest('.data-table');
-            if (paymentsTable) {
-                reinitializeTableSorting(paymentsTable);
+            // Afficher le nombre total de groupes
+            if (sortedPaymentGroups.length > 0) {
+                const totalPayments = filteredRecapPayments.length;
+                const row = tbody.insertRow(0);
+                row.innerHTML = `<td colspan="6" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedPaymentGroups.length} groupe${sortedPaymentGroups.length > 1 ? 's' : ''} (${totalPayments} encaissement${totalPayments > 1 ? 's' : ''})</td>`;
             }
         }
 
@@ -15789,44 +16024,56 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 return include;
             });
             
-            // Créer un tableau combiné avec les opérations
-            const globalOperations = [];
+            // Grouper toutes les opérations par date et type
+            const operationGroups = {};
             
+            // Ajouter les ventes groupées par facture
             filteredSales.forEach(sale => {
-                globalOperations.push({
-                    date: sale.date,
-                    type: 'Vente',
-                    typeClass: 'sale-operation',
-                    client: sale.client,
-                    description: `${sale.product || 'Produit'} (Qté: ${sale.quantity || 0})`,
-                    amount: sale.valeur || 0,
-                    id: sale.id,
-                    isPositive: true
-                });
+                const groupKey = `VENTE_${sale.invoice || 'SANS_FACTURE'}_${sale.client}_${sale.date}`;
+                if (!operationGroups[groupKey]) {
+                    operationGroups[groupKey] = {
+                        date: sale.date,
+                        type: 'Vente',
+                        typeClass: 'sale-operation',
+                        client: sale.client,
+                        reference: sale.invoice || 'Sans facture',
+                        items: [],
+                        total: 0,
+                        isPositive: true
+                    };
+                }
+                operationGroups[groupKey].items.push(sale);
+                operationGroups[groupKey].total += sale.valeur || 0;
             });
             
+            // Ajouter les encaissements groupés par référence
             filteredPayments.forEach(payment => {
-                globalOperations.push({
-                    date: payment.date,
-                    type: 'Encaissement',
-                    typeClass: 'payment-operation',
-                    client: payment.client,
-                    description: `${payment.method} ${payment.reference ? '- ' + payment.reference : ''}`,
-                    amount: payment.amount || 0,
-                    id: payment.id,
-                    isPositive: false
-                });
+                const groupKey = `ENCAISSEMENT_${payment.reference || 'SANS_REF'}_${payment.client}_${payment.date}`;
+                if (!operationGroups[groupKey]) {
+                    operationGroups[groupKey] = {
+                        date: payment.date,
+                        type: 'Encaissement',
+                        typeClass: 'payment-operation',
+                        client: payment.client,
+                        reference: payment.reference || 'Sans référence',
+                        items: [],
+                        total: 0,
+                        isPositive: false
+                    };
+                }
+                operationGroups[groupKey].items.push(payment);
+                operationGroups[groupKey].total += payment.amount || 0;
             });
             
-            // Trier par date (plus récent d'abord)
-            globalOperations.sort((a, b) => {
+            // Convertir en tableau et trier par date (plus récent d'abord)
+            const sortedOperationGroups = Object.values(operationGroups).sort((a, b) => {
                 const dateA = parseDate(a.date);
                 const dateB = parseDate(b.date);
                 return dateB - dateA;
             });
             
             // Mettre à jour les stats globales
-            const totalOperations = globalOperations.length;
+            const totalOperations = filteredSales.length + filteredPayments.length;
             const totalSales = filteredSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
             const totalPayments = filteredPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
             const globalBalance = totalSales - totalPayments;
@@ -15840,48 +16087,125 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             const tbody = document.getElementById('globalRecapTableBody');
             tbody.innerHTML = '';
             
-            globalOperations.slice(0, 100).forEach(operation => {
-                const row = tbody.insertRow();
-                const amountStyle = operation.isPositive ? 'color: #28a745; font-weight: 600;' : 'color: #6c757d; font-weight: 600;';
-                const typeIcon = operation.isPositive ? '📦' : '💰';
+            sortedOperationGroups.forEach((operationGroup, index) => {
+                // Ligne principale du groupe d'opérations (groupée)
+                const mainRow = tbody.insertRow();
+                mainRow.className = 'invoice-group';
+                mainRow.setAttribute('data-operation-group', operationGroup.reference);
                 
-                // Ajouter les attributs pour le système de hover et le clic
-                row.setAttribute('data-product', operation.description);
-                row.style.cursor = 'pointer';
-                row.onclick = function(e) {
-                    // Éviter le clic si on clique sur un bouton
-                    if (e.target.closest('button')) return;
-                    if (operation.isPositive) {
-                        editSale(operation.id);
-                    } else {
-                        editPayment(operation.id);
-                    }
-                };
+                const itemsCount = operationGroup.items.length;
+                const itemsSummary = itemsCount === 1 ? 
+                    `1 ${operationGroup.type.toLowerCase()}` : 
+                    `${itemsCount} ${operationGroup.type.toLowerCase()}s`;
                 
-                row.innerHTML = `
-                    <td>${operation.date}</td>
-                    <td style="font-weight: 600;"><span style="${operation.isPositive ? 'color: #28a745;' : 'color: #fd7e14;'}">${typeIcon} ${operation.type}</span></td>
-                    <td>${operation.client}</td>
-                    <td>${operation.description}</td>
-                    <td style="${amountStyle}">${formatCurrency(operation.amount)}</td>
+                const amountStyle = operationGroup.isPositive ? 'color: #28a745; font-weight: 600;' : 'color: #6c757d; font-weight: 600;';
+                const typeIcon = operationGroup.isPositive ? '📦' : '💰';
+                
+                mainRow.innerHTML = `
+                    <td>${operationGroup.date}</td>
+                    <td style="font-weight: 600;"><span style="${operationGroup.isPositive ? 'color: #28a745;' : 'color: #fd7e14;'}">${typeIcon} ${operationGroup.type}</span></td>
+                    <td>${operationGroup.client}</td>
+                    <td class="invoice-header">
+                        <span class="invoice-expand-icon">▶</span>
+                        <strong>${operationGroup.reference}</strong>
+                        <div class="invoice-summary">${itemsSummary}</div>
+                    </td>
+                    <td style="${amountStyle}">${formatCurrency(operationGroup.total)}</td>
                     <td onclick="event.stopPropagation();">
-                        ${operation.isPositive ? 
-                            `<button class="btn-action btn-danger" onclick="deleteSale('${operation.id}')" title="Supprimer">🗑️</button>` :
-                            `<button class="btn-action btn-danger" onclick="deletePayment('${operation.id}')" title="Supprimer">🗑️</button>`
-                        }
+                        <button class="btn-action btn-warning" onclick="editOperationGroup('${operationGroup.type}', '${operationGroup.reference}', '${operationGroup.client}', '${operationGroup.date}')" title="Modifier groupe">✏️</button>
+                        <button class="btn-action btn-danger" onclick="deleteOperationGroup('${operationGroup.type}', '${operationGroup.reference}', '${operationGroup.client}', '${operationGroup.date}')" title="Supprimer groupe">🗑️</button>
                     </td>
                 `;
+                
+                // Ligne des détails (cachée par défaut)
+                const detailsRow = tbody.insertRow();
+                detailsRow.className = 'invoice-details';
+                
+                if (operationGroup.isPositive) {
+                    // Détails pour les ventes
+                    detailsRow.innerHTML = `
+                        <td colspan="6">
+                            <table class="data-table" style="margin: 0; width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Produit</th>
+                                        <th>Quantité</th>
+                                        <th>Prix Unitaire</th>
+                                        <th>Total</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${operationGroup.items.map(item => `
+                                        <tr>
+                                            <td>${item.product || '-'}</td>
+                                            <td>${item.quantity || '-'}</td>
+                                            <td>${formatCurrency(item.unitPrice || 0)}</td>
+                                            <td>${formatCurrency(item.valeur || 0)}</td>
+                                            <td>
+                                                <button class="btn-action btn-warning" onclick="editSale('${item.id}')" title="Modifier">✏️</button>
+                                                <button class="btn-action btn-danger" onclick="deleteSale('${item.id}')" title="Supprimer">🗑️</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                    <tr class="invoice-total">
+                                        <td colspan="3"><strong>TOTAL ${operationGroup.type.toUpperCase()}</strong></td>
+                                        <td><strong>${formatCurrency(operationGroup.total)}</strong></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    `;
+                } else {
+                    // Détails pour les encaissements
+                    detailsRow.innerHTML = `
+                        <td colspan="6">
+                            <table class="data-table" style="margin: 0; width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Montant</th>
+                                        <th>Mode</th>
+                                        <th>Référence</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${operationGroup.items.map(item => `
+                                        <tr>
+                                            <td>${item.date}</td>
+                                            <td>${formatCurrency(item.amount || 0)}</td>
+                                            <td>${item.method || '-'}</td>
+                                            <td>${item.reference || '-'}</td>
+                                            <td>
+                                                <button class="btn-action btn-warning" onclick="editPayment('${item.id}')" title="Modifier">✏️</button>
+                                                <button class="btn-action btn-danger" onclick="deletePayment('${item.id}')" title="Supprimer">🗑️</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                    <tr class="invoice-total">
+                                        <td><strong>TOTAL ${operationGroup.type.toUpperCase()}</strong></td>
+                                        <td><strong>${formatCurrency(operationGroup.total)}</strong></td>
+                                        <td colspan="3"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    `;
+                }
+                
+                // Événement de clic pour expandir/contracter
+                mainRow.addEventListener('click', function(e) {
+                    if (e.target.closest('button')) return;
+                    toggleInvoiceDetails(this);
+                });
             });
             
-            if (globalOperations.length > 100) {
+            // Afficher le nombre total de groupes
+            if (sortedOperationGroups.length > 0) {
                 const row = tbody.insertRow(0);
-                row.innerHTML = `<td colspan="6" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${globalOperations.length} opérations (100 premières affichées)</td>`;
-            }
-            
-            // Réinitialiser le tri pour ce tableau
-            const globalTable = tbody.closest('.data-table');
-            if (globalTable) {
-                reinitializeTableSorting(globalTable);
+                row.innerHTML = `<td colspan="6" style="text-align: center; background: #f8f9fa; font-weight: 600; color: #667eea; padding: 10px;">📊 ${sortedOperationGroups.length} groupe${sortedOperationGroups.length > 1 ? 's' : ''} (${totalOperations} opération${totalOperations > 1 ? 's' : ''})</td>`;
             }
         }
 
@@ -22330,6 +22654,514 @@ Date [ESPACES] Client [ESPACES] Montant
             
             // Mettre à jour la vue clients
             updateClientsOverview();
+        }
+
+        // ========================================
+        // FONCTIONS POUR LES GROUPES D'ENCAISSEMENTS
+        // ========================================
+        
+        // Fonction pour éditer un groupe d'encaissements
+        function editPaymentGroup(reference, client, date) {
+            // Filtrer tous les encaissements de ce groupe
+            const groupPayments = paymentsData.filter(payment => 
+                (payment.reference || 'Sans référence') === reference && 
+                payment.client === client && 
+                payment.date === date
+            );
+            
+            if (groupPayments.length === 0) {
+                showAlert('Aucun encaissement trouvé pour ce groupe', 'warning');
+                return;
+            }
+            
+            // Si un seul encaissement, éditer directement
+            if (groupPayments.length === 1) {
+                editPayment(groupPayments[0].id);
+                return;
+            }
+            
+            // Sinon, afficher un modal avec tous les encaissements
+            const modal = document.createElement('div');
+            modal.className = 'product-modal';
+            modal.innerHTML = `
+                <div class="product-modal-content" style="max-width: 900px;">
+                    <h3 style="margin-bottom: 20px; color: #667eea;">✏️ Édition Groupe Encaissements: ${reference}</h3>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <strong>Client:</strong> ${client}<br>
+                        <strong>Date:</strong> ${date}<br>
+                        <strong>Nombre d'encaissements:</strong> ${groupPayments.length}
+                    </div>
+                    
+                    <div style="overflow-x: auto; margin-bottom: 20px;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Montant</th>
+                                    <th>Mode</th>
+                                    <th>Référence</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${groupPayments.map(payment => `
+                                    <tr>
+                                        <td>${payment.date}</td>
+                                        <td>${formatCurrency(payment.amount || 0)}</td>
+                                        <td>${payment.method || '-'}</td>
+                                        <td>${payment.reference || '-'}</td>
+                                        <td>
+                                            <button class="btn btn-warning" onclick="editPayment('${payment.id}'); closePaymentGroupModal();" style="margin-right: 5px;">✏️ Modifier</button>
+                                            <button class="btn btn-danger" onclick="deletePayment('${payment.id}'); updatePaymentGroupModal('${reference}', '${client}', '${date}');">🗑️ Supprimer</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: #28a745; color: white; font-weight: 600;">
+                                    <td><strong>TOTAL GROUPE</strong></td>
+                                    <td><strong>${formatCurrency(groupPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0))}</strong></td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="closePaymentGroupModal()">✖️ Fermer</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'flex';
+            
+            // Fermeture en cliquant à l'extérieur
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closePaymentGroupModal();
+                }
+            });
+        }
+        
+        // Fonction pour fermer le modal de groupe d'encaissements
+        function closePaymentGroupModal() {
+            const modal = document.querySelector('.product-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        // Fonction pour mettre à jour le modal après suppression d'un encaissement
+        function updatePaymentGroupModal(reference, client, date) {
+            closePaymentGroupModal();
+            setTimeout(() => {
+                editPaymentGroup(reference, client, date);
+            }, 100);
+        }
+        
+        // Fonction pour supprimer un groupe d'encaissements complet
+        async function deletePaymentGroup(reference, client, date) {
+            const groupPayments = paymentsData.filter(payment => 
+                (payment.reference || 'Sans référence') === reference && 
+                payment.client === client && 
+                payment.date === date
+            );
+            
+            if (groupPayments.length === 0) {
+                showAlert('Aucun encaissement trouvé pour ce groupe', 'warning');
+                return;
+            }
+            
+            const confirmMessage = `Êtes-vous sûr de vouloir supprimer ce groupe d'encaissements ?\n\nGroupe: ${reference}\nClient: ${client}\nDate: ${date}\nNombre d'encaissements: ${groupPayments.length}\nTotal: ${formatCurrency(groupPayments.reduce((sum, p) => sum + (p.amount || 0), 0))}`;
+            
+            if (confirm(confirmMessage)) {
+                try {
+                    // Supprimer tous les encaissements du groupe
+                    for (const payment of groupPayments) {
+                        await deletePayment(payment.id);
+                    }
+                    
+                    showAlert(`Groupe d'encaissements supprimé avec succès`, 'success');
+                    updateAllDisplays();
+                } catch (error) {
+                    console.error('Erreur lors de la suppression du groupe:', error);
+                    showAlert('Erreur lors de la suppression du groupe', 'error');
+                }
+            }
+        }
+        
+        // ========================================
+        // FONCTIONS POUR LES GROUPES D'OPÉRATIONS GLOBALES
+        // ========================================
+        
+        // Fonction pour éditer un groupe d'opérations (ventes ou encaissements)
+        function editOperationGroup(type, reference, client, date) {
+            if (type === 'Vente') {
+                editInvoiceGroup(reference);
+            } else if (type === 'Encaissement') {
+                editPaymentGroup(reference, client, date);
+            }
+        }
+        
+        // Fonction pour supprimer un groupe d'opérations
+        async function deleteOperationGroup(type, reference, client, date) {
+            if (type === 'Vente') {
+                deleteInvoiceGroup(reference);
+            } else if (type === 'Encaissement') {
+                deletePaymentGroup(reference, client, date);
+            }
+        }
+
+        // ========================================
+        // FONCTIONS POUR LES GROUPES DE MOUVEMENTS DE STOCK
+        // ========================================
+        
+        // Fonction pour éditer un groupe de mouvements
+        function editMovementGroup(reference, date, type) {
+            if (type.includes('Entrée')) {
+                editEntryGroup(reference, date, type.replace('Entrée (', '').replace(')', ''));
+            } else if (type.includes('Sortie')) {
+                editExitGroup(reference, date, type.replace('Sortie (', '').replace(')', ''));
+            }
+        }
+        
+        // Fonction pour supprimer un groupe de mouvements
+        async function deleteMovementGroup(reference, date, type) {
+            if (type.includes('Entrée')) {
+                deleteEntryGroup(reference, date, type.replace('Entrée (', '').replace(')', ''));
+            } else if (type.includes('Sortie')) {
+                deleteExitGroup(reference, date, type.replace('Sortie (', '').replace(')', ''));
+            }
+        }
+        
+        // Fonction pour éditer un groupe d'entrées
+        function editEntryGroup(reference, date, type) {
+            const groupEntries = stockEntriesData.filter(entry => 
+                (entry.reference || 'Sans référence') === reference && 
+                entry.date === date && 
+                (entry.type || 'Autre') === type
+            );
+            
+            if (groupEntries.length === 0) {
+                showAlert('Aucune entrée trouvée pour ce groupe', 'warning');
+                return;
+            }
+            
+            // Si une seule entrée, éditer directement
+            if (groupEntries.length === 1) {
+                editStockEntry(groupEntries[0].id);
+                return;
+            }
+            
+            // Sinon, afficher un modal avec toutes les entrées
+            const modal = document.createElement('div');
+            modal.className = 'product-modal';
+            modal.innerHTML = `
+                <div class="product-modal-content" style="max-width: 900px;">
+                    <h3 style="margin-bottom: 20px; color: #28a745;">✏️ Édition Groupe Entrées: ${reference}</h3>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <strong>Type:</strong> ${type}<br>
+                        <strong>Date:</strong> ${date}<br>
+                        <strong>Nombre d'entrées:</strong> ${groupEntries.length}
+                    </div>
+                    
+                    <div style="overflow-x: auto; margin-bottom: 20px;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Quantité</th>
+                                    <th>Unité</th>
+                                    <th>Coût Unit.</th>
+                                    <th>Coût Total</th>
+                                    <th>Fournisseur</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${groupEntries.map(entry => `
+                                    <tr>
+                                        <td>${entry.product}</td>
+                                        <td style="color: #28a745; font-weight: 600;">${(parseFloat(entry.quantity) || 0).toLocaleString()}</td>
+                                        <td>${entry.unit || 'Cartons'}</td>
+                                        <td>${(parseFloat(entry.unitCost) || 0).toLocaleString()} CFA</td>
+                                        <td style="color: #28a745; font-weight: 600;">${(parseFloat(entry.totalCost) || 0).toLocaleString()} CFA</td>
+                                        <td>${entry.supplier || entry.fournisseur || 'Non spécifié'}</td>
+                                        <td>
+                                            <button class="btn btn-warning" onclick="editStockEntry('${entry.id}'); closeEntryGroupModal();" style="margin-right: 5px;">✏️ Modifier</button>
+                                            <button class="btn btn-danger" onclick="deleteStockEntry('${entry.id}'); updateEntryGroupModal('${reference}', '${date}', '${type}');">🗑️ Supprimer</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: #28a745; color: white; font-weight: 600;">
+                                    <td><strong>TOTAL GROUPE</strong></td>
+                                    <td><strong>${groupEntries.reduce((sum, entry) => sum + (parseFloat(entry.quantity) || 0), 0).toLocaleString()}</strong></td>
+                                    <td colspan="2"></td>
+                                    <td><strong>${groupEntries.reduce((sum, entry) => sum + (parseFloat(entry.totalCost) || 0), 0).toLocaleString()} CFA</strong></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="closeEntryGroupModal()">✖️ Fermer</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'flex';
+            
+            // Fermeture en cliquant à l'extérieur
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeEntryGroupModal();
+                }
+            });
+        }
+        
+        // Fonction pour fermer le modal de groupe d'entrées
+        function closeEntryGroupModal() {
+            const modal = document.querySelector('.product-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        // Fonction pour mettre à jour le modal après suppression d'une entrée
+        function updateEntryGroupModal(reference, date, type) {
+            closeEntryGroupModal();
+            setTimeout(() => {
+                editEntryGroup(reference, date, type);
+            }, 100);
+        }
+        
+        // Fonction pour supprimer un groupe d'entrées complet
+        async function deleteEntryGroup(reference, date, type) {
+            const groupEntries = stockEntriesData.filter(entry => 
+                (entry.reference || 'Sans référence') === reference && 
+                entry.date === date && 
+                (entry.type || 'Autre') === type
+            );
+            
+            if (groupEntries.length === 0) {
+                showAlert('Aucune entrée trouvée pour ce groupe', 'warning');
+                return;
+            }
+            
+            const confirmMessage = `Êtes-vous sûr de vouloir supprimer ce groupe d'entrées ?\n\nGroupe: ${reference}\nType: ${type}\nDate: ${date}\nNombre d'entrées: ${groupEntries.length}\nTotal: ${formatCurrency(groupEntries.reduce((sum, e) => sum + (parseFloat(e.totalCost) || 0), 0))}`;
+            
+            if (confirm(confirmMessage)) {
+                try {
+                    // Supprimer toutes les entrées du groupe
+                    for (const entry of groupEntries) {
+                        await deleteStockEntry(entry.id);
+                    }
+                    
+                    showAlert(`Groupe d'entrées supprimé avec succès`, 'success');
+                    updateAllMovementsTable();
+                    updateEntriesMovementsTable();
+                } catch (error) {
+                    console.error('Erreur lors de la suppression du groupe:', error);
+                    showAlert('Erreur lors de la suppression du groupe', 'error');
+                }
+            }
+        }
+        
+        // Fonction pour éditer un groupe de sorties
+        function editExitGroup(reference, date, type) {
+            // Combiner ventes et autres sorties
+            const allExits = [];
+            
+            // Ajouter les ventes correspondantes
+            salesData.forEach(sale => {
+                if ((sale.invoice || `Vente #${sale.id}`) === reference && 
+                    sale.date === date && 
+                    type === 'Vente') {
+                    allExits.push({
+                        ...sale,
+                        source: 'sales',
+                        type: 'Vente'
+                    });
+                }
+            });
+            
+            // Ajouter les autres sorties correspondantes
+            stockExitsData.forEach(exit => {
+                if ((exit.reference || `Sortie #${exit.id}`) === reference && 
+                    exit.date === date && 
+                    (exit.type || 'Autre') === type) {
+                    allExits.push({
+                        ...exit,
+                        source: 'exits',
+                        type: exit.type
+                    });
+                }
+            });
+            
+            if (allExits.length === 0) {
+                showAlert('Aucune sortie trouvée pour ce groupe', 'warning');
+                return;
+            }
+            
+            // Si une seule sortie non-vente, éditer directement
+            if (allExits.length === 1 && allExits[0].source === 'exits') {
+                editStockExit(allExits[0].id, 'exits');
+                return;
+            }
+            
+            // Sinon, afficher un modal avec toutes les sorties
+            const modal = document.createElement('div');
+            modal.className = 'product-modal';
+            modal.innerHTML = `
+                <div class="product-modal-content" style="max-width: 900px;">
+                    <h3 style="margin-bottom: 20px; color: #dc3545;">✏️ Édition Groupe Sorties: ${reference}</h3>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <strong>Type:</strong> ${type}<br>
+                        <strong>Date:</strong> ${date}<br>
+                        <strong>Nombre de sorties:</strong> ${allExits.length}
+                    </div>
+                    
+                    <div style="overflow-x: auto; margin-bottom: 20px;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Quantité</th>
+                                    <th>Unité</th>
+                                    <th>Coût Unit.</th>
+                                    <th>Coût Total</th>
+                                    <th>Destination</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${allExits.map(exit => `
+                                    <tr>
+                                        <td>${exit.product || exit.product}</td>
+                                        <td style="color: #dc3545; font-weight: 600;">${(parseFloat(exit.quantity) || 0).toLocaleString()}</td>
+                                        <td>${exit.unit || 'Cartons'}</td>
+                                        <td>${(parseFloat(exit.unitCost || exit.unitPrice) || 0).toLocaleString()} CFA</td>
+                                        <td style="color: #dc3545; font-weight: 600;">${(parseFloat(exit.totalCost || exit.valeur) || 0).toLocaleString()} CFA</td>
+                                        <td>${exit.destination || exit.client || 'Non spécifié'}</td>
+                                        <td>
+                                            ${exit.source === 'sales' ? 
+                                                '<span style="color: #666; font-size: 0.85rem; font-style: italic;">Géré depuis Ventes</span>' 
+                                                : 
+                                                `<button class="btn btn-warning" onclick="editStockExit('${exit.id}', 'exits'); closeExitGroupModal();" style="margin-right: 5px;">✏️ Modifier</button>
+                                                 <button class="btn btn-danger" onclick="deleteStockExit('${exit.id}', 'exits'); updateExitGroupModal('${reference}', '${date}', '${type}');">🗑️ Supprimer</button>`
+                                            }
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: #dc3545; color: white; font-weight: 600;">
+                                    <td><strong>TOTAL GROUPE</strong></td>
+                                    <td><strong>${allExits.reduce((sum, exit) => sum + (parseFloat(exit.quantity) || 0), 0).toLocaleString()}</strong></td>
+                                    <td colspan="2"></td>
+                                    <td><strong>${allExits.reduce((sum, exit) => sum + (parseFloat(exit.totalCost || exit.valeur) || 0), 0).toLocaleString()} CFA</strong></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="closeExitGroupModal()">✖️ Fermer</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'flex';
+            
+            // Fermeture en cliquant à l'extérieur
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeExitGroupModal();
+                }
+            });
+        }
+        
+        // Fonction pour fermer le modal de groupe de sorties
+        function closeExitGroupModal() {
+            const modal = document.querySelector('.product-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        // Fonction pour mettre à jour le modal après suppression d'une sortie
+        function updateExitGroupModal(reference, date, type) {
+            closeExitGroupModal();
+            setTimeout(() => {
+                editExitGroup(reference, date, type);
+            }, 100);
+        }
+        
+        // Fonction pour supprimer un groupe de sorties complet
+        async function deleteExitGroup(reference, date, type) {
+            // Combiner ventes et autres sorties
+            const allExits = [];
+            
+            // Ajouter les ventes correspondantes
+            salesData.forEach(sale => {
+                if ((sale.invoice || `Vente #${sale.id}`) === reference && 
+                    sale.date === date && 
+                    type === 'Vente') {
+                    allExits.push({
+                        ...sale,
+                        source: 'sales'
+                    });
+                }
+            });
+            
+            // Ajouter les autres sorties correspondantes
+            stockExitsData.forEach(exit => {
+                if ((exit.reference || `Sortie #${exit.id}`) === reference && 
+                    exit.date === date && 
+                    (exit.type || 'Autre') === type) {
+                    allExits.push({
+                        ...exit,
+                        source: 'exits'
+                    });
+                }
+            });
+            
+            if (allExits.length === 0) {
+                showAlert('Aucune sortie trouvée pour ce groupe', 'warning');
+                return;
+            }
+            
+            const confirmMessage = `Êtes-vous sûr de vouloir supprimer ce groupe de sorties ?\n\nGroupe: ${reference}\nType: ${type}\nDate: ${date}\nNombre de sorties: ${allExits.length}\nTotal: ${formatCurrency(allExits.reduce((sum, e) => sum + (parseFloat(e.totalCost || e.valeur) || 0), 0))}`;
+            
+            if (confirm(confirmMessage)) {
+                try {
+                    // Supprimer toutes les sorties du groupe
+                    for (const exit of allExits) {
+                        if (exit.source === 'sales') {
+                            await deleteSale(exit.id);
+                        } else {
+                            await deleteStockExit(exit.id, 'exits');
+                        }
+                    }
+                    
+                    showAlert(`Groupe de sorties supprimé avec succès`, 'success');
+                    updateAllMovementsTable();
+                    updateExitsMovementsTable();
+                } catch (error) {
+                    console.error('Erreur lors de la suppression du groupe:', error);
+                    showAlert('Erreur lors de la suppression du groupe', 'error');
+                }
+            }
         }
 
     </script>
