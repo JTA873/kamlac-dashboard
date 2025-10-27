@@ -22477,13 +22477,10 @@ Date [ESPACES] Client [ESPACES] Montant
                 return;
             }
             
-            // Si une seule ligne, éditer directement
-            if (invoiceSales.length === 1) {
-                editSale(invoiceSales[0].id);
-                return;
-            }
+            // Toujours afficher le modal avec la liste des articles (même pour 1 seul)
+            // Cela assure une interface cohérente et évite les problèmes avec editSale()
             
-            // Sinon, afficher un modal avec toutes les lignes
+            // Afficher un modal avec toutes les lignes
             const modal = document.createElement('div');
             modal.className = 'product-modal';
             modal.innerHTML = `
