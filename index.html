@@ -1691,6 +1691,16 @@
             border-bottom: none;
         }
 
+        /* Styles pour les champs auto-remplis */
+        .auto-filled {
+            background: linear-gradient(90deg, #e8f5e9, #f1f8e9) !important;
+            border-left: 3px solid #4caf50 !important;
+        }
+        
+        .auto-filled::placeholder {
+            color: #66bb6a !important;
+        }
+
         /* Styles pour le chat IA */
         .chat-container {
             display: flex;
@@ -9212,25 +9222,38 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 return;
             }
             
-            // Convertir les stocks en tableau et trier par quantité décroissante (uniquement stocks positifs)
+            // Convertir les stocks en tableau avec valeurs et trier par valeur décroissante
             const stocksArray = Object.keys(currentStockLevels)
-                .map(product => ({
-                    product: product,
-                    quantity: Math.max(0, currentStockLevels[product].quantity || 0), // Seulement stocks positifs
-                    unit: currentStockLevels[product].unit || 'Unités'
-                }))
-                .filter(item => item.quantity > 0) // Exclure les stocks nuls ou négatifs
-                .sort((a, b) => b.quantity - a.quantity);
+                .map(product => {
+                    const stockInfo = currentStockLevels[product];
+                    const quantity = Math.max(0, stockInfo.quantity || 0);
+                    
+                    // Trouver le prix du produit dans productsData
+                    const productInfo = productsData.find(p => p.reference === product);
+                    const unitPrice = productInfo ? (productInfo.price || 0) : 0;
+                    const totalValue = quantity * unitPrice;
+                    
+                    return {
+                        product: product,
+                        quantity: quantity,
+                        unitPrice: unitPrice,
+                        totalValue: totalValue,
+                        unit: stockInfo.unit || 'Unités',
+                        format: productInfo ? (productInfo.format || '') : ''
+                    };
+                })
+                .filter(item => item.quantity > 0 && item.totalValue > 0) // Exclure les stocks sans valeur
+                .sort((a, b) => b.totalValue - a.totalValue); // Trier par valeur décroissante
             
             if (stocksArray.length === 0) {
-                // Aucun stock positif
+                // Aucun stock avec valeur
                 window.stockLevelsChartInstance = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Aucun stock positif'],
+                        labels: ['Aucun stock valorisé'],
                         datasets: [{
                             data: [1],
-                            backgroundColor: ['#ffc107'],
+                            backgroundColor: ['#dc3545'],
                             borderWidth: 0
                         }]
                     },
@@ -9240,12 +9263,17 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         plugins: {
                             title: {
                                 display: true,
-                                text: 'Analyse Pareto des Stocks (20/80)',
-                                font: { size: 16, weight: 'bold' }
+                                text: 'Analyse Pareto des Stocks - Valeurs (20/80)',
+                                font: { size: 18, weight: 'bold' },
+                                color: '#333'
                             },
                             legend: {
                                 display: true,
-                                position: 'right'
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    font: { size: 12 }
+                                }
                             }
                         }
                     }
@@ -9253,21 +9281,21 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 return;
             }
             
-            // Calculer le volume total
-            const totalVolume = stocksArray.reduce((sum, item) => sum + item.quantity, 0);
+            // Calculer la valeur totale du stock
+            const totalValue = stocksArray.reduce((sum, item) => sum + item.totalValue, 0);
             
-            // Appliquer le principe de Pareto : trouver les 20% de produits représentant 80% du volume
-            let cumulativeVolume = 0;
-            let targetVolume = totalVolume * 0.8; // 80% du volume total
+            // Appliquer le principe de Pareto : trouver les 20% de produits représentant 80% de la valeur
+            let cumulativeValue = 0;
+            let targetValue = totalValue * 0.8; // 80% de la valeur totale
             let paretoProducts = [];
             let otherProducts = [];
             
             stocksArray.forEach((item, index) => {
-                cumulativeVolume += item.quantity;
+                cumulativeValue += item.totalValue;
                 
-                // Si on n'a pas encore atteint 80% du volume OU si on est dans les 20% premiers produits
+                // Si on n'a pas encore atteint 80% de la valeur OU si on est dans les 20% premiers produits
                 const percentage = (index + 1) / stocksArray.length;
-                if (cumulativeVolume <= targetVolume || percentage <= 0.2) {
+                if (cumulativeValue <= targetValue || percentage <= 0.2) {
                     paretoProducts.push(item);
                 } else {
                     otherProducts.push(item);
@@ -9286,48 +9314,52 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             const backgroundColors = [];
             const borderColors = [];
             
-            // Couleurs pour les produits Pareto (tons de bleu/vert)
+            // Couleurs dégradées pour les produits Pareto (du plus important au moins important)
             const paretoColors = [
-                '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
-                '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+                '#1e3a8a', '#1e40af', '#3b82f6', '#60a5fa', '#93c5fd',
+                '#dc2626', '#ef4444', '#f87171', '#fca5a5', '#fecaca',
+                '#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0'
             ];
             
-            // Ajouter les produits Pareto individuellement
+            // Ajouter les produits Pareto individuellement avec informations enrichies
             paretoProducts.forEach((item, index) => {
-                const shortName = item.product.length > 25 ? item.product.substring(0, 25) + '...' : item.product;
-                const percentage = ((item.quantity / totalVolume) * 100).toFixed(1);
+                const shortName = item.product.length > 20 ? item.product.substring(0, 20) + '...' : item.product;
+                const valuePercentage = ((item.totalValue / totalValue) * 100).toFixed(1);
+                const formattedValue = formatCurrency(item.totalValue);
                 
-                labels.push(`${shortName} (${percentage}%)`);
-                data.push(item.quantity);
+                labels.push(`${shortName} - ${formattedValue} (${valuePercentage}%)`);
+                data.push(item.totalValue);
                 backgroundColors.push(paretoColors[index % paretoColors.length]);
                 borderColors.push('#ffffff');
             });
             
             // Ajouter les autres produits comme un groupe
             if (otherProducts.length > 0) {
-                const otherVolume = otherProducts.reduce((sum, item) => sum + item.quantity, 0);
-                const otherPercentage = ((otherVolume / totalVolume) * 100).toFixed(1);
+                const otherValue = otherProducts.reduce((sum, item) => sum + item.totalValue, 0);
+                const otherPercentage = ((otherValue / totalValue) * 100).toFixed(1);
+                const formattedOtherValue = formatCurrency(otherValue);
                 
-                labels.push(`Autres produits (${otherProducts.length}) - ${otherPercentage}%`);
-                data.push(otherVolume);
-                backgroundColors.push('#95a5a6'); // Gris pour les autres
+                labels.push(`Autres produits (${otherProducts.length}) - ${formattedOtherValue} (${otherPercentage}%)`);
+                data.push(otherValue);
+                backgroundColors.push('#6b7280'); // Gris moderne pour les autres
                 borderColors.push('#ffffff');
             }
             
             // Calculer les statistiques Pareto
-            const paretoVolume = paretoProducts.reduce((sum, item) => sum + item.quantity, 0);
-            const paretoVolumePercentage = ((paretoVolume / totalVolume) * 100).toFixed(1);
+            const paretoValue = paretoProducts.reduce((sum, item) => sum + item.totalValue, 0);
+            const paretoValuePercentage = ((paretoValue / totalValue) * 100).toFixed(1);
             const paretoProductsPercentage = ((paretoProducts.length / stocksArray.length) * 100).toFixed(1);
             
-            console.log('🔍 Données pour le graphique:', {
+            console.log('🔍 Données pour le graphique Pareto:', {
                 labels: labels,
                 data: data,
                 paretoProducts: paretoProducts.length,
                 otherProducts: otherProducts.length,
-                totalVolume: totalVolume
+                totalValue: formatCurrency(totalValue),
+                paretoValue: formatCurrency(paretoValue)
             });
             
-            // Créer le graphique camembert avec informations enrichies
+            // Créer le graphique donut moderne avec informations enrichies
             window.stockLevelsChartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -9336,115 +9368,168 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         data: data,
                         backgroundColor: backgroundColors,
                         borderColor: borderColors,
-                        borderWidth: 2,
-                        hoverBorderWidth: 3
+                        borderWidth: 3,
+                        hoverBorderWidth: 4,
+                        hoverBorderColor: '#ffffff',
+                        hoverBackgroundColor: backgroundColors.map(color => {
+                            // Rendre les couleurs plus vives au survol
+                            return color.replace(')', ', 0.9)').replace('rgb', 'rgba');
+                        })
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    cutout: '45%', // Taille du trou central
                     layout: {
                         padding: {
-                            left: 20,
-                            right: 20,
-                            top: 10,
-                            bottom: 20
+                            left: 30,
+                            right: 30,
+                            top: 20,
+                            bottom: 30
                         }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'nearest'
                     },
                     plugins: {
                         title: {
                             display: true,
                             text: [
-                                'Analyse Pareto des Stocks (Principe 20/80)',
-                                `${paretoProducts.length} produits (${paretoProductsPercentage}%) = ${paretoVolumePercentage}% du volume`
+                                '📊 Analyse Pareto des Stocks - Valeurs (Principe 20/80)',
+                                `${paretoProducts.length} produits (${paretoProductsPercentage}%) représentent ${paretoValuePercentage}% de la valeur totale`
                             ],
-                            font: { size: 14, weight: 'bold' },
-                            padding: { bottom: 20 },
-                            color: '#2c3e50'
+                            font: { 
+                                size: 16, 
+                                weight: 'bold',
+                                family: 'system-ui, -apple-system, sans-serif'
+                            },
+                            padding: { 
+                                top: 10,
+                                bottom: 25 
+                            },
+                            color: '#1f2937'
                         },
                         legend: {
                             display: true,
                             position: 'bottom',
+                            align: 'center',
                             labels: {
-                                boxWidth: 15,
-                                padding: 15,
-                                font: { size: 12 },
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                padding: 20,
+                                font: { 
+                                    size: 11,
+                                    family: 'system-ui, -apple-system, sans-serif'
+                                },
                                 usePointStyle: true,
-                                pointStyle: 'circle',
-                                filter: function(legendItem, chartData) {
-                                    // S'assurer que tous les éléments sont affichés
-                                    return true;
+                                pointStyle: 'rectRounded',
+                                textAlign: 'left',
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        return data.labels.map((label, i) => {
+                                            const dataset = data.datasets[0];
+                                            const value = dataset.data[i];
+                                            const percentage = ((value / totalValue) * 100).toFixed(1);
+                                            
+                                            // Simplifier le label pour la légende
+                                            let cleanLabel = label.split(' - ')[0]; // Prendre seulement le nom
+                                            if (cleanLabel.length > 30) {
+                                                cleanLabel = cleanLabel.substring(0, 30) + '...';
+                                            }
+                                            
+                                            return {
+                                                text: `${cleanLabel}: ${formatCurrency(value)} (${percentage}%)`,
+                                                fillStyle: dataset.backgroundColor[i],
+                                                strokeStyle: dataset.backgroundColor[i],
+                                                lineWidth: 0,
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
                                 }
                             }
                         },
                         tooltip: {
-                            backgroundColor: 'rgba(0,0,0,0.8)',
-                            titleColor: '#fff',
-                            bodyColor: '#fff',
-                            borderColor: '#ccc',
+                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                            titleColor: '#f9fafb',
+                            bodyColor: '#f3f4f6',
+                            borderColor: '#374151',
                             borderWidth: 1,
+                            cornerRadius: 8,
+                            displayColors: true,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            padding: 12,
                             callbacks: {
                                 title: function(context) {
                                     const label = context[0].label;
-                                    return label.split(' (')[0]; // Nom du produit sans pourcentage
+                                    // Extraire le nom du produit
+                                    return label.split(' - ')[0];
                                 },
                                 label: function(context) {
                                     const value = context.parsed;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    const index = context.dataIndex;
-                                    const isParetoProduct = index < paretoProducts.length;
+                                    const percentage = ((value / totalValue) * 100).toFixed(1);
+                                    const isPareto = context.dataIndex < paretoProducts.length;
                                     
-                                    return [
-                                        `Quantité en stock: ${value.toLocaleString()}`,
-                                        `Part du volume total: ${percentage}%`,
-                                        isParetoProduct ? '🎯 Produit clé (Pareto 20/80)' : '📦 Autre produit'
+                                    const lines = [
+                                        `💰 Valeur: ${formatCurrency(value)}`,
+                                        `📊 Part: ${percentage}% du total`,
                                     ];
-                                },
-                                footer: function(context) {
-                                    const index = context[0].dataIndex;
-                                    if (index < paretoProducts.length) {
-                                        return `Rang: ${index + 1}/${paretoProducts.length} (Top produits)`;
+                                    
+                                    if (isPareto) {
+                                        const product = paretoProducts[context.dataIndex];
+                                        lines.push(`📦 Quantité: ${product.quantity} ${product.unit}`);
+                                        lines.push(`💵 Prix unitaire: ${formatCurrency(product.unitPrice)}`);
+                                        if (product.format) {
+                                            lines.push(`📏 Format: ${product.format}`);
+                                        }
+                                        lines.push('⭐ Produit prioritaire (Pareto)');
                                     } else {
-                                        return `Groupe: ${otherProducts.length} autres produits`;
+                                        lines.push(`📋 ${otherProducts.length} produits groupés`);
+                                        lines.push('📈 Produits secondaires');
                                     }
+                                    
+                                    return lines;
                                 }
                             }
                         }
                     },
-                    elements: {
-                        arc: {
-                            borderWidth: 2
-                        }
-                    },
-                    cutout: '50%', // Taille du trou central plus grande
                     animation: {
                         animateRotate: true,
-                        animateScale: true
-                    },
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const index = elements[0].index;
-                            const productName = pareto20.products[index];
-                            console.log('Clic sur le graphique Pareto - Produit:', productName);
-                            navigateToProductMovements(productName);
-                        }
+                        animateScale: true,
+                        duration: 1500,
+                        easing: 'easeOutQuart'
                     }
                 }
             });
             
-            // Ajouter des informations détaillées dans le centre du donut
+            // Ajouter le texte central avec les statistiques principales
             const centerTextElement = document.getElementById('stockChartCenterText');
             if (centerTextElement) {
                 centerTextElement.innerHTML = `
-                    <div style="text-align: center; font-size: 12px; color: #2c3e50; line-height: 1.3; cursor: pointer; padding: 10px; border-radius: 50%; transition: background-color 0.2s;" 
-                         onclick="navigateToAllMovements()" 
-                         onmouseover="this.style.backgroundColor='#f8f9fa'" 
-                         onmouseout="this.style.backgroundColor='transparent'"
-                         title="Cliquer pour voir tous les mouvements">
-                        <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">Volume Total</div>
-                        <div style="font-size: 16px; font-weight: bold; color: #3498db;">${totalVolume.toLocaleString()}</div>
-                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 5px;">${stocksArray.length} produits</div>
+                    <div style="text-align: center; font-family: system-ui, -apple-system, sans-serif;">
+                        <div style="font-size: 24px; font-weight: bold; color: #1f2937; margin-bottom: 5px;">
+                            ${formatCurrency(totalValue)}
+                        </div>
+                        <div style="font-size: 13px; color: #6b7280; font-weight: 500;">
+                            Valeur totale du stock
+                        </div>
+                        <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">
+                            ${stocksArray.length} produits valorisés
+                        </div>
+                        <div style="font-size: 10px; color: #059669; margin-top: 5px; font-weight: 600;">
+                            Top ${paretoProducts.length}: ${paretoValuePercentage}%
+                        </div>
                     </div>
                 `;
             }
@@ -9452,108 +9537,76 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Ajouter des statistiques détaillées sous le graphique
             const statsElement = document.getElementById('stockChartStats');
             if (statsElement) {
-                const otherVolume = otherProducts.reduce((sum, item) => sum + item.quantity, 0);
+                const otherValue = otherProducts.reduce((sum, item) => sum + item.totalValue, 0);
                 const topProduct = paretoProducts[0];
-                const topProductPercentage = topProduct ? ((topProduct.quantity / totalVolume) * 100).toFixed(1) : '0';
-                
-                // Créer la légende personnalisée
-                let legendHtml = '';
-                if (paretoProducts.length > 0) {
-                    legendHtml += '<div style="margin-bottom: 15px;"><h4 style="color: #2980b9; margin-bottom: 10px;">⭐ Produits Pareto (Top contributeurs):</h4>';
-                    paretoProducts.slice(0, 5).forEach((product, index) => {
-                        const percentage = ((product.quantity / totalVolume) * 100).toFixed(1);
-                        const color = paretoColors[index % paretoColors.length];
-                        legendHtml += `
-                            <div style="display: flex; align-items: center; margin-bottom: 5px; font-size: 12px; cursor: pointer; padding: 3px; border-radius: 3px; transition: background-color 0.2s;" 
-                                 onclick="navigateToProductMovements('${product.product.replace(/'/g, "\\'")}')" 
-                                 onmouseover="this.style.backgroundColor='#f8f9fa'" 
-                                 onmouseout="this.style.backgroundColor='transparent'"
-                                 title="Cliquer pour voir les mouvements de ${product.product}">
-                                <div style="width: 15px; height: 15px; background: ${color}; border-radius: 50%; margin-right: 10px;"></div>
-                                <span style="flex: 1;">${product.product.length > 40 ? product.product.substring(0, 40) + '...' : product.product}</span>
-                                <span style="font-weight: bold; color: ${color};">${percentage}%</span>
-                            </div>
-                        `;
-                    });
-                    if (paretoProducts.length > 5) {
-                        legendHtml += `<div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">... et ${paretoProducts.length - 5} autres produits Pareto</div>`;
-                    }
-                    legendHtml += '</div>';
-                }
-                
-                if (otherProducts.length > 0) {
-                    const otherPercentage = ((otherVolume / totalVolume) * 100).toFixed(1);
-                    legendHtml += `
-                        <div style="margin-bottom: 15px;">
-                            <h4 style="color: #95a5a6; margin-bottom: 10px;">📦 Autres produits:</h4>
-                            <div style="display: flex; align-items: center; margin-bottom: 5px; font-size: 12px;">
-                                <div style="width: 15px; height: 15px; background: #95a5a6; border-radius: 50%; margin-right: 10px;"></div>
-                                <span style="flex: 1;">${otherProducts.length} autres produits</span>
-                                <span style="font-weight: bold; color: #95a5a6;">${otherPercentage}%</span>
-                            </div>
-                        </div>
-                    `;
-                }
                 
                 statsElement.innerHTML = `
-                    <!-- Légende personnalisée -->
-                    <div style="
-                        margin-bottom: 20px; 
-                        padding: 15px; 
-                        background: #f8f9fa; 
-                        border-radius: 10px;
-                        border-left: 4px solid #3498db;
-                    ">
-                        <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 16px;">📊 Légende du Graphique</h3>
-                        ${legendHtml}
-                    </div>
-                    
-                    <!-- Statistiques Pareto -->
-                    <div class="stock-pareto-stats" style="
-                        display: grid; 
-                        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-                        gap: 15px; 
-                        margin-bottom: 20px; 
-                        padding: 15px; 
-                        background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
-                        border-radius: 10px;
-                        border-left: 4px solid #3498db;
-                    ">
-                        <div style="text-align: center;">
-                            <div style="font-size: 18px; font-weight: bold; color: #2980b9;">${paretoProducts.length}</div>
-                            <div style="font-size: 12px; color: #7f8c8d;">Produits Pareto</div>
-                            <div style="font-size: 11px; color: #95a5a6;">(${paretoProductsPercentage}% des produits)</div>
+                    <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid #e2e8f0;">
+                        <h4 style="color: #1e40af; margin-bottom: 15px; font-size: 16px; font-weight: 600;">
+                            📊 Résumé de l'analyse Pareto
+                        </h4>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <div style="color: #059669; font-weight: 600; font-size: 14px;">💚 Produits Pareto (A)</div>
+                                <div style="color: #111827; font-size: 20px; font-weight: bold; margin: 8px 0;">
+                                    ${paretoProducts.length} produits
+                                </div>
+                                <div style="color: #6b7280; font-size: 12px;">
+                                    ${paretoProductsPercentage}% des références → ${paretoValuePercentage}% de la valeur
+                                </div>
+                                <div style="color: #059669; font-size: 13px; font-weight: 600; margin-top: 5px;">
+                                    ${formatCurrency(paretoValue)}
+                                </div>
+                            </div>
+                            
+                            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <div style="color: #f59e0b; font-weight: 600; font-size: 14px;">📦 Autres produits (B+C)</div>
+                                <div style="color: #111827; font-size: 20px; font-weight: bold; margin: 8px 0;">
+                                    ${otherProducts.length} produits
+                                </div>
+                                <div style="color: #6b7280; font-size: 12px;">
+                                    ${(100 - parseFloat(paretoProductsPercentage)).toFixed(1)}% des références → ${(100 - parseFloat(paretoValuePercentage)).toFixed(1)}% de la valeur
+                                </div>
+                                <div style="color: #f59e0b; font-size: 13px; font-weight: 600; margin-top: 5px;">
+                                    ${formatCurrency(otherValue)}
+                                </div>
+                            </div>
+                            
+                            ${topProduct ? `
+                            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <div style="color: #dc2626; font-weight: 600; font-size: 14px;">🏆 Produit N°1</div>
+                                <div style="color: #111827; font-size: 16px; font-weight: bold; margin: 8px 0;">
+                                    ${topProduct.product.length > 25 ? topProduct.product.substring(0, 25) + '...' : topProduct.product}
+                                </div>
+                                <div style="color: #6b7280; font-size: 12px;">
+                                    ${((topProduct.totalValue / totalValue) * 100).toFixed(1)}% de la valeur totale
+                                </div>
+                                <div style="color: #dc2626; font-size: 13px; font-weight: 600; margin-top: 5px;">
+                                    ${formatCurrency(topProduct.totalValue)}
+                                </div>
+                            </div>
+                            ` : ''}
                         </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 18px; font-weight: bold; color: #27ae60;">${paretoVolumePercentage}%</div>
-                            <div style="font-size: 12px; color: #7f8c8d;">Volume représenté</div>
-                            <div style="font-size: 11px; color: #95a5a6;">${paretoVolume.toLocaleString()} unités</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 18px; font-weight: bold; color: #e74c3c;">${topProductPercentage}%</div>
-                            <div style="font-size: 12px; color: #7f8c8d;">Top produit</div>
-                            <div style="font-size: 11px; color: #95a5a6;">${topProduct ? topProduct.product.substring(0, 20) + '...' : 'N/A'}</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 18px; font-weight: bold; color: #9b59b6;">${otherProducts.length}</div>
-                            <div style="font-size: 12px; color: #7f8c8d;">Autres produits</div>
-                            <div style="font-size: 11px; color: #95a5a6;">${((otherVolume / totalVolume) * 100).toFixed(1)}% du volume</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Explication de l'analyse Pareto -->
-                    <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 3px solid #ffc107;">
-                        <div style="font-size: 13px; font-weight: bold; color: #856404; margin-bottom: 5px;">💡 Analyse Pareto</div>
-                        <div style="font-size: 12px; color: #856404; line-height: 1.4;">
-                            <strong>${paretoProducts.length} produits</strong> (${paretoProductsPercentage}% de votre catalogue) 
-                            représentent <strong>${paretoVolumePercentage}% de votre volume de stock</strong>. 
-                            Ces produits sont vos articles clés à surveiller en priorité pour optimiser votre gestion de stock.
+                        
+                        <div style="background: #fef3c7; padding: 12px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                            <div style="font-size: 13px; font-weight: bold; color: #856404; margin-bottom: 5px;">💡 Analyse Pareto - Principe 20/80</div>
+                            <div style="font-size: 12px; color: #92400e; line-height: 1.4;">
+                                <strong>${paretoProducts.length} produits</strong> (${paretoProductsPercentage}% de votre catalogue) génèrent 
+                                <strong>${paretoValuePercentage}% de la valeur</strong> de votre stock. 
+                                Concentrez vos efforts de gestion sur ces produits prioritaires.
+                            </div>
                         </div>
                     </div>
                 `;
             }
-            
-            console.log(`📊 Graphique Pareto enrichi créé: ${paretoProducts.length} produits (${paretoProductsPercentage}%) représentent ${paretoVolumePercentage}% du volume`);
+        }
+        
+        // Fonction pour mettre à jour les graphiques des stocks
+        function updateStockCharts() {
+            updateStockLevelsChart();
+            updateStockMovementsChart();
+            updateStockKPICards();
         }
 
         // Fonction pour mettre à jour les tableaux de stocks positifs et négatifs
@@ -15095,12 +15148,36 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     if (line) {
                         line.productId = product.id;
                         line.product = product.reference; // Utiliser toujours reference
+                        
+                        // Autocomplétion du prix si pas modifié manuellement
                         if (!line.priceManuallyEdited) {
                             line.unitPrice = product.price;
                         }
+                        
+                        // Autocomplétion du format si pas modifié manuellement
+                        if (!line.formatManuallyEdited) {
+                            line.format = product.format || '';
+                        }
+                        
                         line.totalPrice = line.quantity * line.unitPrice;
                         renderSalesLines();
                         updateInvoiceTotals();
+                        
+                        // Ajouter l'effet visuel d'auto-complétion après le rendu
+                        setTimeout(() => {
+                            const priceInput = document.querySelector(`input[data-field="unitPrice"][data-line-id="${lineId}"]`);
+                            const formatInput = document.querySelector(`input[data-field="format"][data-line-id="${lineId}"]`);
+                            
+                            if (priceInput && !line.priceManuallyEdited) {
+                                priceInput.classList.add('auto-filled');
+                                setTimeout(() => priceInput.classList.remove('auto-filled'), 3000);
+                            }
+                            
+                            if (formatInput && !line.formatManuallyEdited) {
+                                formatInput.classList.add('auto-filled');
+                                setTimeout(() => formatInput.classList.remove('auto-filled'), 3000);
+                            }
+                        }, 100);
                     }
                 }
                 // Lignes d'entrée de stock
@@ -16464,15 +16541,358 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
 
         // Afficher détails client
         function showClientDetails(clientName) {
-            // Basculer vers l'onglet récap
-            showSection('recap');
-            document.querySelector('.nav-tab:nth-child(3)').classList.add('active');
+            // Collecter toutes les données du client
+            const clientSales = salesData.filter(sale => sale.client === clientName);
+            const clientPayments = paymentsData.filter(payment => payment.client === clientName);
             
-            // Filtrer par client dans récap
-            document.getElementById('recapClientFilter').value = clientName;
+            // Calculer les totaux
+            const totalSales = clientSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0);
+            const totalPayments = clientPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+            const balance = totalSales - totalPayments;
             
-            // Appliquer le filtre et mettre à jour l'affichage
-            applyRecapFilters();
+            // Grouper les ventes par facture
+            const salesGroups = {};
+            clientSales.forEach(sale => {
+                const groupKey = sale.invoice || `SANS_FACTURE_${sale.date}_${sale.id}`;
+                if (!salesGroups[groupKey]) {
+                    salesGroups[groupKey] = {
+                        invoice: sale.invoice || 'Sans facture',
+                        date: sale.date,
+                        items: [],
+                        total: 0
+                    };
+                }
+                salesGroups[groupKey].items.push(sale);
+                salesGroups[groupKey].total += sale.valeur || 0;
+            });
+            
+            // Grouper les encaissements par référence
+            const paymentsGroups = {};
+            clientPayments.forEach(payment => {
+                const groupKey = `${payment.reference || 'SANS_REF'}_${payment.date}`;
+                if (!paymentsGroups[groupKey]) {
+                    paymentsGroups[groupKey] = {
+                        reference: payment.reference || 'Sans référence',
+                        date: payment.date,
+                        method: payment.method,
+                        items: [],
+                        total: 0
+                    };
+                }
+                paymentsGroups[groupKey].items.push(payment);
+                paymentsGroups[groupKey].total += payment.amount || 0;
+            });
+            
+            // Trier par date (plus récent en premier)
+            const sortedSalesGroups = Object.values(salesGroups).sort((a, b) => new Date(b.date) - new Date(a.date));
+            const sortedPaymentsGroups = Object.values(paymentsGroups).sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            // Créer le modal
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); z-index: 10000; display: flex;
+                align-items: center; justify-content: center; overflow: auto;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 12px; max-width: 90vw; width: 1000px; max-height: 80vh; overflow: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #667eea; padding-bottom: 15px;">
+                        <h2 style="color: #667eea; margin: 0;">
+                            👤 Détails Client : ${clientName}
+                        </h2>
+                        <button onclick="closeClientDetailsModal()" 
+                                style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 18px;">
+                            ✕
+                        </button>
+                    </div>
+                    
+                    <!-- Résumé financier -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
+                        <div style="background: linear-gradient(135deg, #e3f2fd, #f8f9ff); padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #2196f3;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #1976d2; margin-bottom: 5px;">
+                                ${formatCurrency(totalSales)}
+                            </div>
+                            <div style="color: #666; font-size: 0.9rem;">Total Ventes</div>
+                            <div style="color: #999; font-size: 0.8rem; margin-top: 5px;">${clientSales.length} transaction${clientSales.length > 1 ? 's' : ''}</div>
+                        </div>
+                        
+                        <div style="background: linear-gradient(135deg, #e8f5e8, #f8fff8); padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #4caf50;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #388e3c; margin-bottom: 5px;">
+                                ${formatCurrency(totalPayments)}
+                            </div>
+                            <div style="color: #666; font-size: 0.9rem;">Total Encaissements</div>
+                            <div style="color: #999; font-size: 0.8rem; margin-top: 5px;">${clientPayments.length} transaction${clientPayments.length > 1 ? 's' : ''}</div>
+                        </div>
+                        
+                        <div style="background: ${balance > 0 ? 'linear-gradient(135deg, #fff3cd, #fffbf0)' : balance < 0 ? 'linear-gradient(135deg, #d4edda, #f0fff0)' : 'linear-gradient(135deg, #f8f9fa, #ffffff)'}; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid ${balance > 0 ? '#ffc107' : balance < 0 ? '#28a745' : '#6c757d'};">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: ${balance > 0 ? '#856404' : balance < 0 ? '#155724' : '#495057'}; margin-bottom: 5px;">
+                                ${formatCurrency(Math.abs(balance))}
+                            </div>
+                            <div style="color: #666; font-size: 0.9rem;">
+                                ${balance > 0 ? 'En-cours Client' : balance < 0 ? 'Crédit Client' : 'Soldé'}
+                            </div>
+                            <div style="color: #999; font-size: 0.8rem; margin-top: 5px;">
+                                ${balance > 0 ? '⚠️ À recevoir' : balance < 0 ? '💰 En crédit' : '✅ Équilibré'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Onglets -->
+                    <div style="display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 1px solid #ddd;">
+                        <button onclick="showClientModalTab('sales')" id="clientModalTabSales" 
+                                style="padding: 12px 20px; border: none; background: #667eea; color: white; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600;">
+                            📦 Ventes (${sortedSalesGroups.length})
+                        </button>
+                        <button onclick="showClientModalTab('payments')" id="clientModalTabPayments"
+                                style="padding: 12px 20px; border: none; background: #e9ecef; color: #666; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600;">
+                            💰 Encaissements (${sortedPaymentsGroups.length})
+                        </button>
+                        <button onclick="showClientModalTab('timeline')" id="clientModalTabTimeline"
+                                style="padding: 12px 20px; border: none; background: #e9ecef; color: #666; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600;">
+                            📅 Chronologie
+                        </button>
+                    </div>
+                    
+                    <!-- Contenu Ventes -->
+                    <div id="clientModalContentSales" style="display: block;">
+                        ${sortedSalesGroups.length === 0 ? 
+                            '<div style="text-align: center; padding: 40px; color: #666;"><h3>📦 Aucune vente</h3><p>Ce client n\'a pas encore d\'historique de ventes.</p></div>' :
+                            sortedSalesGroups.map(group => `
+                                <div style="border: 1px solid #e3f2fd; border-radius: 8px; margin-bottom: 15px; overflow: hidden;">
+                                    <div style="background: linear-gradient(135deg, #e3f2fd, #f8f9ff); padding: 15px; border-bottom: 1px solid #e0e0e0;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <strong style="color: #1976d2; font-size: 1.1rem;">📄 ${group.invoice}</strong>
+                                                <div style="color: #666; font-size: 0.9rem; margin-top: 5px;">
+                                                    📅 ${group.date} • ${group.items.length} article${group.items.length > 1 ? 's' : ''}
+                                                </div>
+                                            </div>
+                                            <div style="text-align: right;">
+                                                <div style="font-size: 1.3rem; font-weight: bold; color: #1976d2;">
+                                                    ${formatCurrency(group.total)}
+                                                </div>
+                                                <div style="font-size: 0.8rem; color: #666;">
+                                                    Qté: ${group.items.reduce((sum, item) => sum + (item.quantity || 0), 0)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="background: #f8f9ff;">
+                                        ${group.items.map(sale => `
+                                            <div style="padding: 12px 15px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+                                                <div style="flex: 1;">
+                                                    <div style="font-weight: 500; color: #333;">
+                                                        ${sale.product || 'Produit non spécifié'}
+                                                    </div>
+                                                    <div style="font-size: 0.85rem; color: #666; margin-top: 3px;">
+                                                        Qté: ${sale.quantity || '-'} | Prix unitaire: ${sale.unitPrice ? formatCurrency(sale.unitPrice) : '-'}
+                                                    </div>
+                                                </div>
+                                                <div style="text-align: right;">
+                                                    <div style="font-weight: bold; color: #1976d2; font-size: 1.1rem;">
+                                                        ${formatCurrency(sale.valeur || 0)}
+                                                    </div>
+                                                    <button onclick="editSale('${sale.id}'); closeClientDetailsModal();" 
+                                                            style="background: #667eea; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-top: 5px;">
+                                                        ✏️ Modifier
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                    
+                    <!-- Contenu Encaissements -->
+                    <div id="clientModalContentPayments" style="display: none;">
+                        ${sortedPaymentsGroups.length === 0 ? 
+                            '<div style="text-align: center; padding: 40px; color: #666;"><h3>💰 Aucun encaissement</h3><p>Ce client n\'a pas encore d\'historique d\'encaissements.</p></div>' :
+                            sortedPaymentsGroups.map(group => `
+                                <div style="border: 1px solid #e8f5e8; border-radius: 8px; margin-bottom: 15px; overflow: hidden;">
+                                    <div style="background: linear-gradient(135deg, #e8f5e8, #f8fff8); padding: 15px; border-bottom: 1px solid #e0e0e0;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <strong style="color: #388e3c; font-size: 1.1rem;">💰 ${group.reference}</strong>
+                                                <div style="color: #666; font-size: 0.9rem; margin-top: 5px;">
+                                                    📅 ${group.date} • ${group.method} • ${group.items.length} encaissement${group.items.length > 1 ? 's' : ''}
+                                                </div>
+                                            </div>
+                                            <div style="text-align: right;">
+                                                <div style="font-size: 1.3rem; font-weight: bold; color: #388e3c;">
+                                                    ${formatCurrency(group.total)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="background: #f8fff8;">
+                                        ${group.items.map(payment => `
+                                            <div style="padding: 12px 15px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+                                                <div style="flex: 1;">
+                                                    <div style="font-weight: 500; color: #333;">
+                                                        ${payment.method}
+                                                    </div>
+                                                    <div style="font-size: 0.85rem; color: #666; margin-top: 3px;">
+                                                        ${payment.date}${payment.notes ? ` • ${payment.notes}` : ''}
+                                                    </div>
+                                                </div>
+                                                <div style="text-align: right;">
+                                                    <div style="font-weight: bold; color: #388e3c; font-size: 1.1rem;">
+                                                        ${formatCurrency(payment.amount || 0)}
+                                                    </div>
+                                                    <button onclick="editPayment('${payment.id}'); closeClientDetailsModal();" 
+                                                            style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-top: 5px;">
+                                                        ✏️ Modifier
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                    
+                    <!-- Contenu Chronologie -->
+                    <div id="clientModalContentTimeline" style="display: none;">
+                        ${(() => {
+                            // Créer une timeline avec toutes les opérations
+                            const allOperations = [];
+                            
+                            // Ajouter les ventes
+                            clientSales.forEach(sale => {
+                                allOperations.push({
+                                    date: sale.date,
+                                    type: 'sale',
+                                    title: sale.invoice || 'Vente sans facture',
+                                    amount: sale.valeur || 0,
+                                    details: `${sale.product} (Qté: ${sale.quantity})`,
+                                    id: sale.id
+                                });
+                            });
+                            
+                            // Ajouter les encaissements
+                            clientPayments.forEach(payment => {
+                                allOperations.push({
+                                    date: payment.date,
+                                    type: 'payment',
+                                    title: payment.reference || 'Encaissement sans référence',
+                                    amount: payment.amount || 0,
+                                    details: payment.method + (payment.notes ? ` (${payment.notes})` : ''),
+                                    id: payment.id
+                                });
+                            });
+                            
+                            // Trier par date (plus récent en premier)
+                            allOperations.sort((a, b) => new Date(b.date) - new Date(a.date));
+                            
+                            if (allOperations.length === 0) {
+                                return '<div style="text-align: center; padding: 40px; color: #666;"><h3>📅 Aucune activité</h3><p>Ce client n\'a pas encore d\'historique d\'opérations.</p></div>';
+                            }
+                            
+                            let runningBalance = 0;
+                            return allOperations.map(op => {
+                                if (op.type === 'sale') {
+                                    runningBalance += op.amount;
+                                } else {
+                                    runningBalance -= op.amount;
+                                }
+                                
+                                const isPositive = op.type === 'sale';
+                                return `
+                                    <div style="display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #f0f0f0; margin-bottom: 10px;">
+                                        <div style="width: 40px; height: 40px; border-radius: 50%; background: ${isPositive ? '#e3f2fd' : '#e8f5e8'}; display: flex; align-items: center; justify-content: center; margin-right: 15px; flex-shrink: 0;">
+                                            <span style="font-size: 1.2rem;">${isPositive ? '📦' : '💰'}</span>
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                                <strong style="color: ${isPositive ? '#1976d2' : '#388e3c'};">
+                                                    ${op.title}
+                                                </strong>
+                                                <div style="text-align: right;">
+                                                    <div style="font-weight: bold; color: ${isPositive ? '#1976d2' : '#388e3c'}; font-size: 1.1rem;">
+                                                        ${isPositive ? '+' : '-'}${formatCurrency(op.amount)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 5px;">
+                                                📅 ${op.date} • ${op.details}
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <div style="font-size: 0.8rem; color: #888;">
+                                                    Solde après: ${formatCurrency(Math.abs(runningBalance))} ${runningBalance >= 0 ? '(En-cours)' : '(Crédit)'}
+                                                </div>
+                                                <button onclick="${op.type === 'sale' ? `editSale('${op.id}')` : `editPayment('${op.id}')`}; closeClientDetailsModal();" 
+                                                        style="background: ${isPositive ? '#667eea' : '#28a745'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                                    ✏️ Modifier
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                        })()}
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                        <button onclick="closeClientDetailsModal()" 
+                                style="background: #667eea; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            ✓ Fermer
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            window.currentClientDetailsModal = modal;
+            
+            // Fonction pour changer d'onglet
+            window.showClientModalTab = function(tabName) {
+                // Masquer tous les contenus
+                document.getElementById('clientModalContentSales').style.display = 'none';
+                document.getElementById('clientModalContentPayments').style.display = 'none';
+                document.getElementById('clientModalContentTimeline').style.display = 'none';
+                
+                // Réinitialiser tous les boutons
+                document.getElementById('clientModalTabSales').style.background = '#e9ecef';
+                document.getElementById('clientModalTabSales').style.color = '#666';
+                document.getElementById('clientModalTabPayments').style.background = '#e9ecef';
+                document.getElementById('clientModalTabPayments').style.color = '#666';
+                document.getElementById('clientModalTabTimeline').style.background = '#e9ecef';
+                document.getElementById('clientModalTabTimeline').style.color = '#666';
+                
+                // Afficher le contenu sélectionné et activer le bouton
+                if (tabName === 'sales') {
+                    document.getElementById('clientModalContentSales').style.display = 'block';
+                    document.getElementById('clientModalTabSales').style.background = '#667eea';
+                    document.getElementById('clientModalTabSales').style.color = 'white';
+                } else if (tabName === 'payments') {
+                    document.getElementById('clientModalContentPayments').style.display = 'block';
+                    document.getElementById('clientModalTabPayments').style.background = '#667eea';
+                    document.getElementById('clientModalTabPayments').style.color = 'white';
+                } else if (tabName === 'timeline') {
+                    document.getElementById('clientModalContentTimeline').style.display = 'block';
+                    document.getElementById('clientModalTabTimeline').style.background = '#667eea';
+                    document.getElementById('clientModalTabTimeline').style.color = 'white';
+                }
+            };
+            
+            // Fonction pour fermer le modal
+            window.closeClientDetailsModal = function() {
+                if (window.currentClientDetailsModal) {
+                    document.body.removeChild(window.currentClientDetailsModal);
+                    window.currentClientDetailsModal = null;
+                }
+            };
+            
+            // Fermer en cliquant à l'extérieur
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    window.closeClientDetailsModal();
+                }
+            });
         }
 
         // Filtres et affichage récapitulatif
@@ -18507,10 +18927,12 @@ Date [ESPACES] Client [ESPACES] Montant
                 id: lineId,
                 productId: '',
                 product: '',
+                format: '', // Ajouter le champ format
                 quantity: 1,
                 unitPrice: 0,
                 totalPrice: 0,
-                priceManuallyEdited: false
+                priceManuallyEdited: false,
+                formatManuallyEdited: false // Ajouter le flag pour le format
             };
             
             salesLines.push(line);
@@ -18532,7 +18954,7 @@ Date [ESPACES] Client [ESPACES] Montant
                             ${salesLines.length > 1 ? `<button class="remove-line" onclick="removeSaleLine(${line.id})" title="Supprimer cette ligne">✕</button>` : ''}
                         </div>
                     </div>
-                    <div class="form-grid">
+                    <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr;">
                         <div class="form-group">
                             <label>Produit *</label>
                             <div class="input-container">
@@ -18542,11 +18964,18 @@ Date [ESPACES] Client [ESPACES] Montant
                             </div>
                         </div>
                         <div class="form-group">
+                            <label>Format <small style="color: #666;">(auto)</small></label>
+                            <div style="display: flex; gap: 5px; align-items: center;">
+                                <input type="text" data-field="format" data-line-id="${line.id}" value="${line.format}" onchange="updateSaleLine(${line.id}, 'format', this.value)" placeholder="Format..." style="flex: 1;">
+                                ${line.productId ? `<button type="button" onclick="resetFormatFromProduct(${line.id})" title="Remettre le format du produit" style="padding: 8px; border: none; background: #28a745; color: white; border-radius: 6px; cursor: pointer; font-size: 12px;">🔄</button>` : ''}
+                            </div>
+                        </div>
+                        <div class="form-group">
                             <label>Quantité *</label>
                             <input type="number" data-field="quantity" data-line-id="${line.id}" min="1" value="${line.quantity}" onchange="updateSaleLine(${line.id}, 'quantity', this.value)" required>
                         </div>
                         <div class="form-group">
-                            <label>Prix Unitaire * <small style="color: #666;">(modifiable)</small></label>
+                            <label>Prix Unitaire * <small style="color: #666;">(auto)</small></label>
                             <div style="display: flex; gap: 5px; align-items: center;">
                                 <input type="number" data-field="unitPrice" data-line-id="${line.id}" min="0" value="${line.unitPrice}" onchange="updateSaleLine(${line.id}, 'unitPrice', this.value)" required style="flex: 1;">
                                 ${line.productId ? `<button type="button" onclick="resetPriceFromProduct(${line.id})" title="Remettre le prix du produit" style="padding: 8px; border: none; background: #667eea; color: white; border-radius: 6px; cursor: pointer; font-size: 12px;">🔄</button>` : ''}
@@ -18578,6 +19007,19 @@ Date [ESPACES] Client [ESPACES] Montant
                 showAlert('Prix remis à jour depuis le produit', 'success');
             }
         }
+        
+        function resetFormatFromProduct(lineId) {
+            const line = salesLines.find(l => l.id === lineId);
+            if (!line || !line.productId) return;
+            
+            const product = productsData.find(p => p.id == line.productId);
+            if (product) {
+                line.format = product.format || '';
+                line.formatManuallyEdited = false; // Réinitialiser le flag
+                renderSalesLines();
+                showAlert('Format remis à jour depuis le produit', 'success');
+            }
+        }
 
         function updateSaleLine(lineId, field, value) {
             const line = salesLines.find(l => l.id === lineId);
@@ -18590,6 +19032,9 @@ Date [ESPACES] Client [ESPACES] Montant
                 line.unitPrice = parseFloat(value) || 0;
                 line.priceManuallyEdited = true; // Marquer comme modifié manuellement
                 line.totalPrice = line.quantity * line.unitPrice;
+            } else if (field === 'format') {
+                line.format = value.trim();
+                line.formatManuallyEdited = true; // Marquer comme modifié manuellement
             }
             
             renderSalesLines();
@@ -18917,6 +19362,7 @@ Date [ESPACES] Client [ESPACES] Montant
                     date: new Date(date).toLocaleDateString('fr-FR'),
                     invoice: invoiceNumber || `FAC-${Date.now()}`,
                     product: line.product,
+                    format: line.format || '', // Inclure le format
                     quantity: line.quantity,
                     unitPrice: line.unitPrice,
                     valeur: line.totalPrice
@@ -19290,11 +19736,52 @@ Date [ESPACES] Client [ESPACES] Montant
                         </div>
                     </div>
                     <div class="client-details" id="details-${client.name.replace(/[^a-zA-Z0-9]/g, '')}">
-                        <div class="client-transactions">
-                            <div class="transactions-section">
-                                <h4>📦 Dernières Ventes (${client.salesDetails.length})</h4>
-                                ${(() => {
-                                    // Grouper les ventes par référence de facture
+                        <!-- Résumé financier du client -->
+                        <div style="background: linear-gradient(135deg, #f8f9ff, #e3f2fd); padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #dee2e6;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; text-align: center;">
+                                <div>
+                                    <div style="font-size: 1.3rem; font-weight: bold; color: #1976d2;">${formatCurrency(client.sales)}</div>
+                                    <div style="font-size: 0.8rem; color: #666;">Total Ventes</div>
+                                    <div style="font-size: 0.7rem; color: #999;">${client.salesDetails.length} transaction${client.salesDetails.length > 1 ? 's' : ''}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 1.3rem; font-weight: bold; color: #388e3c;">${formatCurrency(client.payments)}</div>
+                                    <div style="font-size: 0.8rem; color: #666;">Total Encaissements</div>
+                                    <div style="font-size: 0.7rem; color: #999;">${client.paymentsDetails.length} transaction${client.paymentsDetails.length > 1 ? 's' : ''}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 1.3rem; font-weight: bold; color: ${client.balance > 0 ? '#856404' : client.balance < 0 ? '#155724' : '#495057'};">${formatCurrency(Math.abs(client.balance))}</div>
+                                    <div style="font-size: 0.8rem; color: #666;">${client.balance > 0 ? 'En-cours' : client.balance < 0 ? 'Crédit' : 'Soldé'}</div>
+                                    <div style="font-size: 0.7rem; color: #999;">${client.balance > 0 ? '⚠️ À recevoir' : client.balance < 0 ? '💰 En crédit' : '✅ Équilibré'}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Navigation par onglets -->
+                        <div style="display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 1px solid #ddd;">
+                            <button onclick="event.stopPropagation(); showClientTab('${client.name.replace(/[^a-zA-Z0-9]/g, '')}', 'sales')" 
+                                    id="clientTab${client.name.replace(/[^a-zA-Z0-9]/g, '')}Sales" 
+                                    style="padding: 10px 15px; border: none; background: #667eea; color: white; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.8rem;">
+                                📦 Ventes (${client.salesDetails.length})
+                            </button>
+                            <button onclick="event.stopPropagation(); showClientTab('${client.name.replace(/[^a-zA-Z0-9]/g, '')}', 'payments')" 
+                                    id="clientTab${client.name.replace(/[^a-zA-Z0-9]/g, '')}Payments"
+                                    style="padding: 10px 15px; border: none; background: #e9ecef; color: #666; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.8rem;">
+                                💰 Encaissements (${client.paymentsDetails.length})
+                            </button>
+                            <button onclick="event.stopPropagation(); showClientTab('${client.name.replace(/[^a-zA-Z0-9]/g, '')}', 'timeline')" 
+                                    id="clientTab${client.name.replace(/[^a-zA-Z0-9]/g, '')}Timeline"
+                                    style="padding: 10px 15px; border: none; background: #e9ecef; color: #666; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 0.8rem;">
+                                📅 Chronologie
+                            </button>
+                        </div>
+
+                        <!-- Contenu Ventes (TOUTES) -->
+                        <div id="clientContent${client.name.replace(/[^a-zA-Z0-9]/g, '')}Sales" style="display: block; max-height: 400px; overflow-y: auto;">
+                            ${client.salesDetails.length === 0 ? 
+                                '<div style="text-align: center; padding: 30px; color: #666;"><div style="font-size: 2rem; margin-bottom: 10px;">📦</div><h4>Aucune vente</h4><p>Ce client n\'a pas encore d\'historique de ventes.</p></div>' :
+                                (() => {
+                                    // Grouper TOUTES les ventes par référence de facture
                                     const salesGroups = {};
                                     client.salesDetails.forEach(sale => {
                                         const groupKey = sale.invoice || `Sans_facture_${sale.date}_${sale.id}`;
@@ -19319,48 +19806,48 @@ Date [ESPACES] Client [ESPACES] Montant
                                     // Trier les groupes par date (plus récent en premier)
                                     const sortedGroups = Object.values(salesGroups).sort((a, b) => new Date(b.date) - new Date(a.date));
 
-                                    return sortedGroups.slice(0, 5).map(group => {
+                                    return sortedGroups.map(group => {
                                         const groupId = `sales-group-${client.name.replace(/[^a-zA-Z0-9]/g, '')}-${group.reference.replace(/[^a-zA-Z0-9]/g, '')}`;
                                         return `
-                                            <div class="sale-group-item" style="border: 1px solid #e3f2fd; border-radius: 8px; margin-bottom: 8px; overflow: hidden;">
-                                                <div class="sale-group-header" onclick="toggleSaleGroupDetails('${groupId}')" style="padding: 12px; background: linear-gradient(135deg, #e3f2fd 0%, #f8f9ff 100%); cursor: pointer; border-bottom: 1px solid #e0e0e0;">
+                                            <div class="sale-group-item" style="border: 1px solid #e3f2fd; border-radius: 8px; margin-bottom: 10px; overflow: hidden;">
+                                                <div class="sale-group-header" onclick="event.stopPropagation(); toggleSaleGroupDetails('${groupId}')" style="padding: 12px; background: linear-gradient(135deg, #e3f2fd 0%, #f8f9ff 100%); cursor: pointer; border-bottom: 1px solid #e0e0e0;">
                                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                                         <div>
-                                                            <strong style="color: #1976d2;">📄 ${group.reference}</strong>
-                                                            <div style="font-size: 12px; color: #666; margin-top: 2px;">
-                                                                ${group.date} • ${group.items.length} article${group.items.length > 1 ? 's' : ''}
+                                                            <strong style="color: #1976d2; font-size: 0.9rem;">📄 ${group.reference}</strong>
+                                                            <div style="font-size: 0.75rem; color: #666; margin-top: 2px;">
+                                                                📅 ${group.date} • ${group.items.length} article${group.items.length > 1 ? 's' : ''}
                                                             </div>
                                                         </div>
                                                         <div style="text-align: right;">
-                                                            <div style="font-weight: bold; color: #1976d2; font-size: 14px;">
+                                                            <div style="font-weight: bold; color: #1976d2; font-size: 0.9rem;">
                                                                 ${formatCurrency(group.totalValue)}
                                                             </div>
-                                                            <div style="font-size: 11px; color: #666;">
+                                                            <div style="font-size: 0.7rem; color: #666;">
                                                                 Qté: ${Math.round(group.totalQuantity)}
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div style="font-size: 11px; color: #888; margin-top: 4px;">
-                                                        ▼ Cliquez pour voir le détail
+                                                    <div style="font-size: 0.7rem; color: #888; margin-top: 4px;">
+                                                        ▼ Voir détail
                                                     </div>
                                                 </div>
                                                 <div class="sale-group-details" id="${groupId}" style="display: none; background: #f8f9ff;">
                                                     ${group.items.map(sale => `
-                                                        <div class="sale-item-detail" onclick="editSale(${sale.id})" style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f0f7ff'" onmouseout="this.style.backgroundColor='transparent'">
+                                                        <div class="sale-item-detail" onclick="event.stopPropagation(); editSale(${sale.id})" style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f0f7ff'" onmouseout="this.style.backgroundColor='transparent'">
                                                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                                                 <div style="flex: 1;">
-                                                                    <div style="font-weight: 500; color: #333; font-size: 13px;">
+                                                                    <div style="font-weight: 500; color: #333; font-size: 0.8rem;">
                                                                         ${sale.product || 'Produit non spécifié'}
                                                                     </div>
-                                                                    <div style="font-size: 11px; color: #666; margin-top: 2px;">
+                                                                    <div style="font-size: 0.7rem; color: #666; margin-top: 2px;">
                                                                         Qté: ${sale.quantity || '-'} | Prix unit: ${sale.unitPrice ? formatCurrency(sale.unitPrice) : '-'}
                                                                     </div>
                                                                 </div>
                                                                 <div style="text-align: right;">
-                                                                    <div style="font-weight: bold; color: #1976d2;">
+                                                                    <div style="font-weight: bold; color: #1976d2; font-size: 0.8rem;">
                                                                         ${formatCurrency(sale.valeur)}
                                                                     </div>
-                                                                    <div style="font-size: 10px; color: #667eea; margin-top: 2px;">
+                                                                    <div style="font-size: 0.6rem; color: #667eea; margin-top: 2px;">
                                                                         ✏️ Modifier
                                                                     </div>
                                                                 </div>
@@ -19371,17 +19858,16 @@ Date [ESPACES] Client [ESPACES] Montant
                                             </div>
                                         `;
                                     }).join('');
-                                })()}
-                                ${client.salesDetails.length > 0 && Object.values(client.salesDetails.reduce((groups, sale) => {
-                                    const key = sale.invoice || `Sans_facture_${sale.date}_${sale.id}`;
-                                    groups[key] = true;
-                                    return groups;
-                                }, {})).length > 5 ? `<div style="text-align: center; color: #666; font-size: 11px;">... et d'autres factures</div>` : ''}
-                            </div>
-                            <div class="transactions-section">
-                                <h4>💰 Derniers Encaissements (${client.paymentsDetails.length})</h4>
-                                ${(() => {
-                                    // Grouper les encaissements par référence
+                                })()
+                            }
+                        </div>
+
+                        <!-- Contenu Encaissements (TOUS) -->
+                        <div id="clientContent${client.name.replace(/[^a-zA-Z0-9]/g, '')}Payments" style="display: none; max-height: 400px; overflow-y: auto;">
+                            ${client.paymentsDetails.length === 0 ? 
+                                '<div style="text-align: center; padding: 30px; color: #666;"><div style="font-size: 2rem; margin-bottom: 10px;">💰</div><h4>Aucun encaissement</h4><p>Ce client n\'a pas encore d\'historique d\'encaissements.</p></div>' :
+                                (() => {
+                                    // Grouper TOUS les encaissements par référence
                                     const paymentsGroups = {};
                                     client.paymentsDetails.forEach(payment => {
                                         const groupKey = payment.reference || `Sans_ref_${payment.date}_${payment.id}`;
@@ -19406,45 +19892,45 @@ Date [ESPACES] Client [ESPACES] Montant
                                     // Trier les groupes par date (plus récent en premier)
                                     const sortedGroups = Object.values(paymentsGroups).sort((a, b) => new Date(b.date) - new Date(a.date));
 
-                                    return sortedGroups.slice(0, 5).map(group => {
+                                    return sortedGroups.map(group => {
                                         const groupId = `payments-group-${client.name.replace(/[^a-zA-Z0-9]/g, '')}-${group.reference.replace(/[^a-zA-Z0-9]/g, '')}`;
                                         return `
-                                            <div class="payment-group-item" style="border: 1px solid #e8f5e8; border-radius: 8px; margin-bottom: 8px; overflow: hidden;">
-                                                <div class="payment-group-header" onclick="togglePaymentGroupDetails('${groupId}')" style="padding: 12px; background: linear-gradient(135deg, #e8f5e8 0%, #f8fff8 100%); cursor: pointer; border-bottom: 1px solid #e0e0e0;">
+                                            <div class="payment-group-item" style="border: 1px solid #e8f5e8; border-radius: 8px; margin-bottom: 10px; overflow: hidden;">
+                                                <div class="payment-group-header" onclick="event.stopPropagation(); togglePaymentGroupDetails('${groupId}')" style="padding: 12px; background: linear-gradient(135deg, #e8f5e8 0%, #f8fff8 100%); cursor: pointer; border-bottom: 1px solid #e0e0e0;">
                                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                                         <div>
-                                                            <strong style="color: #388e3c;">💰 ${group.reference}</strong>
-                                                            <div style="font-size: 12px; color: #666; margin-top: 2px;">
-                                                                ${group.date} • ${group.method} • ${group.items.length} encaissement${group.items.length > 1 ? 's' : ''}
+                                                            <strong style="color: #388e3c; font-size: 0.9rem;">💰 ${group.reference}</strong>
+                                                            <div style="font-size: 0.75rem; color: #666; margin-top: 2px;">
+                                                                📅 ${group.date} • ${group.method} • ${group.items.length} encaissement${group.items.length > 1 ? 's' : ''}
                                                             </div>
                                                         </div>
                                                         <div style="text-align: right;">
-                                                            <div style="font-weight: bold; color: #388e3c; font-size: 14px;">
+                                                            <div style="font-weight: bold; color: #388e3c; font-size: 0.9rem;">
                                                                 ${formatCurrency(group.totalAmount)}
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div style="font-size: 11px; color: #888; margin-top: 4px;">
-                                                        ▼ Cliquez pour voir le détail
+                                                    <div style="font-size: 0.7rem; color: #888; margin-top: 4px;">
+                                                        ▼ Voir détail
                                                     </div>
                                                 </div>
                                                 <div class="payment-group-details" id="${groupId}" style="display: none; background: #f8fff8;">
                                                     ${group.items.map(payment => `
-                                                        <div class="payment-item-detail" onclick="editPayment(${payment.id})" style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f0fff0'" onmouseout="this.style.backgroundColor='transparent'">
+                                                        <div class="payment-item-detail" onclick="event.stopPropagation(); editPayment(${payment.id})" style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f0fff0'" onmouseout="this.style.backgroundColor='transparent'">
                                                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                                                 <div style="flex: 1;">
-                                                                    <div style="font-weight: 500; color: #333; font-size: 13px;">
+                                                                    <div style="font-weight: 500; color: #333; font-size: 0.8rem;">
                                                                         ${payment.method}
                                                                     </div>
-                                                                    <div style="font-size: 11px; color: #666; margin-top: 2px;">
-                                                                        ${payment.date}${payment.notes ? ` • ${payment.notes}` : ''}
+                                                                    <div style="font-size: 0.7rem; color: #666; margin-top: 2px;">
+                                                                        📅 ${payment.date}${payment.notes ? ` • ${payment.notes}` : ''}
                                                                     </div>
                                                                 </div>
                                                                 <div style="text-align: right;">
-                                                                    <div style="font-weight: bold; color: #388e3c;">
+                                                                    <div style="font-weight: bold; color: #388e3c; font-size: 0.8rem;">
                                                                         ${formatCurrency(payment.amount)}
                                                                     </div>
-                                                                    <div style="font-size: 10px; color: #667eea; margin-top: 2px;">
+                                                                    <div style="font-size: 0.6rem; color: #667eea; margin-top: 2px;">
                                                                         ✏️ Modifier
                                                                     </div>
                                                                 </div>
@@ -19455,13 +19941,89 @@ Date [ESPACES] Client [ESPACES] Montant
                                             </div>
                                         `;
                                     }).join('');
-                                })()}
-                                ${client.paymentsDetails.length > 0 && Object.values(client.paymentsDetails.reduce((groups, payment) => {
-                                    const key = payment.reference || `Sans_ref_${payment.date}_${payment.id}`;
-                                    groups[key] = true;
-                                    return groups;
-                                }, {})).length > 5 ? `<div style="text-align: center; color: #666; font-size: 11px;">... et d'autres références</div>` : ''}
-                            </div>
+                                })()
+                            }
+                        </div>
+
+                        <!-- Contenu Chronologie (TOUTES les opérations) -->
+                        <div id="clientContent${client.name.replace(/[^a-zA-Z0-9]/g, '')}Timeline" style="display: none; max-height: 400px; overflow-y: auto;">
+                            ${(() => {
+                                // Créer une timeline avec toutes les opérations
+                                const allOperations = [];
+                                
+                                // Ajouter les ventes
+                                client.salesDetails.forEach(sale => {
+                                    allOperations.push({
+                                        date: sale.date,
+                                        type: 'sale',
+                                        title: sale.invoice || 'Vente sans facture',
+                                        amount: sale.valeur || 0,
+                                        details: `${sale.product} (Qté: ${sale.quantity})`,
+                                        id: sale.id
+                                    });
+                                });
+                                
+                                // Ajouter les encaissements
+                                client.paymentsDetails.forEach(payment => {
+                                    allOperations.push({
+                                        date: payment.date,
+                                        type: 'payment',
+                                        title: payment.reference || 'Encaissement sans référence',
+                                        amount: payment.amount || 0,
+                                        details: payment.method + (payment.notes ? ` (${payment.notes})` : ''),
+                                        id: payment.id
+                                    });
+                                });
+                                
+                                // Trier par date (plus récent en premier)
+                                allOperations.sort((a, b) => new Date(b.date) - new Date(a.date));
+                                
+                                if (allOperations.length === 0) {
+                                    return '<div style="text-align: center; padding: 30px; color: #666;"><div style="font-size: 2rem; margin-bottom: 10px;">📅</div><h4>Aucune activité</h4><p>Ce client n\'a pas encore d\'historique d\'opérations.</p></div>';
+                                }
+                                
+                                let runningBalance = 0;
+                                return allOperations.map(op => {
+                                    if (op.type === 'sale') {
+                                        runningBalance += op.amount;
+                                    } else {
+                                        runningBalance -= op.amount;
+                                    }
+                                    
+                                    const isPositive = op.type === 'sale';
+                                    return `
+                                        <div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0; margin-bottom: 8px;">
+                                            <div style="width: 30px; height: 30px; border-radius: 50%; background: ${isPositive ? '#e3f2fd' : '#e8f5e8'}; display: flex; align-items: center; justify-content: center; margin-right: 12px; flex-shrink: 0;">
+                                                <span style="font-size: 0.9rem;">${isPositive ? '📦' : '💰'}</span>
+                                            </div>
+                                            <div style="flex: 1;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                                                    <strong style="color: ${isPositive ? '#1976d2' : '#388e3c'}; font-size: 0.8rem;">
+                                                        ${op.title}
+                                                    </strong>
+                                                    <div style="text-align: right;">
+                                                        <div style="font-weight: bold; color: ${isPositive ? '#1976d2' : '#388e3c'}; font-size: 0.8rem;">
+                                                            ${isPositive ? '+' : '-'}${formatCurrency(op.amount)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div style="font-size: 0.7rem; color: #666; margin-bottom: 3px;">
+                                                    📅 ${op.date} • ${op.details}
+                                                </div>
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <div style="font-size: 0.65rem; color: #888;">
+                                                        Solde: ${formatCurrency(Math.abs(runningBalance))} ${runningBalance >= 0 ? '(En-cours)' : '(Crédit)'}
+                                                    </div>
+                                                    <button onclick="event.stopPropagation(); ${op.type === 'sale' ? `editSale('${op.id}')` : `editPayment('${op.id}')`}" 
+                                                            style="background: ${isPositive ? '#667eea' : '#28a745'}; color: white; border: none; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 0.6rem;">
+                                                        ✏️ Modifier
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('');
+                            })()}
                         </div>
                     </div>
                 `;
@@ -19490,6 +20052,51 @@ Date [ESPACES] Client [ESPACES] Montant
                         detailsElement.classList.add('expanded');
                     }, 10);
                 }
+            }
+        }
+
+        // Fonction pour changer d'onglet dans les détails client
+        function showClientTab(clientId, tabName) {
+            // Masquer tous les contenus
+            const salesContent = document.getElementById(`clientContent${clientId}Sales`);
+            const paymentsContent = document.getElementById(`clientContent${clientId}Payments`);
+            const timelineContent = document.getElementById(`clientContent${clientId}Timeline`);
+            
+            if (salesContent) salesContent.style.display = 'none';
+            if (paymentsContent) paymentsContent.style.display = 'none';
+            if (timelineContent) timelineContent.style.display = 'none';
+            
+            // Réinitialiser tous les boutons
+            const salesTab = document.getElementById(`clientTab${clientId}Sales`);
+            const paymentsTab = document.getElementById(`clientTab${clientId}Payments`);
+            const timelineTab = document.getElementById(`clientTab${clientId}Timeline`);
+            
+            if (salesTab) {
+                salesTab.style.background = '#e9ecef';
+                salesTab.style.color = '#666';
+            }
+            if (paymentsTab) {
+                paymentsTab.style.background = '#e9ecef';
+                paymentsTab.style.color = '#666';
+            }
+            if (timelineTab) {
+                timelineTab.style.background = '#e9ecef';
+                timelineTab.style.color = '#666';
+            }
+            
+            // Afficher le contenu sélectionné et activer le bouton
+            if (tabName === 'sales' && salesContent && salesTab) {
+                salesContent.style.display = 'block';
+                salesTab.style.background = '#667eea';
+                salesTab.style.color = 'white';
+            } else if (tabName === 'payments' && paymentsContent && paymentsTab) {
+                paymentsContent.style.display = 'block';
+                paymentsTab.style.background = '#667eea';
+                paymentsTab.style.color = 'white';
+            } else if (tabName === 'timeline' && timelineContent && timelineTab) {
+                timelineContent.style.display = 'block';
+                timelineTab.style.background = '#667eea';
+                timelineTab.style.color = 'white';
             }
         }
 
@@ -23546,8 +24153,11 @@ Date [ESPACES] Client [ESPACES] Montant
             }
         }
         
-        // Fonction pour éditer un groupe de facture (toutes les lignes de la facture)
+        // Fonction pour éditer un groupe de facture (toutes les lignes de la facture) - VERSION UNIFIÉE
         function editInvoiceGroup(invoiceNumber) {
+            // S'assurer que la liste des produits est à jour pour l'autocomplétion
+            updateProductsList();
+            
             // Filtrer toutes les ventes de cette facture
             const invoiceSales = salesData.filter(sale => sale.invoice === invoiceNumber);
             
@@ -23556,73 +24166,420 @@ Date [ESPACES] Client [ESPACES] Montant
                 return;
             }
             
-            // Toujours afficher le modal avec la liste des articles (même pour 1 seul)
-            // Cela assure une interface cohérente et évite les problèmes avec editSale()
+            // Créer une copie des données pour l'édition
+            window.editingInvoiceData = {
+                originalInvoiceNumber: invoiceNumber,
+                client: invoiceSales[0].client,
+                date: invoiceSales[0].date,
+                newInvoiceNumber: invoiceNumber,
+                lines: invoiceSales.map(sale => ({
+                    id: sale.id,
+                    product: sale.product || '',
+                    quantity: sale.quantity || 1,
+                    unitPrice: sale.unitPrice || 0,
+                    totalPrice: sale.valeur || 0,
+                    isNew: false
+                }))
+            };
             
-            // Afficher un modal avec toutes les lignes
+            // Créer le modal d'édition unifié
             const modal = document.createElement('div');
             modal.className = 'product-modal';
+            modal.style.display = 'flex';
             modal.innerHTML = `
-                <div class="product-modal-content" style="max-width: 900px;">
-                    <h3 style="margin-bottom: 20px; color: #667eea;">✏️ Édition Facture: ${invoiceNumber}</h3>
+                <div class="product-modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
+                    <h3 style="margin-bottom: 20px; color: #667eea; text-align: center;">
+                        ✏️ Édition Facture Complète
+                    </h3>
                     
-                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <strong>Client:</strong> ${invoiceSales[0].client}<br>
-                        <strong>Date:</strong> ${invoiceSales[0].date}<br>
-                        <strong>Nombre d'articles:</strong> ${invoiceSales.length}
+                    <!-- Informations générales de la facture -->
+                    <div style="background: linear-gradient(135deg, #f8f9ff, #e3f2fd); padding: 20px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #dee2e6;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div class="form-group">
+                                <label style="font-weight: 600; color: #333;">Client *</label>
+                                <input type="text" id="editInvoiceClient" value="${window.editingInvoiceData.client}" 
+                                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;" required>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight: 600; color: #333;">Date *</label>
+                                <input type="date" id="editInvoiceDate" value="${new Date(window.editingInvoiceData.date.split('/').reverse().join('-')).toISOString().split('T')[0]}" 
+                                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;" required>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight: 600; color: #333;">N° Facture *</label>
+                                <input type="text" id="editInvoiceNumber" value="${window.editingInvoiceData.newInvoiceNumber}" 
+                                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;" required>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div style="overflow-x: auto; margin-bottom: 20px;">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Produit</th>
-                                    <th>Quantité</th>
-                                    <th>Prix Unitaire</th>
-                                    <th>Total</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${invoiceSales.map(sale => `
-                                    <tr>
-                                        <td>${sale.product || '-'}</td>
-                                        <td>${sale.quantity || '-'}</td>
-                                        <td>${formatCurrency(sale.unitPrice || 0)}</td>
-                                        <td>${formatCurrency(sale.valeur || 0)}</td>
-                                        <td>
-                                            <button class="btn btn-warning" onclick="editSale('${sale.id}'); closeInvoiceGroupModal();" style="margin-right: 5px;">✏️ Modifier</button>
-                                            <button class="btn btn-danger" onclick="deleteSale('${sale.id}'); updateInvoiceGroupModal('${invoiceNumber}');">🗑️ Supprimer</button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                            <tfoot>
-                                <tr style="background: #28a745; color: white; font-weight: 600;">
-                                    <td colspan="3"><strong>TOTAL FACTURE</strong></td>
-                                    <td><strong>${formatCurrency(invoiceSales.reduce((sum, sale) => sum + (sale.valeur || 0), 0))}</strong></td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                    <!-- Articles de la facture -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="color: #667eea; margin: 0;">📦 Articles de la facture</h4>
+                            <button onclick="addNewInvoiceLine()" 
+                                    style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                ➕ Ajouter Article
+                            </button>
+                        </div>
+                        
+                        <div id="invoiceEditLines" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px;">
+                            <!-- Les lignes seront générées ici -->
+                        </div>
                     </div>
                     
-                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                        <button class="btn btn-secondary" onclick="closeInvoiceGroupModal()">✖️ Fermer</button>
-                        <button class="btn btn-info" onclick="addSaleToInvoice('${invoiceNumber}', '${invoiceSales[0].client}', '${invoiceSales[0].date}')">➕ Ajouter Article</button>
+                    <!-- Totaux -->
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #28a745;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: #333; font-size: 1.1rem;">Total Articles: </strong>
+                                <span id="editInvoiceTotalLines" style="color: #667eea; font-weight: 600;">0</span>
+                            </div>
+                            <div>
+                                <strong style="color: #333; font-size: 1.1rem;">Quantité Totale: </strong>
+                                <span id="editInvoiceTotalQuantity" style="color: #667eea; font-weight: 600;">0</span>
+                            </div>
+                            <div>
+                                <strong style="color: #333; font-size: 1.3rem;">TOTAL FACTURE: </strong>
+                                <span id="editInvoiceTotalAmount" style="color: #28a745; font-weight: bold; font-size: 1.4rem;">0 CFA</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Boutons d'action -->
+                    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                        <button onclick="saveCompleteInvoiceEdit()" 
+                                style="background: #667eea; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+                            💾 Sauvegarder Facture
+                        </button>
+                        <button onclick="closeUnifiedInvoiceModal()" 
+                                style="background: #6c757d; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+                            ❌ Annuler
+                        </button>
+                        <button onclick="deleteCompleteInvoice()" 
+                                style="background: #dc3545; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+                            🗑️ Supprimer Facture
+                        </button>
                     </div>
                 </div>
             `;
             
             document.body.appendChild(modal);
-            modal.style.display = 'flex';
+            window.currentUnifiedInvoiceModal = modal;
             
             // Fermeture en cliquant à l'extérieur
             modal.addEventListener('click', function(e) {
                 if (e.target === modal) {
-                    closeInvoiceGroupModal();
+                    closeUnifiedInvoiceModal();
                 }
             });
+            
+            // Générer les lignes d'articles
+            renderInvoiceEditLines();
+        }
+        
+        // ===== FONCTIONS DE SUPPORT POUR L'ÉDITION UNIFIÉE DE FACTURES =====
+        
+        // Fonction pour générer les lignes d'articles dans le modal d'édition
+        function renderInvoiceEditLines() {
+            const container = document.getElementById('invoiceEditLines');
+            if (!container || !window.editingInvoiceData) return;
+            
+            container.innerHTML = '';
+            
+            window.editingInvoiceData.lines.forEach((line, index) => {
+                const lineDiv = document.createElement('div');
+                lineDiv.style.cssText = `
+                    padding: 15px; border-bottom: 1px solid #eee; background: ${line.isNew ? '#e8f5e8' : '#fff'};
+                    transition: all 0.3s ease;
+                `;
+                
+                lineDiv.innerHTML = `
+                    <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-weight: 600; color: #667eea;">Article ${index + 1}</span>
+                        ${line.isNew ? '<span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600;">NOUVEAU</span>' : ''}
+                        <button onclick="removeInvoiceLine(${index})" 
+                                style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-left: auto;">
+                            🗑️ Supprimer
+                        </button>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; align-items: end;">
+                        <div class="form-group">
+                            <label style="font-weight: 500; color: #333; font-size: 0.9rem;">Produit *</label>
+                            <div class="input-container">
+                                <input type="text" id="editLine${index}Product" value="${line.product}" 
+                                       oninput="updateInvoiceLineProduct(${index}, this.value); showCustomDropdown(this, 'products')" 
+                                       onblur="hideCustomDropdown(this)" 
+                                       onkeydown="handleDropdownKeydown(event, this)"
+                                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" 
+                                       placeholder="Nom du produit..." required>
+                                <span class="dropdown-arrow" onclick="toggleCustomDropdown(document.getElementById('editLine${index}Product'), 'products')">▼</span>
+                                <div class="custom-dropdown" id="editLine${index}ProductDropdown"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label style="font-weight: 500; color: #333; font-size: 0.9rem;">Quantité *</label>
+                            <input type="number" value="${line.quantity}" min="0.01" step="0.01"
+                                   onchange="updateInvoiceLineQuantity(${index}, this.value)"
+                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label style="font-weight: 500; color: #333; font-size: 0.9rem;">Prix Unit. *</label>
+                            <input type="number" value="${line.unitPrice}" min="0" step="0.01"
+                                   onchange="updateInvoiceLineUnitPrice(${index}, this.value)"
+                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label style="font-weight: 500; color: #333; font-size: 0.9rem;">Total</label>
+                            <div style="padding: 8px; background: #f8f9fa; border-radius: 4px; font-weight: 600; color: #28a745; text-align: center;">
+                                ${formatCurrency(line.totalPrice)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(lineDiv);
+            });
+            
+            // Mettre à jour les totaux
+            updateInvoiceEditTotals();
+        }
+        
+        // Fonction pour ajouter une nouvelle ligne
+        function addNewInvoiceLine() {
+            if (!window.editingInvoiceData) return;
+            
+            const newLine = {
+                id: 'new_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                product: '',
+                quantity: 1,
+                unitPrice: 0,
+                totalPrice: 0,
+                isNew: true
+            };
+            
+            window.editingInvoiceData.lines.push(newLine);
+            renderInvoiceEditLines();
+        }
+        
+        // Fonction pour supprimer une ligne
+        function removeInvoiceLine(index) {
+            if (!window.editingInvoiceData || window.editingInvoiceData.lines.length <= 1) {
+                showAlert('Une facture doit contenir au moins un article', 'warning');
+                return;
+            }
+            
+            window.editingInvoiceData.lines.splice(index, 1);
+            renderInvoiceEditLines();
+        }
+        
+        // Fonctions de mise à jour des lignes
+        function updateInvoiceLineProduct(index, value) {
+            if (!window.editingInvoiceData) return;
+            
+            window.editingInvoiceData.lines[index].product = value.trim();
+            
+            // Auto-complétion du prix si le produit existe dans productsList
+            const product = productsList.find(p => 
+                p.reference && p.reference.toLowerCase() === value.toLowerCase()
+            );
+            
+            if (product && product.price) {
+                window.editingInvoiceData.lines[index].unitPrice = product.price;
+                calculateInvoiceLineTotal(index);
+                renderInvoiceEditLines();
+            }
+        }
+        
+        function updateInvoiceLineQuantity(index, value) {
+            if (!window.editingInvoiceData) return;
+            
+            window.editingInvoiceData.lines[index].quantity = parseFloat(value) || 0;
+            calculateInvoiceLineTotal(index);
+            updateInvoiceEditTotals();
+        }
+        
+        function updateInvoiceLineUnitPrice(index, value) {
+            if (!window.editingInvoiceData) return;
+            
+            window.editingInvoiceData.lines[index].unitPrice = parseFloat(value) || 0;
+            calculateInvoiceLineTotal(index);
+            updateInvoiceEditTotals();
+        }
+        
+        function calculateInvoiceLineTotal(index) {
+            if (!window.editingInvoiceData) return;
+            
+            const line = window.editingInvoiceData.lines[index];
+            line.totalPrice = line.quantity * line.unitPrice;
+        }
+        
+        // Fonction pour mettre à jour les totaux
+        function updateInvoiceEditTotals() {
+            if (!window.editingInvoiceData) return;
+            
+            const totalLines = window.editingInvoiceData.lines.length;
+            const totalQuantity = window.editingInvoiceData.lines.reduce((sum, line) => sum + line.quantity, 0);
+            const totalAmount = window.editingInvoiceData.lines.reduce((sum, line) => sum + line.totalPrice, 0);
+            
+            const totalLinesEl = document.getElementById('editInvoiceTotalLines');
+            const totalQuantityEl = document.getElementById('editInvoiceTotalQuantity');
+            const totalAmountEl = document.getElementById('editInvoiceTotalAmount');
+            
+            if (totalLinesEl) totalLinesEl.textContent = totalLines;
+            if (totalQuantityEl) totalQuantityEl.textContent = Math.round(totalQuantity * 100) / 100;
+            if (totalAmountEl) totalAmountEl.textContent = formatCurrency(totalAmount);
+        }
+        
+        // Fonction pour sauvegarder la facture complète
+        async function saveCompleteInvoiceEdit() {
+            if (!window.editingInvoiceData) return;
+            
+            // Récupérer les données du formulaire
+            const newClient = document.getElementById('editInvoiceClient').value.trim();
+            const newDate = document.getElementById('editInvoiceDate').value;
+            const newInvoiceNumber = document.getElementById('editInvoiceNumber').value.trim();
+            
+            // Validation
+            if (!newClient || !newDate || !newInvoiceNumber) {
+                showAlert('Veuillez remplir tous les champs obligatoires', 'error');
+                return;
+            }
+            
+            const validLines = window.editingInvoiceData.lines.filter(line => 
+                line.product.trim() && line.quantity > 0 && line.unitPrice >= 0
+            );
+            
+            if (validLines.length === 0) {
+                showAlert('Veuillez ajouter au moins un article valide', 'error');
+                return;
+            }
+            
+            updateCloudStatus('syncing', '⬆️ Sauvegarde...');
+            
+            try {
+                // Supprimer les anciennes ventes de cette facture
+                const originalInvoiceNumber = window.editingInvoiceData.originalInvoiceNumber;
+                const oldSales = salesData.filter(sale => sale.invoice === originalInvoiceNumber);
+                
+                // Supprimer les anciennes ventes de la mémoire
+                salesData = salesData.filter(sale => sale.invoice !== originalInvoiceNumber);
+                
+                // Supprimer de Firebase
+                if (isFirebaseInitialized) {
+                    const batch = db.batch();
+                    oldSales.forEach(sale => {
+                        const docRef = db.collection('sales').doc(sale.id.toString());
+                        batch.delete(docRef);
+                    });
+                    await batch.commit();
+                }
+                
+                // Créer les nouvelles ventes
+                const newSales = validLines.map(line => ({
+                    id: line.isNew ? (Date.now().toString() + Math.random().toString(36).substr(2, 5)) : line.id,
+                    client: newClient,
+                    date: new Date(newDate).toLocaleDateString('fr-FR'),
+                    invoice: newInvoiceNumber,
+                    product: line.product,
+                    quantity: line.quantity,
+                    unitPrice: line.unitPrice,
+                    valeur: line.totalPrice
+                }));
+                
+                // Ajouter les nouvelles ventes
+                salesData.push(...newSales);
+                saveToLocalStorage();
+                
+                // Sauvegarder dans Firebase
+                if (isFirebaseInitialized) {
+                    const batch = db.batch();
+                    newSales.forEach(sale => {
+                        const docRef = db.collection('sales').doc(sale.id.toString());
+                        batch.set(docRef, {
+                            ...sale,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+                    await batch.commit();
+                }
+                
+                const totalValue = newSales.reduce((sum, sale) => sum + sale.valeur, 0);
+                showAlert(`✅ Facture "${newInvoiceNumber}" mise à jour ! ${validLines.length} articles, Total: ${formatCurrency(totalValue)}`, 'success');
+                
+                // Fermer le modal et mettre à jour les affichages
+                closeUnifiedInvoiceModal();
+                populateFilters();
+                populateRecapFilters();
+                updateClientsList();
+                applyFilters();
+                applyRecapFilters();
+                updateClientsOverview();
+                updateClientsSummaryTable();
+                updateCloudStatus('online', '☁️ Sync');
+                
+            } catch (error) {
+                console.error('Erreur sauvegarde facture:', error);
+                showAlert('Erreur lors de la sauvegarde: ' + error.message, 'error');
+                updateCloudStatus('offline', '❌ Erreur');
+            }
+        }
+        
+        // Fonction pour supprimer la facture complète
+        async function deleteCompleteInvoice() {
+            if (!window.editingInvoiceData) return;
+            
+            const invoiceNumber = window.editingInvoiceData.originalInvoiceNumber;
+            
+            if (!confirm(`Supprimer définitivement la facture "${invoiceNumber}" et tous ses articles ?`)) {
+                return;
+            }
+            
+            try {
+                // Supprimer les ventes de cette facture
+                const invoiceSales = salesData.filter(sale => sale.invoice === invoiceNumber);
+                salesData = salesData.filter(sale => sale.invoice !== invoiceNumber);
+                saveToLocalStorage();
+                
+                // Supprimer de Firebase
+                if (isFirebaseInitialized) {
+                    const batch = db.batch();
+                    invoiceSales.forEach(sale => {
+                        const docRef = db.collection('sales').doc(sale.id.toString());
+                        batch.delete(docRef);
+                    });
+                    await batch.commit();
+                }
+                
+                showAlert(`🗑️ Facture "${invoiceNumber}" supprimée définitivement`, 'warning');
+                
+                // Fermer le modal et mettre à jour les affichages
+                closeUnifiedInvoiceModal();
+                populateFilters();
+                populateRecapFilters();
+                updateClientsList();
+                applyFilters();
+                applyRecapFilters();
+                updateClientsOverview();
+                updateClientsSummaryTable();
+                
+            } catch (error) {
+                console.error('Erreur suppression facture:', error);
+                showAlert('Erreur lors de la suppression: ' + error.message, 'error');
+            }
+        }
+        
+        // Fonction pour fermer le modal unifié
+        function closeUnifiedInvoiceModal() {
+            if (window.currentUnifiedInvoiceModal) {
+                document.body.removeChild(window.currentUnifiedInvoiceModal);
+                window.currentUnifiedInvoiceModal = null;
+                window.editingInvoiceData = null;
+            }
         }
         
         // Fonction pour fermer le modal de groupe de facture
