@@ -20171,7 +20171,7 @@ Date [ESPACES] Client [ESPACES] Montant
             const clients = [...new Set(salesData.map(sale => sale.client))].sort();
             populateSelect('clientFilter', clients, 'Tous les clients');
             
-            const articles = [...new Set(salesData.map(sale => sale.produit))].filter(Boolean).sort();
+            const articles = [...new Set(salesData.map(sale => sale.product))].filter(Boolean).sort();
             populateSelect('articleFilter', articles, 'Tous les articles');
         }
 
@@ -20225,7 +20225,7 @@ Date [ESPACES] Client [ESPACES] Montant
                 }
                 
                 if (clientFilter && sale.client !== clientFilter) include = false;
-                if (articleFilter && sale.produit !== articleFilter) include = false;
+                if (articleFilter && sale.product !== articleFilter) include = false;
                 
                 return include;
             });
