@@ -3431,6 +3431,10 @@
             <div class="last-update" id="lastUpdate">Dernière mise à jour: --</div>
             <div style="margin-top: 8px; font-size: clamp(0.7rem, 1.8vw, 0.8rem); color: var(--text-secondary);">
                 <span>Version: <strong id="appVersion">2.1.0</strong></span>
+                <button id="performanceToggle" onclick="togglePerformanceMode()" 
+                        style="margin-left: 10px; padding: 2px 6px; border-radius: 3px; background: #28a745; color: white; border: none; font-size: 0.7rem;">
+                    🚀 PERF
+                </button>
             </div>
             <span class="cloud-status" id="cloudStatus">🔄 Initialisation...</span>
         </div>
@@ -3546,7 +3550,12 @@
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div class="chart-card">
-                        <h3 class="chart-title">📈 Évolution CA vs Encaissements</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 class="chart-title" style="margin: 0;">📊 Top 10 Produits - Évolution Mensuelle</h3>
+                            <select id="productEvolutionFilter" onchange="updateProductEvolutionChart()" style="padding: 6px 12px; border: 1px solid #e9ecef; border-radius: 8px; background: white; cursor: pointer; font-size: 13px;">
+                                <option value="">🔍 Tous les produits</option>
+                            </select>
+                        </div>
                         <div class="chart-container" style="height: 300px;">
                             <canvas id="evolutionChart"></canvas>
                         </div>
@@ -3945,6 +3954,7 @@
                 <!-- Sous-navigation pour les paramètres -->
                 <div class="settings-nav">
                     <button class="settings-tab active" onclick="showSettingsSection('products')">📦 Produits</button>
+                    <button class="settings-tab" onclick="showSettingsSection('conformity')">✅ Conformité</button>
                     <button class="settings-tab" onclick="showSettingsSection('data')">💾 Données</button>
                 </div>
                 
@@ -3993,6 +4003,98 @@
                         <!-- Grille de produits améliorée -->
                         <div id="productsGrid" class="enhanced-product-grid">
                             <!-- Les produits seront affichés ici -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Section Conformité -->
+                <div id="settings-conformity" class="settings-section">
+                    <div class="invoice-section">
+                        <!-- En-tête de la section Conformité -->
+                        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                                <div>
+                                    <h3 style="color: white; margin: 0; font-size: 1.5rem;">✅ Contrôle de Conformité</h3>
+                                    <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 0.95rem;">Vérification des champs obligatoires : Format et Prix de vente</p>
+                                </div>
+                                <button class="btn" onclick="checkProductsConformity()" style="background: white; color: #f59e0b; padding: 14px 24px; font-size: 16px; font-weight: 700; border-radius: 25px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.3s ease;">
+                                    🔍 Actualiser
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Statistiques de conformité -->
+                        <div class="kpi-grid" style="margin-bottom: 20px;">
+                            <div class="kpi-card">
+                                <div class="kpi-icon" style="color: #28a745;">✅</div>
+                                <div class="kpi-value" id="conformProductsCount">0</div>
+                                <div class="kpi-label">Produits Conformes</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-icon" style="color: #dc3545;">⚠️</div>
+                                <div class="kpi-value" id="nonConformProductsCount">0</div>
+                                <div class="kpi-label">Non Conformes</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-icon" style="color: #f59e0b;">📊</div>
+                                <div class="kpi-value" id="conformityPercentage">0%</div>
+                                <div class="kpi-label">Taux de Conformité</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Filtres -->
+                        <div class="filters-section" style="margin-bottom: 20px;">
+                            <div class="filters-grid">
+                                <div class="filter-group">
+                                    <label for="conformityFilter">Affichage</label>
+                                    <select id="conformityFilter" onchange="filterConformityProducts()">
+                                        <option value="all">Tous les produits</option>
+                                        <option value="nonconform" selected>Non conformes uniquement</option>
+                                        <option value="conform">Conformes uniquement</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label for="issueTypeFilter">Type de problème</label>
+                                    <select id="issueTypeFilter" onchange="filterConformityProducts()">
+                                        <option value="all">Tous les problèmes</option>
+                                        <option value="format">Format manquant</option>
+                                        <option value="price">Prix manquant</option>
+                                        <option value="both">Format ET prix manquants</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tableau des produits non conformes -->
+                        <div class="card">
+                            <h4 style="margin-bottom: 15px; color: #dc3545;">⚠️ Produits nécessitant une attention</h4>
+                            <div style="overflow-x: auto;">
+                                <table class="data-table" id="conformityTable">
+                                    <thead>
+                                        <tr>
+                                            <th>📦 Produit</th>
+                                            <th style="text-align: center;">📏 Format</th>
+                                            <th style="text-align: center;">💰 Prix de vente</th>
+                                            <th style="text-align: center;">⚠️ Problèmes</th>
+                                            <th style="text-align: center;">🔧 Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="conformityTableBody">
+                                        <!-- Rempli dynamiquement -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Aide -->
+                        <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #3b82f6;">
+                            <div style="font-size: 13px; font-weight: bold; color: #1e40af; margin-bottom: 5px;">💡 Aide - Conformité des produits</div>
+                            <div style="font-size: 12px; color: #1e3a8a; line-height: 1.4;">
+                                <strong>Champs obligatoires :</strong><br>
+                                • <strong>Format :</strong> Décrit l'unité/conditionnement (ex: "x 250g", "Lot de 12", "1L")<br>
+                                • <strong>Prix de vente :</strong> Prix unitaire de vente (nombre > 0)<br><br>
+                                <strong>Valeurs non acceptées :</strong> champs vides, "à définir", prix = 0
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -4125,16 +4227,16 @@
                 
                 <!-- 2 Tableaux des Stocks -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                    <!-- Tableau Stocks Positifs -->
+                    <!-- Tableau Stocks en Valeur -->
                     <div class="card">
-                        <h4 style="margin-bottom: 10px; color: #28a745; text-align: center;">✅ Stocks Positifs</h4>
+                        <h4 style="margin-bottom: 10px; color: #667eea; text-align: center;">💰 Stocks en Valeur</h4>
                         <div style="max-height: 300px; overflow-y: auto;">
-                            <table class="data-table" id="positiveStocksTable">
+                            <table class="data-table" id="stockValueTable">
                                 <thead>
                                     <tr>
                                         <th>📦 Produit</th>
-                                        <th>📊 Quantité</th>
-                                        <th>📏 Unité</th>
+                                        <th>💰 Valeur Unitaire</th>
+                                        <th>💵 Valeur Stock</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -4144,11 +4246,11 @@
                         </div>
                     </div>
                     
-                    <!-- Tableau Stocks Négatifs -->
+                    <!-- Tableau Stocks en Volume -->
                     <div class="card">
-                        <h4 style="margin-bottom: 10px; color: #dc3545; text-align: center;">⚠️ Stocks Négatifs</h4>
+                        <h4 style="margin-bottom: 10px; color: #28a745; text-align: center;">📊 Stocks en Volume</h4>
                         <div style="max-height: 300px; overflow-y: auto;">
-                            <table class="data-table" id="negativeStocksTable">
+                            <table class="data-table" id="stockVolumeTable">
                                 <thead>
                                     <tr>
                                         <th>📦 Produit</th>
@@ -4164,29 +4266,7 @@
                     </div>
                 </div>
                 
-                <!-- Graphique Pareto des stocks -->
-                <div class="card" style="margin-bottom: 20px;">
-                    <h3 style="margin-bottom: 15px; color: #667eea; text-align: center;">📊 Analyse Pareto des Stocks (Principe 20/80)</h3>
-                    
-                    <div style="position: relative;">
-                        <!-- Container du graphique avec position relative pour le texte central -->
-                        <div class="chart-container" style="height: 400px; position: relative;">
-                            <canvas id="stockLevelsChart"></canvas>
-                            <!-- Texte au centre du donut -->
-                            <div id="stockChartCenterText" style="
-                                position: absolute;
-                                top: 50%;
-                                left: 50%;
-                                transform: translate(-50%, -50%);
-                                pointer-events: none;
-                                z-index: 10;
-                            "></div>
-                        </div>
-                        
-                        <!-- Statistiques détaillées sous le graphique -->
-                        <div id="stockChartStats"></div>
-                    </div>
-                </div>
+
                 
                 <!-- Tableau simple des stocks actuels -->
                 <div class="card">
@@ -4312,6 +4392,7 @@
                                     <select id="exitType" required>
                                         <option value="">Sélectionner...</option>
                                         <option value="Vente">Vente</option>
+                                        <option value="Usine">Usine</option>
                                         <option value="Perte">Perte/Avarie</option>
                                         <option value="Prélèvement">Prélèvement</option>
                                         <option value="Transfert">Transfert</option>
@@ -4827,82 +4908,7 @@
                             </div>
                         </div>
                         
-                        <!-- Nouvelle section: Outils de Debug et Analyse -->
-                        <div style="background: rgba(255,255,255,0.95); color: #333; padding: 30px; border-radius: 4px; margin: 20px 0; text-align: left;">
-                            <h3 style="color: #667eea; margin-bottom: 20px; text-align: center;">🔧 Outils de Debug et Analyse</h3>
-                            
-                            <!-- Onglets pour organiser les outils -->
-                            <div style="display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee;">
-                                <button onclick="showDebugTab('firebase')" id="tabFirebase" class="debug-tab active" style="flex: 1; padding: 10px; border: none; background: #667eea; color: white; cursor: pointer; border-radius: 5px 5px 0 0; margin-right: 2px;">🔥 Firebase</button>
-                                <button onclick="showDebugTab('stocks')" id="tabStocks" class="debug-tab" style="flex: 1; padding: 10px; border: none; background: #ccc; color: #666; cursor: pointer; border-radius: 5px 5px 0 0; margin-right: 2px;">📦 Stocks</button>
-                                <button onclick="showDebugTab('commercial')" id="tabCommercial" class="debug-tab" style="flex: 1; padding: 10px; border: none; background: #ccc; color: #666; cursor: pointer; border-radius: 5px 5px 0 0; margin-right: 2px;">💼 Commercial</button>
-                                <button onclick="showDebugTab('system')" id="tabSystem" class="debug-tab" style="flex: 1; padding: 10px; border: none; background: #ccc; color: #666; cursor: pointer; border-radius: 5px 5px 0 0;">⚙️ Système</button>
-                            </div>
-                            
-                            <!-- Contenu des onglets -->
-                            <div id="debugFirebase" class="debug-content" style="display: block;">
-                                <h4 style="color: #667eea; margin-bottom: 15px;">🔥 Outils Firebase</h4>
-                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
-                                    <button onclick="testFirebaseConnection()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🔍 Test Connexion</button>
-                                    <button onclick="synchronizeProductsAndInventory()" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🔄 Sync Produits</button>
-                                    <button onclick="synchroniserDonneesBidirectionnellement(stockEntriesData, [], 'stockEntries')" style="background: #ffc107; color: #333; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">↔️ Sync Bidirectionnelle</button>
-                                </div>
-                                <div id="firebaseTestResults" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
-                                    Cliquez sur un bouton pour voir les résultats...
-                                </div>
-                            </div>
-                            
-                            <div id="debugStocks" class="debug-content" style="display: none;">
-                                <h4 style="color: #667eea; margin-bottom: 15px;">📦 Outils Stocks</h4>
-                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
-                                    <button onclick="testStockTablesDirectly()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🧪 Test Tables</button>
-                                    <button onclick="diagnosticStockIds()" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🔍 Diagnostic IDs</button>
-                                    <button onclick="validateStockImport()" style="background: #ffc107; color: #333; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">✅ Valider Import</button>
-                                    <button onclick="checkStockAvailability()" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">📊 Vérif Disponibilité</button>
-                                    <button onclick="diagnosticProductsInventory()" style="background: #6f42c1; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">📋 Diagnostic Inventaire</button>
-                                </div>
-                                <div id="stocksTestResults" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
-                                    Cliquez sur un bouton pour voir les résultats...
-                                </div>
-                            </div>
-                            
-                            <div id="debugCommercial" class="debug-content" style="display: none;">
-                                <h4 style="color: #667eea; margin-bottom: 15px;">💼 Outils Commercial</h4>
-                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
-                                    <button onclick="validatePaymentsImport()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">✅ Valider Encaissements</button>
-                                    <button onclick="testDeleteFunction()" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🗑️ Test Suppression</button>
-                                    <button onclick="analyzeQuestion('top produits cette semaine')" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">📊 Analyse Ventes</button>
-                                </div>
-                                <div id="commercialTestResults" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
-                                    Cliquez sur un bouton pour voir les résultats...
-                                </div>
-                            </div>
-                            
-                            <div id="debugSystem" class="debug-content" style="display: none;">
-                                <h4 style="color: #667eea; margin-bottom: 15px;">⚙️ Outils Système</h4>
-                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
-                                    <button onclick="testAllStockGraphics()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">📈 Test Graphiques</button>
-                                    <button onclick="cleanupDeletedMovementsList()" style="background: #ffc107; color: #333; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🧹 Nettoyer Cache</button>
-                                    <button onclick="checkCanvasElements()" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🎨 Check Canvas</button>
-                                    <button onclick="diagnoseMappingIssues()" style="background: #6f42c1; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">🗂️ Diagnostic Mapping</button>
-                                </div>
-                                <div id="systemTestResults" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
-                                    Cliquez sur un bouton pour voir les résultats...
-                                </div>
-                            </div>
-                            
-                            <!-- Console de sortie globale -->
-                            <div style="margin-top: 25px;">
-                                <h4 style="color: #667eea; margin-bottom: 10px;">📟 Console de Debug</h4>
-                                <div id="debugConsole" style="background: #212529; color: #28a745; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 11px; max-height: 150px; overflow-y: auto; border: 1px solid #444;">
-                                    > Console de debug initialisée...<br>
-                                    > Tous les outils de debug et analyse sont maintenant disponibles dans le module Admin.<br>
-                                </div>
-                                <div style="margin-top: 10px; text-align: center;">
-                                    <button onclick="clearDebugConsole()" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 11px;">🗑️ Vider Console</button>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- Section debug supprimée - Version production optimisée -->
                         
                         <!-- Section Import Encaissements en Masse (migrée du module Commercial) -->
                         <div style="background: rgba(255,255,255,0.95); color: #333; padding: 30px; border-radius: 15px; margin: 20px 0; text-align: left;">
@@ -5007,20 +5013,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             </div>
                         </div>
                         
-                        <!-- Bouton DEBUGALL - Diagnostic Complet -->
-                        <div style="background: rgba(255,0,0,0.1); border: 2px solid #ff6b6b; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
-                            <h4 style="color: #ff6b6b; margin-bottom: 15px;">🚨 DIAGNOSTIC COMPLET - DEBUGALL</h4>
-                            <p style="color: #666; margin-bottom: 15px; font-size: 14px;">
-                                Effectue un test complet de toutes les fonctionnalités :<br>
-                                <strong>Saisie → Synchronisation → Analyse → Suppression → Nettoyage</strong><br>
-                                <em>Les données de test sont automatiquement supprimées à la fin</em>
-                            </p>
-                            <button onclick="executeDebugAll()" style="background: linear-gradient(45deg, #ff6b6b, #ee5a24); color: white; border: none; padding: 15px 30px; border-radius: 25px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,107,107,0.3); margin: 5px;">
-                                🔥 DEBUGALL SIMPLE - Test Firebase
-                            </button>
-                            <button onclick="executeDebugAllComplete()" style="background: linear-gradient(45deg, #dc3545, #c82333); color: white; border: none; padding: 15px 30px; border-radius: 25px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(220,53,69,0.3); margin: 5px;">
-                                🔥🔥 DEBUGALL COMPLET - Avec Données
-                            </button>
+                        <!-- Section DEBUGALL supprimée - Tests de déploiement terminés -->
                             <div id="debugAllProgress" style="margin-top: 15px; display: none;">
                                 <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px;">
                                     <div style="font-weight: bold; margin-bottom: 10px;">📊 Progression du test :</div>
@@ -5669,6 +5662,23 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
     </div>
 
     <script>
+        // Mode debug conditionnel pour les performances
+        const DEBUG_MODE = false; // Désactivé pour les performances
+        let PERFORMANCE_MODE = true; // Mode haute performance activé par défaut
+        
+        // Fonctions de log conditionnelles
+        function debugLog(...args) {
+            if (DEBUG_MODE) console.log(...args);
+        }
+        
+        function debugWarn(...args) {
+            if (DEBUG_MODE) console.warn(...args);
+        }
+        
+        function debugError(...args) {
+            console.error(...args); // Erreurs toujours affichées
+        }
+        
         // Variables globales
         let salesData = [];
         let paymentsData = [];
@@ -5683,26 +5693,61 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         let isFirebaseInitialized = false;
         let deletionInProgress = false;
         
+        // Système de throttling optimisé pour les performances
+        const throttleTimers = {};
+        function throttle(key, func, delay = 250) {
+            // Si le mode performance est désactivé, exécuter immédiatement
+            if (!PERFORMANCE_MODE) {
+                requestAnimationFrame(func);
+                return;
+            }
+            
+            if (throttleTimers[key]) {
+                clearTimeout(throttleTimers[key]);
+            }
+            throttleTimers[key] = setTimeout(() => {
+                requestAnimationFrame(func);
+                delete throttleTimers[key];
+            }, delay);
+        }
+        
         // Fonction utilitaire pour vérifier Firebase
         function isFirebaseReady() {
             const ready = isFirebaseInitialized && db !== null && typeof db.collection === 'function';
             if (!ready) {
-                console.warn('⚠️ Firebase non disponible - opération ignorée');
-                console.log(`🔍 État: isFirebaseInitialized=${isFirebaseInitialized}, db=${!!db}, typeof db=${typeof db}`);
+                // Firebase non disponible - opération ignorée
             }
             return ready;
+        }
+        
+        // Système de cache pour éviter les rechargements inutiles
+        let dataCache = {};
+        let lastDataLoad = {};
+        const DATA_CACHE_DURATION = 15000; // 15 secondes
+        
+        function shouldReloadData(type) {
+            const now = Date.now();
+            const lastLoad = lastDataLoad[type] || 0;
+            return (now - lastLoad) > DATA_CACHE_DURATION;
+        }
+        
+        function markDataLoaded(type) {
+            lastDataLoad[type] = Date.now();
+        }
+        
+        function getCachedData(type) {
+            return dataCache[type] || null;
+        }
+        
+        function setCachedData(type, data) {
+            dataCache[type] = data;
+            markDataLoaded(type);
         }
         
         // 🔥 FONCTION DEBUG FIREBASE SUPPRESSION 🔥
         async function debugFirebaseDelete(collection, localId, action = "SUPPRESSION") {
             console.group(`🔥 FIREBASE ${action} DEBUG - Collection: ${collection}`);
-            console.log(`📝 ID Local à supprimer: "${localId}" (Type: ${typeof localId})`);
-            console.log(`🔥 Firebase Ready: ${isFirebaseReady()}`);
-            console.log(`📅 Timestamp: ${new Date().toISOString()}`);
-            
             if (isFirebaseReady()) {
-                console.log(`📍 Document Path: ${collection}/${localId.toString()}`);
-                console.log(`🎯 Document ID pour Firebase: "${localId.toString()}"`);
                 
                 // Afficher un aperçu de la collection avant suppression
                 await debugFirebaseCollectionOverview(collection);
@@ -6115,15 +6160,27 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 activeTab.classList.add('active');
             }
             
-            // Initialiser le module si nécessaire
+            // Initialiser le module si nécessaire (instantané si pré-chargé)
             if (moduleId === 'stocks') {
-                initializeStocksModule();
+                if (!moduleInitialized.stocks) {
+                    initializeStocksModule();
+                }
+                // Optimisation environnement stocks
+                requestAnimationFrame(() => optimizeStockEnvironment());
             } else if (moduleId === 'commercial') {
-                initializeCommercialModule();
+                if (!moduleInitialized.commercial) {
+                    initializeCommercialModule();
+                }
             } else if (moduleId === 'admin') {
-                initializeAdminModule();
+                if (!moduleInitialized.admin) {
+                    initializeAdminModule();
+                    moduleInitialized.admin = true;
+                }
             } else if (moduleId === 'formation') {
-                initializeFormationModule();
+                if (!moduleInitialized.formation) {
+                    initializeFormationModule();
+                    moduleInitialized.formation = true;
+                }
             }
 
             // Mettre à jour la sidebar
@@ -6136,114 +6193,87 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         function initializeCommercialModule() {
-            console.log('🏪 Initialisation du module Commercial...');
+            // Vérifier si déjà initialisé
+            if (moduleInitialized.commercial) {
+                console.log('⚡ Module Commercial déjà prêt');
+                return;
+            }
             
             // Réinitialiser l'affichage du module commercial
             showSection('dashboard');
             
-            // Mettre à jour la liste des produits (pour récupérer ceux créés dans le module stocks)
-            updateProductsList();
+            // Mise à jour optimisée avec requestAnimationFrame
+            requestAnimationFrame(() => {
+                updateProductsList();
+                updateClientsList();
+                
+                requestAnimationFrame(() => {
+                    updateAllClientDropdowns();
+                    console.log(`⚡ Module Commercial: ${productsData.length} produits disponibles`);
+                });
+            });
             
-            // Mettre à jour les dropdowns clients et produits
-            updateClientsList();
-            updateAllClientDropdowns();
-            
-            console.log(`📦 Module Commercial: ${productsData.length} produits disponibles`);
+            moduleInitialized.commercial = true;
         }
         
         function initializeStocksModule() {
-            console.log('Initialisation du module Stocks avec données locales uniquement...');
-            
-            // Charger SEULEMENT depuis localStorage
-            // loadStockData(); // 🚫 DÉSACTIVÉ pour éviter les conflits
-            const savedEntries = localStorage.getItem('stockEntries');
-            const savedExits = localStorage.getItem('stockExits');
-            const savedAlerts = localStorage.getItem('stockAlerts');
-            
-            if (savedEntries) stockEntriesData = JSON.parse(savedEntries);
-            if (savedExits) stockExitsData = JSON.parse(savedExits);
-            if (savedAlerts) stockAlertsData = JSON.parse(savedAlerts);
-            
-            console.log(`📦 Données chargées: ${stockEntriesData.length} entrées, ${stockExitsData.length} sorties`);
-            
-            // Initialiser les lignes par défaut pour les formulaires multi-lignes
-            if (entryLines.length === 0) {
-                addEntryLine();
-            }
-            if (exitLines.length === 0) {
-                addExitLine();
-            }
-            
-            // FORCER TOUJOURS LA MISE À JOUR DÈS L'INITIALISATION
-            console.log(`${salesData.length} données de vente trouvées, calcul immédiat des stocks...`);
-            
-            // NOUVEAU: Lancer la synchronisation produits/inventaire au chargement du module
-            if (isFirebaseReady()) {
-                setTimeout(() => {
-                    synchronizeProductsAndInventory();
-                }, 2000); // Attendre 2 secondes pour que tout soit chargé
-            }
-            
-            // Mise à jour immédiate des KPIs
-            forceUpdateStockKPIs();
-            
-            // NOUVEAU: Forcer la mise à jour de TOUS les tableaux
-            setTimeout(() => {
-                console.log('🔄 Mise à jour tableaux...');
+            // Vérifier si déjà pré-chargé
+            if (moduleInitialized.stocks) {
+                console.log('⚡ Module Stocks déjà pré-chargé - affichage instantané');
+            } else {
+                console.log('🔄 Initialisation rapide module Stocks...');
+                
+                // Charger SEULEMENT depuis localStorage si pas déjà fait
+                const savedEntries = localStorage.getItem('stockEntries');
+                const savedExits = localStorage.getItem('stockExits');
+                const savedAlerts = localStorage.getItem('stockAlerts');
+                
                 try {
+                    if (savedEntries) stockEntriesData = JSON.parse(savedEntries);
+                    if (savedExits) stockExitsData = JSON.parse(savedExits);
+                    if (savedAlerts) stockAlertsData = JSON.parse(savedAlerts);
+                } catch (error) {
+                    console.warn('⚠️ Erreur accès localStorage:', error.message);
+                    stockEntriesData = [];
+                    stockExitsData = [];
+                    stockAlertsData = [];
+                }
+                
+                console.log(`📦 Données: ${stockEntriesData.length} entrées, ${stockExitsData.length} sorties`);
+                
+                // Calculer immédiatement si pas en cache
+                if (!stockDashboardCache.isValid) {
+                    calculateCurrentStockLevels();
+                    stockDashboardCache.isValid = true;
+                    stockDashboardCache.lastUpdate = Date.now();
+                }
+                
+                // Initialiser les lignes par défaut
+                if (entryLines.length === 0) addEntryLine();
+                if (exitLines.length === 0) addExitLine();
+                
+                moduleInitialized.stocks = true;
+            }
+            
+            // Mise à jour immédiate des KPIs et tableaux (optimisée)
+            requestAnimationFrame(() => {
+                forceUpdateStockKPIs();
+                
+                // Mise à jour différée des tableaux pour éviter le blocage
+                requestAnimationFrame(() => {
                     updateAllMovementsTable();
                     updateEntriesMovementsTable();
                     updateExitsMovementsTable();
                     updateInventoryTable();
-                    
-                    // NOUVEAU: Initialiser les graphiques
                     updateStockCharts();
-                    updateStockProductFilters(); // Mise à jour des listes déroulantes
+                    updateStockProductFilters();
                     
-                    // Appliquer les filtres par défaut au chargement
+                    // Appliquer les filtres par défaut
                     setTimeout(() => {
-                        resetMovementFilters(); // Cela chargera tous les mouvements sans filtre
-                    }, 500);
-                    
-                    console.log('✅ Tous les tableaux stocks ont été mis à jour');
-                } catch (error) {
-                    console.error('❌ Erreur lors du forçage des tableaux:', error);
-                }
-            }, 1000);
-            
-            // Vérifier que les données de ventes sont chargées
-            if (salesData.length === 0) {
-                console.log('Aucune donnée de vente trouvée localement, tentative de récupération depuis Firebase...');
-                // Attendre un peu que Firebase se charge
-                setTimeout(() => {
-                    if (salesData.length > 0) {
-                        console.log(`${salesData.length} ventes récupérées, recalcul des stocks...`);
-                        
-                        // UTILISER LA FONCTION FORCÉE
-                        forceUpdateStockKPIs();
-                        
-                        // NOUVEAU: Re-forcer la mise à jour des tableaux avec les nouvelles données
-                        setTimeout(() => {
-                            updateAllMovementsTable();
-                            updateEntriesMovementsTable();
-                            updateExitsMovementsTable();
-                            updateInventoryTable();
-                            
-                            // Mettre à jour les graphiques également
-                            updateStockCharts();
-                            updateStockProductFilters();
-                        }, 500);
-                        
-                        // Générer automatiquement le rapport en console
-                        generateStockAnalysisReport();
-                    }
-                }, 2000);
-            } else {
-                console.log(`${salesData.length} ventes trouvées, calcul des stocks basé sur ces données...`);
-                
-                // Générer automatiquement le rapport en console
-                setTimeout(() => generateStockAnalysisReport(), 500);
-            }
+                        resetMovementFilters();
+                    }, 300);
+                });
+            });
             
             // Afficher le dashboard stocks par défaut
             showStocksSection('stock-dashboard');
@@ -6253,17 +6283,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // Ajouter le bouton de debug
             addDebugButton();
-            
-            // Message d'information pour l'utilisateur - SUPPRIMÉ POUR ÉVITER LE SPAM DE MESSAGES
-            // setTimeout(() => {
-            //     const negativeProducts = Object.keys(currentStockLevels).filter(
-            //         product => currentStockLevels[product].quantity < 0
-            //     ).length;
-            //     
-            //     if (negativeProducts > 0) {
-            //         showAlert(`📊 Module Stocks initialisé avec ${salesData.length} ventes existantes. ${negativeProducts} produits ont des stocks négatifs - normal au début, ajoutez vos entrées de stock pour rééquilibrer.`, 'info');
-            //     }
-            // }, 1500);
         }
         
         // ========================================
@@ -7264,6 +7283,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             <label for="edit_type">Type de sortie</label>
                             <select id="edit_type" class="form-control">
                                 <option value="Consommation production" ${(movement.type === 'Consommation production' || movement.type === 'Production') ? 'selected' : ''}>Consommation production</option>
+                                <option value="Usine" ${movement.type === 'Usine' ? 'selected' : ''}>Usine</option>
                                 <option value="Perte/Casse" ${(movement.type === 'Perte/Casse' || movement.type === 'Perte') ? 'selected' : ''}>Perte/Casse</option>
                                 <option value="Prélèvement" ${(movement.type === 'Prélèvement' || movement.type === 'Prelevement') ? 'selected' : ''}>Prélèvement</option>
                                 <option value="Ajustement inventaire" ${(movement.type === 'Ajustement inventaire' || movement.type === 'Ajustement') ? 'selected' : ''}>Ajustement inventaire</option>
@@ -9106,553 +9126,328 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         // DASHBOARD STOCKS AMÉLIORÉ AVEC INTÉGRATION VENTES
         // ========================================
         
+        // Cache intelligent pour éviter les recalculs inutiles
+        let stockDashboardCache = {
+            lastUpdate: 0,
+            data: null,
+            isValid: false
+        };
+        
+        function invalidateStockDashboardCache() {
+            stockDashboardCache.isValid = false;
+            stockDashboardCache.lastUpdate = 0;
+        }
+        
         function updateStockDashboard() {
-            console.log('🔄 MAJ dashboard...');
-            calculateCurrentStockLevels();
+            // Affichage instantané du loader
+            showDashboardLoader();
             
-            // Mettre à jour les cartes KPI
-            updateStockKPICards();
+            // Vérifier si le cache est encore valide (moins de 30 secondes)
+            const now = Date.now();
+            const cacheAge = now - stockDashboardCache.lastUpdate;
             
-            // Mettre à jour les sections informatives
-            updateStockAlerts();
+            // Désactiver temporairement le cache pour forcer l'affichage
+            // if (stockDashboardCache.isValid && cacheAge < 30000 && currentStockLevels && Object.keys(currentStockLevels).length > 0) {
+            //     // Utiliser le cache - affichage instantané
+            //     console.log('🚀 Utilisation du cache dashboard');
+            //     requestAnimationFrame(() => {
+            //         updateStockKPICardsFromCache();
+            //         updateStockAlertsFromCache();
+            //         updateSimpleStocksTableFromCache();
+            //         hideDashboardLoader();
+            //     });
+            //     return;
+            // }
             
-            // Mettre à jour le tableau simple
-            updateSimpleStocksTable();
+            console.log('🔄 Recalcul dashboard nécessaire - cache invalide ou vide');
             
-            // Mettre à jour le graphique en aires empilées
-            updateStockLevelsChart();
-            
-            // Initialiser les filtres du dashboard stocks
-            setTimeout(() => {
-                initializeStockDashboardFilters();
-            }, 100);
+            // Calcul en arrière-plan de façon non-bloquante
+            requestAnimationFrame(() => {
+                calculateCurrentStockLevels();
+                
+                // Mise à jour par étapes pour éviter le blocage
+                requestAnimationFrame(() => {
+                    updateStockKPICards();
+                    
+                    requestAnimationFrame(() => {
+                        updateStockAlerts();
+                        
+                        requestAnimationFrame(() => {
+                            updateSimpleStocksTable();
+                            
+                            // Marquer le cache comme valide
+                            stockDashboardCache.lastUpdate = now;
+                            stockDashboardCache.isValid = true;
+                            
+                            // Cacher le loader
+                            hideDashboardLoader();
+                            
+                            // Initialiser les filtres du dashboard stocks (désactivé temporairement pour optimisation)
+                            setTimeout(() => {
+                                // initializeStockDashboardFilters(); // Désactivé pour éviter les blocages
+                            }, 100);
+                        });
+                    });
+                });
+            });
+        }
+        
+        function showDashboardLoader() {
+            // Afficher un loader simple
+            const dashboardContent = document.getElementById('stock-dashboard');
+            if (dashboardContent) {
+                const loader = document.createElement('div');
+                loader.id = 'dashboardLoader';
+                loader.style.cssText = `
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(255,255,255,0.9);
+                    padding: 20px;
+                    border-radius: 10px;
+                    text-align: center;
+                    z-index: 1000;
+                    font-size: 14px;
+                    color: #667eea;
+                `;
+                loader.innerHTML = '🔄 Chargement du dashboard...';
+                dashboardContent.style.position = 'relative';
+                dashboardContent.appendChild(loader);
+            }
+        }
+        
+        function hideDashboardLoader() {
+            const loader = document.getElementById('dashboardLoader');
+            if (loader) {
+                loader.remove();
+            }
         }
         
         function updateSimpleStocksTable() {
             const tableBody = document.getElementById('stocksTableBody');
-            if (!tableBody) return;
-            
-            tableBody.innerHTML = '';
-            
-            // Trier les produits par quantité (les plus importants en premier)
-            const sortedProducts = Object.keys(currentStockLevels)
-                .sort((a, b) => currentStockLevels[b].quantity - currentStockLevels[a].quantity);
-            
-            sortedProducts.forEach(product => {
-                const stock = currentStockLevels[product];
-                const quantity = stock.quantity || 0;
-                const unit = stock.unit || 'Unités';
-                const value = (stock.value || 0).toLocaleString();
-                
-                // Déterminer le statut et la couleur
-                let status, statusColor;
-                if (quantity < 0) {
-                    status = '🔴 Négatif';
-                    statusColor = '#dc3545';
-                } else if (quantity === 0) {
-                    status = '⚠️ Vide';
-                    statusColor = '#ffc107';
-                } else if (quantity <= 10) {
-                    status = '🟡 Faible';
-                    statusColor = '#fd7e14';
-                } else {
-                    status = '✅ OK';
-                    statusColor = '#28a745';
-                }
-                
-                const row = document.createElement('tr');
-                row.style.cursor = 'pointer';
-                row.setAttribute('data-product', product);
-                row.addEventListener('click', () => {
-                    // console.log(`🖱️ Clic détecté sur le produit: ${product}`);
-                    navigateToProductMovements(product);
-                });
-                row.innerHTML = `
-                    <td style="font-weight: 600;">${product}</td>
-                    <td style="text-align: center; font-weight: 700; color: ${statusColor};">${quantity.toLocaleString()}</td>
-                    <td style="text-align: center;">${unit}</td>
-                    <td style="text-align: center; color: ${statusColor};">${status}</td>
-                    <td style="text-align: right; font-weight: 600;">${value} CFA</td>
-                `;
-                
-                tableBody.appendChild(row);
-            });
-            
-            // Réinitialiser le tri pour ce tableau
-            const stockTable = document.getElementById('stocksTable');
-            if (stockTable) {
-                reinitializeTableSorting(stockTable);
-            }
-        }
-        
-        function updateStockLevelsChart() {
-            const canvas = document.getElementById('stockLevelsChart');
-            if (!canvas) return;
-            
-            const ctx = canvas.getContext('2d');
-            
-            // Détruire le graphique existant
-            if (window.stockLevelsChartInstance) {
-                window.stockLevelsChartInstance.destroy();
-            }
-            
-            // Récupérer les stocks actuels et les trier par quantité décroissante
-            if (!currentStockLevels || Object.keys(currentStockLevels).length === 0) {
-                // Graphique par défaut si pas de données
-                window.stockLevelsChartInstance = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Aucune donnée'],
-                        datasets: [{
-                            data: [1],
-                            backgroundColor: ['#e3e3e3'],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Analyse Pareto des Stocks (20/80)',
-                                font: { size: 16, weight: 'bold' }
-                            },
-                            legend: {
-                                display: true,
-                                position: 'right'
-                            }
-                        }
-                    }
-                });
+            if (!tableBody) {
+                console.log('❌ stocksTableBody non trouvé');
                 return;
             }
             
-            // Convertir les stocks en tableau avec valeurs et trier par valeur décroissante
-            const stocksArray = Object.keys(currentStockLevels)
-                .map(product => {
-                    const stockInfo = currentStockLevels[product];
-                    const quantity = Math.max(0, stockInfo.quantity || 0);
-                    
-                    // Trouver le prix du produit dans productsData
-                    const productInfo = productsData.find(p => p.reference === product);
-                    const unitPrice = productInfo ? (productInfo.price || 0) : 0;
-                    const totalValue = quantity * unitPrice;
-                    
-                    return {
-                        product: product,
-                        quantity: quantity,
-                        unitPrice: unitPrice,
-                        totalValue: totalValue,
-                        unit: stockInfo.unit || 'Unités',
-                        format: productInfo ? (productInfo.format || '') : ''
-                    };
-                })
-                .filter(item => item.quantity > 0 && item.totalValue > 0) // Exclure les stocks sans valeur
-                .sort((a, b) => b.totalValue - a.totalValue); // Trier par valeur décroissante
+            console.log('🔄 updateSimpleStocksTable démarré');
+            console.log('📊 currentStockLevels:', currentStockLevels);
+            console.log('📦 stockEntriesData:', stockEntriesData.length);
+            console.log('📤 stockExitsData:', stockExitsData.length);
             
-            if (stocksArray.length === 0) {
-                // Aucun stock avec valeur
-                window.stockLevelsChartInstance = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Aucun stock valorisé'],
-                        datasets: [{
-                            data: [1],
-                            backgroundColor: ['#dc3545'],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Analyse Pareto des Stocks - Valeurs (20/80)',
-                                font: { size: 18, weight: 'bold' },
-                                color: '#333'
-                            },
-                            legend: {
-                                display: true,
-                                position: 'bottom',
-                                labels: {
-                                    padding: 20,
-                                    font: { size: 12 }
-                                }
-                            }
+            // Version ultra-optimisée - rendu par batch asynchrone
+            requestAnimationFrame(() => {
+                tableBody.innerHTML = '';
+                
+                const products = Object.keys(currentStockLevels || {});
+                console.log('🏷️ Produits trouvés:', products.length);
+                
+                if (products.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666; padding: 20px;">Aucune donnée de stock disponible</td></tr>';
+                    return;
+                }
+                
+                // Limiter à 50 produits max pour éviter le blocage
+                const topProducts = products
+                    .sort((a, b) => currentStockLevels[b].quantity - currentStockLevels[a].quantity)
+                    .slice(0, 50);
+                
+                // Pré-calculer les infos produits une seule fois
+                const productInfoMap = new Map();
+                if (productsData && productsData.length < 500) {
+                    productsData.forEach(p => {
+                        const key = p.reference || p.nom || p.name;
+                        if (key) {
+                            productInfoMap.set(key, {
+                                unit: p.format || 'Unités',
+                                price: parseFloat(p.prix || p.price || 0)
+                            });
+                        }
+                    });
+                }
+                
+                // Rendu par batch de 10 pour éviter le blocage
+                let currentIndex = 0;
+                const batchSize = 10;
+                
+                function renderBatch() {
+                    const fragment = document.createDocumentFragment();
+                    const endIndex = Math.min(currentIndex + batchSize, topProducts.length);
+                    
+                    for (let i = currentIndex; i < endIndex; i++) {
+                        const product = topProducts[i];
+                        const stock = currentStockLevels[product];
+                        const quantity = stock.quantity || 0;
+                        
+                        const info = productInfoMap.get(product) || { unit: stock.unit || 'Unités', price: 0 };
+                        const totalValue = quantity * info.price;
+                        
+                        // Statut simplifié
+                        const statusColor = quantity < 0 ? '#dc3545' : quantity === 0 ? '#ffc107' : quantity <= 10 ? '#fd7e14' : '#28a745';
+                        const status = quantity < 0 ? '🔴 Négatif' : quantity === 0 ? '⚠️ Vide' : quantity <= 10 ? '🟡 Faible' : '✅ OK';
+                        
+                        const row = document.createElement('tr');
+                        row.style.cursor = 'pointer';
+                        row.setAttribute('data-product', product);
+                        row.addEventListener('click', () => navigateToProductMovements(product));
+                        row.innerHTML = `
+                            <td style="font-weight: 600;">${product}</td>
+                            <td style="text-align: center; font-weight: 700; color: ${statusColor};">${quantity}</td>
+                            <td style="text-align: center;">${info.unit}</td>
+                            <td style="text-align: center; color: ${statusColor};">${status}</td>
+                            <td style="text-align: right; font-weight: 600;">${totalValue.toFixed(0)} CFA</td>
+                        `;
+                        
+                        fragment.appendChild(row);
+                    }
+                    
+                    tableBody.appendChild(fragment);
+                    currentIndex = endIndex;
+                    
+                    if (currentIndex < topProducts.length) {
+                        requestAnimationFrame(renderBatch);
+                    } else {
+                        // Terminé - sauvegarder dans le cache
+                        if (stockDashboardCache.data) {
+                            stockDashboardCache.data.tableHtml = tableBody.innerHTML;
                         }
                     }
-                });
-                return;
-            }
-            
-            // Calculer la valeur totale du stock
-            const totalValue = stocksArray.reduce((sum, item) => sum + item.totalValue, 0);
-            
-            // Appliquer le principe de Pareto : trouver les 20% de produits représentant 80% de la valeur
-            let cumulativeValue = 0;
-            let targetValue = totalValue * 0.8; // 80% de la valeur totale
-            let paretoProducts = [];
-            let otherProducts = [];
-            
-            stocksArray.forEach((item, index) => {
-                cumulativeValue += item.totalValue;
-                
-                // Si on n'a pas encore atteint 80% de la valeur OU si on est dans les 20% premiers produits
-                const percentage = (index + 1) / stocksArray.length;
-                if (cumulativeValue <= targetValue || percentage <= 0.2) {
-                    paretoProducts.push(item);
-                } else {
-                    otherProducts.push(item);
                 }
-            });
-            
-            // S'assurer qu'on a au moins quelques produits dans la catégorie Pareto
-            if (paretoProducts.length === 0 && stocksArray.length > 0) {
-                paretoProducts = stocksArray.slice(0, Math.max(1, Math.ceil(stocksArray.length * 0.2)));
-                otherProducts = stocksArray.slice(paretoProducts.length);
-            }
-            
-            // Préparer les données pour le graphique
-            const labels = [];
-            const data = [];
-            const backgroundColors = [];
-            const borderColors = [];
-            
-            // Couleurs dégradées pour les produits Pareto (du plus important au moins important)
-            const paretoColors = [
-                '#1e3a8a', '#1e40af', '#3b82f6', '#60a5fa', '#93c5fd',
-                '#dc2626', '#ef4444', '#f87171', '#fca5a5', '#fecaca',
-                '#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0'
-            ];
-            
-            // Ajouter les produits Pareto individuellement avec informations enrichies
-            paretoProducts.forEach((item, index) => {
-                const shortName = item.product.length > 20 ? item.product.substring(0, 20) + '...' : item.product;
-                const valuePercentage = ((item.totalValue / totalValue) * 100).toFixed(1);
-                const formattedValue = formatCurrency(item.totalValue);
                 
-                labels.push(`${shortName} - ${formattedValue} (${valuePercentage}%)`);
-                data.push(item.totalValue);
-                backgroundColors.push(paretoColors[index % paretoColors.length]);
-                borderColors.push('#ffffff');
+                renderBatch();
             });
-            
-            // Ajouter les autres produits comme un groupe
-            if (otherProducts.length > 0) {
-                const otherValue = otherProducts.reduce((sum, item) => sum + item.totalValue, 0);
-                const otherPercentage = ((otherValue / totalValue) * 100).toFixed(1);
-                const formattedOtherValue = formatCurrency(otherValue);
-                
-                labels.push(`Autres produits (${otherProducts.length}) - ${formattedOtherValue} (${otherPercentage}%)`);
-                data.push(otherValue);
-                backgroundColors.push('#6b7280'); // Gris moderne pour les autres
-                borderColors.push('#ffffff');
-            }
-            
-            // Calculer les statistiques Pareto
-            const paretoValue = paretoProducts.reduce((sum, item) => sum + item.totalValue, 0);
-            const paretoValuePercentage = ((paretoValue / totalValue) * 100).toFixed(1);
-            const paretoProductsPercentage = ((paretoProducts.length / stocksArray.length) * 100).toFixed(1);
-            
-            console.log('🔍 Données pour le graphique Pareto:', {
-                labels: labels,
-                data: data,
-                paretoProducts: paretoProducts.length,
-                otherProducts: otherProducts.length,
-                totalValue: formatCurrency(totalValue),
-                paretoValue: formatCurrency(paretoValue)
-            });
-            
-            // Créer le graphique donut moderne avec informations enrichies
-            window.stockLevelsChartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: backgroundColors,
-                        borderColor: borderColors,
-                        borderWidth: 3,
-                        hoverBorderWidth: 4,
-                        hoverBorderColor: '#ffffff',
-                        hoverBackgroundColor: backgroundColors.map(color => {
-                            // Rendre les couleurs plus vives au survol
-                            return color.replace(')', ', 0.9)').replace('rgb', 'rgba');
-                        })
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '45%', // Taille du trou central
-                    layout: {
-                        padding: {
-                            left: 30,
-                            right: 30,
-                            top: 20,
-                            bottom: 30
-                        }
-                    },
-                    interaction: {
-                        intersect: false,
-                        mode: 'nearest'
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: [
-                                '📊 Analyse Pareto des Stocks - Valeurs (Principe 20/80)',
-                                `${paretoProducts.length} produits (${paretoProductsPercentage}%) représentent ${paretoValuePercentage}% de la valeur totale`
-                            ],
-                            font: { 
-                                size: 16, 
-                                weight: 'bold',
-                                family: 'system-ui, -apple-system, sans-serif'
-                            },
-                            padding: { 
-                                top: 10,
-                                bottom: 25 
-                            },
-                            color: '#1f2937'
-                        },
-                        legend: {
-                            display: true,
-                            position: 'bottom',
-                            align: 'center',
-                            labels: {
-                                boxWidth: 12,
-                                boxHeight: 12,
-                                padding: 20,
-                                font: { 
-                                    size: 11,
-                                    family: 'system-ui, -apple-system, sans-serif'
-                                },
-                                usePointStyle: true,
-                                pointStyle: 'rectRounded',
-                                textAlign: 'left',
-                                generateLabels: function(chart) {
-                                    const data = chart.data;
-                                    if (data.labels.length && data.datasets.length) {
-                                        return data.labels.map((label, i) => {
-                                            const dataset = data.datasets[0];
-                                            const value = dataset.data[i];
-                                            const percentage = ((value / totalValue) * 100).toFixed(1);
-                                            
-                                            // Simplifier le label pour la légende
-                                            let cleanLabel = label.split(' - ')[0]; // Prendre seulement le nom
-                                            if (cleanLabel.length > 30) {
-                                                cleanLabel = cleanLabel.substring(0, 30) + '...';
-                                            }
-                                            
-                                            return {
-                                                text: `${cleanLabel}: ${formatCurrency(value)} (${percentage}%)`,
-                                                fillStyle: dataset.backgroundColor[i],
-                                                strokeStyle: dataset.backgroundColor[i],
-                                                lineWidth: 0,
-                                                hidden: false,
-                                                index: i
-                                            };
-                                        });
-                                    }
-                                    return [];
-                                }
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                            titleColor: '#f9fafb',
-                            bodyColor: '#f3f4f6',
-                            borderColor: '#374151',
-                            borderWidth: 1,
-                            cornerRadius: 8,
-                            displayColors: true,
-                            titleFont: {
-                                size: 14,
-                                weight: 'bold'
-                            },
-                            bodyFont: {
-                                size: 13
-                            },
-                            padding: 12,
-                            callbacks: {
-                                title: function(context) {
-                                    const label = context[0].label;
-                                    // Extraire le nom du produit
-                                    return label.split(' - ')[0];
-                                },
-                                label: function(context) {
-                                    const value = context.parsed;
-                                    const percentage = ((value / totalValue) * 100).toFixed(1);
-                                    const isPareto = context.dataIndex < paretoProducts.length;
-                                    
-                                    const lines = [
-                                        `💰 Valeur: ${formatCurrency(value)}`,
-                                        `📊 Part: ${percentage}% du total`,
-                                    ];
-                                    
-                                    if (isPareto) {
-                                        const product = paretoProducts[context.dataIndex];
-                                        lines.push(`📦 Quantité: ${product.quantity} ${product.unit}`);
-                                        lines.push(`💵 Prix unitaire: ${formatCurrency(product.unitPrice)}`);
-                                        if (product.format) {
-                                            lines.push(`📏 Format: ${product.format}`);
-                                        }
-                                        lines.push('⭐ Produit prioritaire (Pareto)');
-                                    } else {
-                                        lines.push(`📋 ${otherProducts.length} produits groupés`);
-                                        lines.push('📈 Produits secondaires');
-                                    }
-                                    
-                                    return lines;
-                                }
-                            }
-                        }
-                    },
-                    animation: {
-                        animateRotate: true,
-                        animateScale: true,
-                        duration: 1500,
-                        easing: 'easeOutQuart'
-                    }
-                }
-            });
-            
-            // Ajouter le texte central avec les statistiques principales
-            const centerTextElement = document.getElementById('stockChartCenterText');
-            if (centerTextElement) {
-                centerTextElement.innerHTML = `
-                    <div style="text-align: center; font-family: system-ui, -apple-system, sans-serif;">
-                        <div style="font-size: 24px; font-weight: bold; color: #1f2937; margin-bottom: 5px;">
-                            ${formatCurrency(totalValue)}
-                        </div>
-                        <div style="font-size: 13px; color: #6b7280; font-weight: 500;">
-                            Valeur totale du stock
-                        </div>
-                        <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">
-                            ${stocksArray.length} produits valorisés
-                        </div>
-                        <div style="font-size: 10px; color: #059669; margin-top: 5px; font-weight: 600;">
-                            Top ${paretoProducts.length}: ${paretoValuePercentage}%
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Ajouter des statistiques détaillées sous le graphique
-            const statsElement = document.getElementById('stockChartStats');
-            if (statsElement) {
-                const otherValue = otherProducts.reduce((sum, item) => sum + item.totalValue, 0);
-                const topProduct = paretoProducts[0];
-                
-                statsElement.innerHTML = `
-                    <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid #e2e8f0;">
-                        <h4 style="color: #1e40af; margin-bottom: 15px; font-size: 16px; font-weight: 600;">
-                            📊 Résumé de l'analyse Pareto
-                        </h4>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
-                                <div style="color: #059669; font-weight: 600; font-size: 14px;">💚 Produits Pareto (A)</div>
-                                <div style="color: #111827; font-size: 20px; font-weight: bold; margin: 8px 0;">
-                                    ${paretoProducts.length} produits
-                                </div>
-                                <div style="color: #6b7280; font-size: 12px;">
-                                    ${paretoProductsPercentage}% des références → ${paretoValuePercentage}% de la valeur
-                                </div>
-                                <div style="color: #059669; font-size: 13px; font-weight: 600; margin-top: 5px;">
-                                    ${formatCurrency(paretoValue)}
-                                </div>
-                            </div>
-                            
-                            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
-                                <div style="color: #f59e0b; font-weight: 600; font-size: 14px;">📦 Autres produits (B+C)</div>
-                                <div style="color: #111827; font-size: 20px; font-weight: bold; margin: 8px 0;">
-                                    ${otherProducts.length} produits
-                                </div>
-                                <div style="color: #6b7280; font-size: 12px;">
-                                    ${(100 - parseFloat(paretoProductsPercentage)).toFixed(1)}% des références → ${(100 - parseFloat(paretoValuePercentage)).toFixed(1)}% de la valeur
-                                </div>
-                                <div style="color: #f59e0b; font-size: 13px; font-weight: 600; margin-top: 5px;">
-                                    ${formatCurrency(otherValue)}
-                                </div>
-                            </div>
-                            
-                            ${topProduct ? `
-                            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
-                                <div style="color: #dc2626; font-weight: 600; font-size: 14px;">🏆 Produit N°1</div>
-                                <div style="color: #111827; font-size: 16px; font-weight: bold; margin: 8px 0;">
-                                    ${topProduct.product.length > 25 ? topProduct.product.substring(0, 25) + '...' : topProduct.product}
-                                </div>
-                                <div style="color: #6b7280; font-size: 12px;">
-                                    ${((topProduct.totalValue / totalValue) * 100).toFixed(1)}% de la valeur totale
-                                </div>
-                                <div style="color: #dc2626; font-size: 13px; font-weight: 600; margin-top: 5px;">
-                                    ${formatCurrency(topProduct.totalValue)}
-                                </div>
-                            </div>
-                            ` : ''}
-                        </div>
-                        
-                        <div style="background: #fef3c7; padding: 12px; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                            <div style="font-size: 13px; font-weight: bold; color: #856404; margin-bottom: 5px;">💡 Analyse Pareto - Principe 20/80</div>
-                            <div style="font-size: 12px; color: #92400e; line-height: 1.4;">
-                                <strong>${paretoProducts.length} produits</strong> (${paretoProductsPercentage}% de votre catalogue) génèrent 
-                                <strong>${paretoValuePercentage}% de la valeur</strong> de votre stock. 
-                                Concentrez vos efforts de gestion sur ces produits prioritaires.
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-        
-        // Fonction pour mettre à jour les graphiques des stocks
-        function updateStockCharts() {
-            updateStockLevelsChart();
-            updateStockMovementsChart();
-            updateStockKPICards();
         }
 
-        // Fonction pour mettre à jour les tableaux de stocks positifs et négatifs
+        
+
+
+        // Fonction pour mettre à jour les tableaux de stocks en valeur et en volume
+        function updateStockKPICardsFromCache() {
+            // Version ultra-rapide depuis le cache
+            if (stockDashboardCache.data && stockDashboardCache.data.kpiHtml) {
+                const kpiContainer = document.getElementById('stockKPIContainer');
+                if (kpiContainer) {
+                    kpiContainer.innerHTML = stockDashboardCache.data.kpiHtml;
+                }
+            }
+        }
+        
+        function updateStockAlertsFromCache() {
+            // Version ultra-rapide depuis le cache
+            if (stockDashboardCache.data && stockDashboardCache.data.alertsHtml) {
+                const alertsContainer = document.getElementById('stockAlertsContainer');
+                if (alertsContainer) {
+                    alertsContainer.innerHTML = stockDashboardCache.data.alertsHtml;
+                }
+            }
+        }
+        
+        function updateSimpleStocksTableFromCache() {
+            // Version ultra-rapide depuis le cache
+            if (stockDashboardCache.data && stockDashboardCache.data.tableHtml) {
+                const tableBody = document.getElementById('stocksTableBody');
+                if (tableBody) {
+                    tableBody.innerHTML = stockDashboardCache.data.tableHtml;
+                }
+            }
+        }
+        
         function updateStockKPICards() {
             if (!currentStockLevels) return;
             
             const products = Object.keys(currentStockLevels);
-            const positiveStocks = [];
-            const negativeStocks = [];
+            const stocksWithValue = [];
+            const stocksWithVolume = [];
             
-            // Séparer les stocks positifs et négatifs
-            products.forEach(product => {
+            // Version optimisée - éviter les boucles lourdes
+            const productInfo = {};
+            if (productsData && Array.isArray(productsData) && productsData.length < 1000) {
+                // Seulement pour un nombre raisonnable de produits
+                for (let i = 0; i < productsData.length; i++) {
+                    const product = productsData[i];
+                    const key = product.reference || product.nom || product.name;
+                    if (key) {
+                        productInfo[key] = {
+                            price: parseFloat(product.prix || product.price || 0),
+                            unit: product.format || 'Unités'
+                        };
+                    }
+                }
+            }
+            
+            // Version ultra-simplifiée - seulement les 20 premiers produits
+            const topProducts = products.slice(0, 20);
+            
+            for (let i = 0; i < topProducts.length; i++) {
+                const product = topProducts[i];
                 const stock = currentStockLevels[product];
                 const quantity = stock.quantity || 0;
-                const unit = stock.unit || 'Unités';
                 
                 if (quantity > 0) {
-                    positiveStocks.push({ product, quantity, unit });
-                } else if (quantity < 0) {
-                    negativeStocks.push({ product, quantity: Math.abs(quantity), unit });
+                    const prodInfo = productInfo[product] || { price: 0, unit: 'Unités' };
+                    
+                    if (prodInfo.price > 0) {
+                        stocksWithValue.push({
+                            product: product,
+                            unitPrice: prodInfo.price,
+                            quantity: quantity,
+                            stockValue: quantity * prodInfo.price
+                        });
+                    }
+                    
+                    stocksWithVolume.push({
+                        product: product,
+                        quantity: quantity,
+                        unit: prodInfo.unit
+                    });
                 }
-            });
+            }
             
-            // Trier par quantité décroissante
-            positiveStocks.sort((a, b) => b.quantity - a.quantity);
-            negativeStocks.sort((a, b) => b.quantity - a.quantity);
+            // Trier par valeur décroissante pour les stocks en valeur
+            stocksWithValue.sort((a, b) => b.stockValue - a.stockValue);
             
-            // Remplir le tableau des stocks positifs
-            const positiveTableBody = document.querySelector('#positiveStocksTable tbody');
-            if (positiveTableBody) {
-                positiveTableBody.innerHTML = '';
-                if (positiveStocks.length === 0) {
-                    positiveTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #666;">Aucun stock positif</td></tr>';
+            // Trier par quantité décroissante pour les stocks en volume
+            stocksWithVolume.sort((a, b) => b.quantity - a.quantity);
+            
+            // Remplir le tableau des stocks en valeur
+            const valueTableBody = document.querySelector('#stockValueTable tbody');
+            if (valueTableBody) {
+                valueTableBody.innerHTML = '';
+                if (stocksWithValue.length === 0) {
+                    valueTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #666;">Aucun stock avec prix défini</td></tr>';
                 } else {
-                    positiveStocks.forEach(stock => {
+                    // Rendu ultra-simplifié des 10 premiers seulement
+                    const fragment = document.createDocumentFragment();
+                    const topStocks = stocksWithValue.slice(0, 10);
+                    
+                    for (let i = 0; i < topStocks.length; i++) {
+                        const stock = topStocks[i];
+                        const row = document.createElement('tr');
+                        row.style.cursor = 'pointer';
+                        row.innerHTML = `
+                            <td>${stock.product}</td>
+                            <td style="text-align: right; font-weight: bold; color: #667eea;">${stock.unitPrice.toFixed(0)} CFA</td>
+                            <td style="text-align: right; font-weight: bold; color: #28a745;">${stock.stockValue.toFixed(0)} CFA</td>
+                        `;
+                        fragment.appendChild(row);
+                    }
+                    valueTableBody.appendChild(fragment);
+                }
+            }
+            
+            // Remplir le tableau des stocks en volume
+            const volumeTableBody = document.querySelector('#stockVolumeTable tbody');
+            if (volumeTableBody) {
+                volumeTableBody.innerHTML = '';
+                if (stocksWithVolume.length === 0) {
+                    volumeTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #666;">Aucun stock disponible</td></tr>';
+                } else {
+                    stocksWithVolume.slice(0, 20).forEach(stock => { // Limiter à 20 produits
                         const row = document.createElement('tr');
                         row.style.cursor = 'pointer';
                         row.setAttribute('data-product', stock.product);
                         row.addEventListener('click', () => {
-                            // console.log(`🖱️ Clic détecté sur le produit (tableau positif): ${stock.product}`);
                             navigateToProductMovements(stock.product);
                         });
                         row.innerHTML = `
@@ -9660,44 +9455,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                             <td style="text-align: right; font-weight: bold; color: #28a745;">${stock.quantity.toLocaleString()}</td>
                             <td style="text-align: center;">${stock.unit}</td>
                         `;
-                        positiveTableBody.appendChild(row);
-                    });
-                }
-            }
-            
-            // Remplir le tableau des stocks négatifs
-            const negativeTableBody = document.querySelector('#negativeStocksTable tbody');
-            if (negativeTableBody) {
-                negativeTableBody.innerHTML = '';
-                if (negativeStocks.length === 0) {
-                    negativeTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #666;">Aucun stock négatif</td></tr>';
-                } else {
-                    negativeStocks.forEach(stock => {
-                        const row = document.createElement('tr');
-                        row.style.cursor = 'pointer';
-                        row.setAttribute('data-product', stock.product);
-                        row.addEventListener('click', () => {
-                            // console.log(`🖱️ Clic détecté sur le produit (tableau négatif): ${stock.product}`);
-                            navigateToProductMovements(stock.product);
-                        });
-                        row.innerHTML = `
-                            <td>${stock.product}</td>
-                            <td style="text-align: right; font-weight: bold; color: #dc3545;">-${stock.quantity.toLocaleString()}</td>
-                            <td style="text-align: center;">${stock.unit}</td>
-                        `;
-                        negativeTableBody.appendChild(row);
+                        volumeTableBody.appendChild(row);
                     });
                 }
             }
             
             // Initialiser le tri pour ces tableaux
-            const positiveTable = document.getElementById('positiveStocksTable');
-            const negativeTable = document.getElementById('negativeStocksTable');
-            if (positiveTable) {
-                reinitializeTableSorting(positiveTable);
+            const valueTable = document.getElementById('stockValueTable');
+            const volumeTable = document.getElementById('stockVolumeTable');
+            if (valueTable) {
+                reinitializeTableSorting(valueTable);
             }
-            if (negativeTable) {
-                reinitializeTableSorting(negativeTable);
+            if (volumeTable) {
+                reinitializeTableSorting(volumeTable);
             }
             
             // NOUVEAU: Calculer et afficher les KPI d'entrées et sorties
@@ -10302,11 +10072,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         // Fonction de synchronisation bidirectionnelle pour résoudre les désynchronisations
         async function synchroniserDonneesBidirectionnellement(donneesLocales, donneesFirebase, collection) {
             try {
-                console.log(`🔄 Synchronisation bidirectionnelle pour ${collection}:`);
-                logToDebugConsole(`🔄 Sync bidirectionnelle ${collection}...`, 'info');
-                console.log(`📱 Local: ${donneesLocales.length} éléments`);
-                console.log(`🔥 Firebase: ${donneesFirebase.length} éléments`);
-                logToDebugConsole(`📱 Local: ${donneesLocales.length} | 🔥 Firebase: ${donneesFirebase.length}`, 'info');
+                // console.log(`🔄 Synchronisation bidirectionnelle pour ${collection}:`);
+                // logToDebugConsole(`🔄 Sync bidirectionnelle ${collection}...`, 'info');
+                // console.log(`📱 Local: ${donneesLocales.length} éléments`);
+                // console.log(`🔥 Firebase: ${donneesFirebase.length} éléments`);
+                // logToDebugConsole(`📱 Local: ${donneesLocales.length} | 🔥 Firebase: ${donneesFirebase.length}`, 'info');
                 
                 // Récupérer la liste des éléments supprimés
                 const deletedItems = JSON.parse(localStorage.getItem('deletedMovements') || '[]');
@@ -10423,9 +10193,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         async function loadStockData() {
             const now = Date.now();
             
-            // ⚠️ PROTECTION STRICTE : Max 1 fois par 5 minutes
-            if (now - lastLoadStockTime < LOAD_STOCK_THROTTLE_MS) {
-                console.log(`🚫 loadStockData() BLOQUÉE - Trop récent (< 5 min)`);
+            // ⚠️ PROTECTION OPTIMISÉE : Max 1 fois par 2 minutes (réduit pour le dashboard)
+            if (now - lastLoadStockTime < 120000) { // 2 minutes au lieu de 5
+                console.log(`🚫 loadStockData() BLOQUÉE - Trop récent (< 2 min)`);
                 return;
             }
             
@@ -10452,12 +10222,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 stockAlertsData = JSON.parse(savedAlerts);
             }
             
-            console.log(`📊 Données locales: ${stockEntriesData.length} entrées, ${stockExitsData.length} sorties`);
+            // console.log(`📊 Données locales: ${stockEntriesData.length} entrées, ${stockExitsData.length} sorties`);
             
             // Si Firebase est initialisé, synchroniser BIDIRECTIONNELLEMENT avec les données du cloud
             if (isFirebaseInitialized && db) {
                 try {
-                    console.log('🔄 Sync Firebase stocks...');
+                    // console.log('🔄 Sync Firebase stocks...');
                     
                     // Charger les entrées de stock depuis Firebase
                     const entriesSnapshot = await db.collection('stockEntries').get();
@@ -10476,7 +10246,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         });
                     }
                     
-                    console.log(`🔥 Données Firebase: ${firebaseEntries.length} entrées`);
+                    // console.log(`🔥 Données Firebase: ${firebaseEntries.length} entrées`);
                     
                     // NOUVEAU: Synchronisation bidirectionnelle intelligente
                     await synchroniserDonneesBidirectionnellement(stockEntriesData, firebaseEntries, 'stockEntries');
@@ -10497,10 +10267,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         });
                     }
                     
-                    console.log(`🔥 Données Firebase: ${firebaseExits.length} sorties`);
-                    await synchroniserDonneesBidirectionnellement(stockExitsData, firebaseExits, 'stockExits');
-                    
-                    // Charger les alertes (sans synchronisation bidirectionnelle pour le moment)
+                // console.log(`🔥 Données Firebase: ${firebaseExits.length} sorties`);
+                await synchroniserDonneesBidirectionnellement(stockExitsData, firebaseExits, 'stockExits');                    // Charger les alertes (sans synchronisation bidirectionnelle pour le moment)
                     const alertsSnapshot = await db.collection('stockAlerts').get();
                     if (!alertsSnapshot.empty) {
                         const firebaseAlerts = [];
@@ -10526,7 +10294,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 }
             }
             
-            // Calculer les niveaux de stock actuels
+            // Calculer les niveaux de stock actuels et invalider le cache
+            invalidateStockDashboardCache();
             calculateCurrentStockLevels();
         }
         
@@ -10711,14 +10480,25 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         // ========================================
         
         function calculateCurrentStockLevels() {
-            console.log('📊 Début calcul stocks...');
+            console.log('🧮 calculateCurrentStockLevels démarré');
             
-            // Si productsData est vide, on continue avec les données disponibles
-            if (productsData.length === 0) {
-                console.warn('⚠️ productsData vide, calcul avec données disponibles');
-            } else {
-                console.log(`✅ productsData chargée: ${productsData.length} produits disponibles`);
+            // Version optimisée - vérifier si on peut éviter le recalcul complet
+            const dataHash = JSON.stringify([salesData.length, stockEntriesData.length, stockExitsData.length]);
+            console.log('📊 Données disponibles:', { 
+                sales: salesData.length, 
+                entries: stockEntriesData.length, 
+                exits: stockExitsData.length 
+            });
+            
+            if (stockDashboardCache.data && stockDashboardCache.data.hash === dataHash && 
+                stockDashboardCache.data.stockLevels && Object.keys(stockDashboardCache.data.stockLevels).length > 0) {
+                console.log('📋 Utilisation du cache (hash identique)');
+                currentStockLevels = stockDashboardCache.data.stockLevels;
+                console.log('✅ Stocks restaurés depuis cache:', Object.keys(currentStockLevels).length);
+                return; // Données inchangées, pas de recalcul nécessaire
             }
+            
+            console.log('🔄 Recalcul nécessaire');
             
             // Réinitialiser les niveaux de stock
             currentStockLevels = {};
@@ -10733,9 +10513,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 const quantity = parseFloat(sale.quantity) || 0;
                 
                 // FILTRER LES DONNÉES ABERRANTES
-                if (canonicalProductName && quantity > 0 && quantity < 1000000 && 
-                    !canonicalProductName.includes('Reprise de données') && 
-                    !canonicalProductName.includes('Reprise des données')) {
+                if (canonicalProductName && quantity > 0 && quantity < 1000000) {
                     
                     if (!salesByProduct[canonicalProductName]) {
                         salesByProduct[canonicalProductName] = {
@@ -10816,11 +10594,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 }
             });
             
-            console.log(`✅ Calcul stocks terminé:`);
-            console.log(`   • ${Object.keys(currentStockLevels).length} produits suivis`);
-            console.log(`   • ${Object.keys(salesByProduct).length} produits vendus`);
-            console.log(`   • ${negativeStockCount} stocks négatifs`);
-            console.log(`   • ${stockEntriesData.length} entrées de stock`);
+            // console.log(`✅ Calcul stocks terminé: ${Object.keys(currentStockLevels).length} produits, ${negativeStockCount} négatifs`);
+            
+            // Sauvegarder dans le cache pour les prochains affichages
+            const currentDataHash = JSON.stringify([salesData.length, stockEntriesData.length, stockExitsData.length]);
+            stockDashboardCache.data = {
+                hash: currentDataHash,
+                stockLevels: {...currentStockLevels}
+            };
+            
+            console.log('✅ calculateCurrentStockLevels terminé:', {
+                produits: Object.keys(currentStockLevels).length,
+                cache: !!stockDashboardCache.data
+            });
             console.log(`   • ${stockExitsData.length} autres sorties`);
         }
         
@@ -10987,7 +10773,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Traiter chaque ligne
             for (const line of validLines) {
                 const productName = line.product.trim();
-                console.log('🏷️ Traitement produit:', productName); // Debug
+                // console.log('🏷️ Traitement produit:', productName); // Debug - Désactivé
                 
                 // Créer l'entrée
                 const entry = {
@@ -11146,6 +10932,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             console.log('📦 Module stocks actif:', isStocksModuleActive);
             
             // Recalculer et mettre à jour le dashboard simplifié
+            invalidateStockDashboardCache();
             calculateCurrentStockLevels();
             updateStockDashboard();
             
@@ -11161,27 +10948,40 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         const stockItemsPerPage = 50;
         let filteredStockData = [];
         
-        function updateInventoryTable() {
-            console.log('📊 Mise à jour du nouveau tableau de bord stocks...');
-            
-            // Vérifications préliminaires
-            if (Object.keys(currentStockLevels).length === 0) {
-                console.warn('⚠️ currentStockLevels est vide, recalcul des stocks...');
-                calculateCurrentStockLevels();
+        // Cache pour prepareStockData avec validation par hash
+        // Cache pour prepareStockData avec validation par hash
+        let preparedStockCache = {
+            data: null,
+            hash: '',
+            timestamp: 0
+        };
+        
+        // Throttling pour updateInventoryTable
+        let updateInventoryTableTimer = null;
+        function updateInventoryTableThrottled() {
+            if (updateInventoryTableTimer) {
+                return; // Déjà en attente
             }
+            updateInventoryTableTimer = setTimeout(() => {
+                updateInventoryTable();
+                updateInventoryTableTimer = null;
+            }, 200); // 200ms de délai
+        }
+        
+        function updateInventoryTable() {
+            // Vérifier si on a besoin de recalculer
+            const needsUpdate = Object.keys(currentStockLevels).length === 0 || productsData.length === 0;
             
-            if (productsData.length === 0) {
-                console.warn('⚠️ productsData est vide, tentative de rechargement...');
-                loadFromLocalStorage();
-                // Si toujours vide après rechargement localStorage
+            if (needsUpdate) {
+                if (Object.keys(currentStockLevels).length === 0) {
+                    calculateCurrentStockLevels();
+                }
                 if (productsData.length === 0) {
-                    console.error('❌ Impossible de charger productsData');
+                    loadFromLocalStorage();
                 }
             }
             
-            console.log(`📊 Données disponibles: currentStockLevels=${Object.keys(currentStockLevels).length}, productsData=${productsData.length}`);
-            
-            // Préparer les données
+            // Préparer les données (avec cache)
             prepareStockData();
             
             // Appliquer les filtres
@@ -11192,50 +10992,69 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         function prepareStockData() {
+            // Générer un hash des données pour détecter les changements
+            const dataHash = `${Object.keys(currentStockLevels).length}-${productsData.length}-${stockEntriesData.length}-${stockExitsData.length}-${salesData.length}`;
+            
+            // Vérifier si le cache est valide (moins de 10 secondes)
+            const cacheAge = Date.now() - preparedStockCache.timestamp;
+            const isCacheValid = preparedStockCache.data && 
+                                preparedStockCache.hash === dataHash && 
+                                cacheAge < 10000;
+            
+            if (isCacheValid) {
+                window.preparedStockData = preparedStockCache.data;
+                return;
+            }
+            
             // FILTRER SEULEMENT LES PRODUITS ACTIFS (qui existent dans productsData)
             const activeProductNames = new Set(productsData.map(p => p.reference));
-            console.log(`� Produits actifs référencés: ${activeProductNames.size}`);
             
             // Filtrer currentStockLevels pour ne garder que les produits actifs
             const activeStockEntries = Object.keys(currentStockLevels)
                 .filter(productName => activeProductNames.has(productName));
             
-            console.log(`🔍 Produits avec stock filtrés: ${activeStockEntries.length}/${Object.keys(currentStockLevels).length}`);
+            // Pré-calculer les maps pour optimiser les recherches (évite les filter/reduce multiples)
+            const entriesMap = new Map();
+            const exitsMap = new Map();
+            const salesMap = new Map();
+            
+            // Pré-calculer les totaux UNE SEULE FOIS pour tous les produits
+            stockEntriesData.forEach(entry => {
+                const canonicalName = getCanonicalProductName(entry.product);
+                const qty = parseFloat(entry.quantity) || 0;
+                entriesMap.set(canonicalName, (entriesMap.get(canonicalName) || 0) + qty);
+            });
+            
+            stockExitsData.forEach(exit => {
+                const canonicalName = getCanonicalProductName(exit.product);
+                const qty = parseFloat(exit.quantity) || 0;
+                exitsMap.set(canonicalName, (exitsMap.get(canonicalName) || 0) + qty);
+            });
+            
+            salesData.forEach(sale => {
+                const canonicalName = getCanonicalProductName(sale.product);
+                const qty = parseFloat(sale.quantity) || 0;
+                salesMap.set(canonicalName, (salesMap.get(canonicalName) || 0) + qty);
+            });
+            
+            // Créer un index produits pour recherche rapide (au lieu de find)
+            const productsMap = new Map(productsData.map(p => [p.reference, p]));
             
             // Convertir currentStockLevels en tableau pour manipulation (SEULEMENT LES ACTIFS)
             const stockArray = activeStockEntries.map(productName => {
                 const stock = currentStockLevels[productName];
                 
-                // Le productName ici EST DÉJÀ le nom canonique depuis calculateCurrentStockLevels
-                // Donc on cherche directement par reference
-                const linkedProduct = productsData.find(p => p.reference === productName);
+                // Recherche rapide via Map au lieu de find
+                const linkedProduct = productsMap.get(productName);
                 
                 const displayName = linkedProduct ? linkedProduct.reference : productName;
                 const costPerUnit = linkedProduct ? (linkedProduct.price || 0) : 0;
                 const stockValue = Math.max(0, stock.quantity) * costPerUnit;
                 
-                // Calculer les totaux d'entrées et sorties
-                // Attention: utiliser les noms originaux ET canoniques pour les recherches
-                const totalEntries = stockEntriesData
-                    .filter(entry => {
-                        const canonicalName = getCanonicalProductName(entry.product);
-                        return canonicalName === productName || entry.product === productName;
-                    })
-                    .reduce((total, entry) => total + (parseFloat(entry.quantity) || 0), 0);
-                
-                const totalExits = stockExitsData
-                    .filter(exit => {
-                        const canonicalName = getCanonicalProductName(exit.product);
-                        return canonicalName === productName || exit.product === productName;
-                    })
-                    .reduce((total, exit) => total + (parseFloat(exit.quantity) || 0), 0);
-                
-                const totalSales = salesData
-                    .filter(sale => {
-                        const canonicalName = getCanonicalProductName(sale.product);
-                        return canonicalName === productName || sale.product === productName;
-                    })
-                    .reduce((total, sale) => total + (parseFloat(sale.quantity) || 0), 0);
+                // Récupérer les totaux depuis les maps pré-calculées (O(1) au lieu de O(n))
+                const totalEntries = entriesMap.get(productName) || 0;
+                const totalExits = exitsMap.get(productName) || 0;
+                const totalSales = salesMap.get(productName) || 0;
                 
                 const totalAllExits = totalExits + totalSales;
                 const rotationRate = totalEntries > 0 ? ((totalAllExits / totalEntries) * 100).toFixed(1) : '0.0';
@@ -11276,9 +11095,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 };
             });
             
-            console.log(`✅ ${stockArray.length} produits préparés pour affichage`);
-            console.log(`🔗 ${stockArray.filter(item => item.linkedProduct).length} produits liés à productsData`);
-            console.log(`❌ ${stockArray.filter(item => !item.linkedProduct).length} produits non liés`);
+            // Mettre en cache les données préparées
+            preparedStockCache = {
+                data: stockArray,
+                hash: dataHash,
+                timestamp: Date.now()
+            };
             
             // Stocker les données préparées
             window.preparedStockData = stockArray;
@@ -11639,25 +11461,31 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         // FONCTIONS MANQUANTES POUR LE MODULE STOCKS
         // ========================================
         
+        // Throttling pour éviter les appels excessifs aux graphiques
+        let lastStockChartsUpdate = 0;
+        const STOCK_CHARTS_THROTTLE_MS = 2000; // 2 secondes
+        
         function updateStockCharts() {
-            console.log('📊 Mise à jour des graphiques stocks...');
+            const now = Date.now();
+            
+            // Throttling pour éviter les appels excessifs
+            if (now - lastStockChartsUpdate < STOCK_CHARTS_THROTTLE_MS) {
+                return;
+            }
+            
+            lastStockChartsUpdate = now;
             
             try {
-                // 1. Graphique d'évolution des stocks (élément existant)
-                updateStockEvolutionChart();
+                // Mise à jour séquentielle pour éviter la surcharge
+                updateStockKPICards();
                 
-                // 2. Graphique par produit (utiliser stockByProductChart existant)
-                updateStockByProductChart();
+                setTimeout(() => updateStockEvolutionChart(), 100);
+                setTimeout(() => updateStockByProductChart(), 200);
+                setTimeout(() => updateEntriesExitsChart(), 300);
+                setTimeout(() => updateStockRotationChart(), 400);
                 
-                // 3. Graphique entrées/sorties (utiliser entriesExitsChart existant)
-                updateEntriesExitsChart();
-                
-                // 4. Graphique rotation des stocks (utiliser stockRotationChart existant)
-                updateStockRotationChart();
-                
-                console.log('✅ Graphiques stocks mis à jour');
             } catch (error) {
-                console.error('❌ Erreur lors de la mise à jour des graphiques stocks:', error);
+                console.error('❌ Erreur graphiques stocks:', error);
             }
         }
         
@@ -12318,7 +12146,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 showAlert('🔄 Mise à jour forcée des tableaux en cours...', 'info');
                 
                 // Forcer le recalcul des stocks
-                calculateStockLevels();
+                throttle('stockLevels', () => calculateStockLevels(), 1500);
                 
                 // Mettre à jour tous les tableaux
                 updateAllMovementsTable();
@@ -13064,12 +12892,14 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             measurementId: "G-Q8DKW4YL0L"
         };
 
-        // Fonction pour initialiser le tri avec délai pour s'assurer que les tables sont bien chargées
+        // Fonction optimisée pour initialiser le tri
         function initializeTableSortingDelayed() {
-            setTimeout(() => {
-                initializeTableSorting();
-                console.log('✅ Tri des tableaux initialisé');
-            }, 500);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    initializeTableSorting();
+                    console.log('⚡ Tri des tableaux initialisé');
+                });
+            });
         }
 
         // Fonction de tri générique pour tous les tableaux
@@ -13351,74 +13181,261 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         }
 
         async function initializeApp() {
-            console.log('Initialisation de l\'application...');
+            debugLog('🚀 Initialisation optimisée de l\'application...');
             
-            // NOUVEAU: Effacement automatique et transparent du cache à chaque connexion
-            await effacerCacheAutomatique();
+            try {
+                // Afficher la version
+                document.getElementById('appVersion').textContent = APP_VERSION;
+                
+                // Charger les préférences de performance
+                loadPerformanceMode();
+                
+                // 1. Initialiser Firebase d'abord
+                await initializeFirebase();
+                
+                // 2. Opérations de base avec throttling
+                throttle('basicInit', () => {
+                    setDefaultDates();
+                    updateLastUpdateTime();
+                    loadFromLocalStorage();
+                    // extractCategoriesFromNotes(); // DÉSACTIVÉ - migration terminée
+                    updateCategoriesList();
+                    addSaleLine();
+                }, 300);
+                
+                // 3. Chargement optimisé des données avec requestAnimationFrame
+                requestAnimationFrame(() => {
+                    throttle('filtersInit', () => {
+                        populateFilters();
+                        populateRecapFilters();
+                    }, 100);
+                    
+                    throttle('listsUpdate', () => {
+                        updateClientsList();
+                        updateProductsList();
+                    }, 150);
+                });
+                
+                // 4. Synchronisation différée des produits - DÉSACTIVÉE (migration terminée)
+                // setTimeout(() => {
+                //     throttle('productSync', cleanupAndSynchronizeProducts, 2000);
+                // }, 1500);
+                
+                // 5. Application optimisée des filtres et vues
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        throttle('filtersApply', () => {
+                            applyFilters();
+                            applyRecapFilters();
+                        }, 200);
+                        
+                        throttle('viewsUpdate', () => {
+                            updateClientsOverview();
+                            updateProductsDisplay();
+                            updatePaymentsDisplay();
+                            setTodayForNewInvoice();
+                            updateClientsSummaryTable();
+                        }, 250);
+                    });
+                });
+                
+                // 6. Initialisation optimisée des composants graphiques
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        initializeChartJS();
+                        initializeTableSortingDelayed();
+                        showModule('commercial');
+                    });
+                });
+                
+                // 7. Nettoyage périodique différé
+                setTimeout(() => {
+                    demarrerNettoyagePeriodique();
+                }, 1000);
+                
+                // 8. Pré-chargement intelligent des modules en arrière-plan
+                setTimeout(() => {
+                    preloadModulesInBackground();
+                }, 1500);
+                
+                debugLog('✅ Application initialisée avec optimisations');
+                
+            } catch (error) {
+                debugError('❌ Erreur initialisation:', error);
+            }
+        }
+        
+        // Tracker des modules initialisés pour éviter les doublons
+        const moduleInitialized = {
+            commercial: false,
+            stocks: false,
+            admin: false,
+            formation: false
+        };
+        
+        // Pré-chargement intelligent des modules en arrière-plan
+        function preloadModulesInBackground() {
+            console.log('🚀 Démarrage du pré-chargement des modules en arrière-plan...');
             
-            // Initialiser le thème
-            // Afficher la version
-            document.getElementById('appVersion').textContent = APP_VERSION;
+            // Commercial déjà chargé, marquer comme initialisé
+            moduleInitialized.commercial = true;
             
-            setDefaultDates();
-            updateLastUpdateTime();
+            // Pré-charger Stocks en arrière-plan (module le plus lourd)
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    if (!moduleInitialized.stocks) {
+                        console.log('⚡ Pré-chargement module Stocks...');
+                        preloadStocksModule();
+                        moduleInitialized.stocks = true;
+                    }
+                }, 500);
+            });
             
-            loadFromLocalStorage();
-            extractCategoriesFromNotes(); // Extraire les catégories des notes existantes
-            updateCategoriesList(); // Charger les catégories des notes
+            // Pré-charger Admin en arrière-plan
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    if (!moduleInitialized.admin) {
+                        console.log('⚡ Pré-chargement module Admin...');
+                        preloadAdminModule();
+                        moduleInitialized.admin = true;
+                    }
+                }, 1500);
+            });
             
-            // Initialiser Firebase d'abord
-            await initializeFirebase();
+            // Pré-charger Formation en arrière-plan
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    if (!moduleInitialized.formation) {
+                        console.log('⚡ Pré-chargement module Formation...');
+                        moduleInitialized.formation = true;
+                    }
+                }, 2000);
+            });
             
-            // Puis charger les données de stock (maintenant avec synchronisation Firebase)
-            // await loadStockData(); // 🚫 DÉSACTIVÉ pour éviter les conflits
-            
-            addSaleLine();
-            
-            populateFilters();
-            populateRecapFilters();
-            updateClientsList();
-            updateProductsList();
-            
-            // NOUVEAU: Nettoyer et synchroniser les produits au démarrage
-            setTimeout(() => {
-                cleanupAndSynchronizeProducts();
-            }, 2000); // Après 2 secondes pour laisser le temps aux autres initialisations
-            
-            applyFilters();
-            applyRecapFilters();
-            updateClientsOverview();
-            updateProductsDisplay();
-            updatePaymentsDisplay();
-            setTodayForNewInvoice();
-            updateClientsSummaryTable();
-            
-            // Initialiser Chart.js
-            initializeChartJS();
-            
-            // Initialiser le tri des tableaux (avec délai)
-            initializeTableSortingDelayed();
-            
-            // Afficher le module commercial par défaut
-            showModule('commercial');
-            
-            // Message de bienvenue avec fonctionnalités
-        setTimeout(() => {
-
-            // NOUVEAU: Démarrer le nettoyage automatique périodique du cache (toutes les 30 minutes)
-            demarrerNettoyagePeriodique();
-        }, 1000);
+            console.log('✅ Pré-chargement des modules planifié');
+        }
+        
+        // Pré-chargement optimisé du module Stocks (sans affichage)
+        function preloadStocksModule() {
+            try {
+                // Charger SEULEMENT les données depuis localStorage
+                const savedEntries = localStorage.getItem('stockEntries');
+                const savedExits = localStorage.getItem('stockExits');
+                const savedAlerts = localStorage.getItem('stockAlerts');
+                
+                if (savedEntries) stockEntriesData = JSON.parse(savedEntries);
+                if (savedExits) stockExitsData = JSON.parse(savedExits);
+                if (savedAlerts) stockAlertsData = JSON.parse(savedAlerts);
+                
+                // Pré-calculer les stocks en arrière-plan
+                requestAnimationFrame(() => {
+                    calculateCurrentStockLevels();
+                    stockDashboardCache.isValid = true;
+                    stockDashboardCache.lastUpdate = Date.now();
+                    console.log('✅ Stocks pré-calculés en arrière-plan');
+                });
+                
+                // Initialiser les lignes par défaut
+                if (entryLines.length === 0) addEntryLine();
+                if (exitLines.length === 0) addExitLine();
+                
+            } catch (error) {
+                console.warn('⚠️ Erreur pré-chargement stocks:', error.message);
+            }
+        }
+        
+        // Pré-chargement optimisé du module Admin (sans affichage)
+        function preloadAdminModule() {
+            try {
+                // Juste initialiser l'état verrouillé
+                console.log('✅ Module Admin pré-chargé (verrouillé)');
+            } catch (error) {
+                console.warn('⚠️ Erreur pré-chargement admin:', error.message);
+            }
         }
         
         // Fonction pour démarrer un nettoyage périodique automatique du cache
         function demarrerNettoyagePeriodique() {
-            // Nettoyage toutes les 30 minutes (1800000 ms)
+            // Nettoyage toutes les 2 heures (7200000 ms) - Optimisé post-déploiement
             setInterval(async () => {
-                console.log('🔄 Nettoyage périodique automatique du cache...');
                 await effacerCacheAutomatique();
-            }, 1800000);
+            }, 7200000);
             
-            console.log('✅ Nettoyage périodique du cache démarré (toutes les 30 minutes)');
+            debugLog('✅ Nettoyage périodique du cache démarré (toutes les 30 minutes)');
+        }
+        
+        // 📊 OPTIMISATION SPÉCIALE ENVIRONNEMENT STOCKS
+        function optimizeStockEnvironment() {
+            if (!PERFORMANCE_MODE) {
+                debugLog('⚡ Mode performance désactivé - optimisations ignorées');
+                return;
+            }
+            
+            debugLog('🚀 Optimisation environnement stocks activée');
+            
+            // Désactiver les mises à jour automatiques trop fréquentes
+            const stockModule = document.getElementById('stockModule');
+            if (stockModule && stockModule.style.display !== 'none') {
+                
+                // Cache spécial pour les données de stock
+                const stockCacheKey = 'stockOptimized';
+                const lastUpdate = localStorage.getItem(`${stockCacheKey}_timestamp`);
+                const now = Date.now();
+                
+                // Mise à jour seulement si plus de 10 secondes écoulées
+                if (!lastUpdate || (now - parseInt(lastUpdate)) > 10000) {
+                    
+                    throttle('stockOptimization', () => {
+                        // Mise à jour séquentielle des éléments critiques
+                        setTimeout(() => updateStockKPICards(), 500);
+                        setTimeout(() => updateStockCharts(), 1500);
+                        setTimeout(() => updateStockTable(), 2500);
+                        
+                        localStorage.setItem(`${stockCacheKey}_timestamp`, now.toString());
+                        debugLog('📈 Environnement stocks mis à jour (optimisé)');
+                    }, 2000);
+                    
+                } else {
+                    debugLog('📊 Cache stocks récent, mise à jour ignorée');
+                }
+            }
+        }
+        
+        // 🎛️ CONTRÔLE DU MODE PERFORMANCE
+        function togglePerformanceMode() {
+            PERFORMANCE_MODE = !PERFORMANCE_MODE;
+            const button = document.getElementById('performanceToggle');
+            
+            if (PERFORMANCE_MODE) {
+                button.style.background = '#28a745';
+                button.textContent = '🚀 PERF';
+                debugLog('⚡ Mode haute performance ACTIVÉ');
+            } else {
+                button.style.background = '#dc3545';
+                button.textContent = '🐌 NORM';
+                debugLog('🔄 Mode normal activé (performances réduites)');
+            }
+            
+            // Sauvegarder le choix
+            localStorage.setItem('performanceMode', PERFORMANCE_MODE.toString());
+        }
+        
+        // Charger le mode performance sauvegardé au démarrage
+        function loadPerformanceMode() {
+            const saved = localStorage.getItem('performanceMode');
+            if (saved !== null) {
+                PERFORMANCE_MODE = saved === 'true';
+                const button = document.getElementById('performanceToggle');
+                if (button) {
+                    if (PERFORMANCE_MODE) {
+                        button.style.background = '#28a745';
+                        button.textContent = '🚀 PERF';
+                    } else {
+                        button.style.background = '#dc3545';
+                        button.textContent = '🐌 NORM';
+                    }
+                }
+            }
         }
 
         function loadFromLocalStorage() {
@@ -13436,7 +13453,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             loadProductsFromFirebase();
         }
         
-        // Fonction SIMPLE pour charger les produits depuis Firebase
+        // Cache des produits pour éviter les rechargements inutiles
+        let productsCache = null;
+        let productsCacheTime = 0;
+        const PRODUCTS_CACHE_DURATION = 30000; // 30 secondes
+        
+        // Fonction OPTIMISÉE pour charger les produits depuis Firebase avec cache
         async function loadProductsFromFirebase() {
             if (!isFirebaseInitialized || !db) {
                 console.log('🔄 Firebase non initialisé, utilisation localStorage uniquement');
@@ -15160,10 +15182,9 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                             line.unitPrice = product.price;
                         }
                         
-                        // Autocomplétion du format si pas modifié manuellement
-                        if (!line.formatManuallyEdited) {
-                            line.format = product.format || '';
-                        }
+                        // TOUJOURS remplir le format automatiquement lors de la sélection du produit
+                        line.format = product.format || '';
+                        line.formatManuallyEdited = false; // Réinitialiser le flag pour permettre les futures mises à jour auto
                         
                         line.totalPrice = line.quantity * line.unitPrice;
                         renderSalesLines();
@@ -15179,7 +15200,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                                 setTimeout(() => priceInput.classList.remove('auto-filled'), 3000);
                             }
                             
-                            if (formatInput && !line.formatManuallyEdited) {
+                            if (formatInput) {
                                 formatInput.classList.add('auto-filled');
                                 setTimeout(() => formatInput.classList.remove('auto-filled'), 3000);
                             }
@@ -16261,6 +16282,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 console.log('Affichage de l\'onglet Produits - Chargement des données...');
                 loadProductsFromFirebase();
                 updateProductsDisplay();
+            }
+            
+            // Charger et vérifier la conformité quand on va sur l'onglet Conformité
+            if (settingsSectionName === 'conformity') {
+                console.log('Affichage de l\'onglet Conformité - Vérification des produits...');
+                checkProductsConformity();
             }
         }
 
@@ -17548,6 +17575,12 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             editingProductId = null;
         }
 
+        // Fonction pour invalider le cache produits
+        function invalidateProductsCache() {
+            productsCache = null;
+            productsCacheTime = 0;
+        }
+        
         async function saveProduct() {
             const reference = document.getElementById('productReference').value.trim();
             const price = parseFloat(document.getElementById('productPrice').value) || 0;
@@ -18205,57 +18238,80 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
             `;
             container.appendChild(archiveButton);
             
-            // Afficher les produits (tous sont maintenant visibles)
-            visibleProducts.forEach(product => {
-                const productCard = document.createElement('div');
-                productCard.className = 'product-card';
+            // Affichage optimisé avec rendu par batch pour éviter les blocages
+            const BATCH_SIZE = 10; // Traiter 10 produits à la fois
+            let currentIndex = 0;
+            
+            function renderBatch() {
+                const endIndex = Math.min(currentIndex + BATCH_SIZE, visibleProducts.length);
+                const batch = visibleProducts.slice(currentIndex, endIndex);
                 
-                // Normaliser l'ID pour éviter les problèmes de type
-                const normalizedId = String(product.id);
-                
-                // Calculer un indicateur de couleur basé sur le prix
-                const priceColor = (product.price || 0) > 1000 ? '#28a745' : (product.price || 0) > 500 ? '#fd7e14' : '#6c757d';
-                
-                productCard.innerHTML = `
-                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, ${priceColor}, ${priceColor}99);"></div>
+                batch.forEach(product => {
+                    const productCard = document.createElement('div');
+                    productCard.className = 'product-card';
                     
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                        <div style="flex: 1;">
-                            <div class="product-name" style="font-size: 1.1rem; font-weight: 700; color: #333; margin-bottom: 5px; line-height: 1.3;">
-                                ${product.reference || 'Sans référence'}
+                    // Normaliser l'ID pour éviter les problèmes de type
+                    const normalizedId = String(product.id);
+                    
+                    // Calculer un indicateur de couleur basé sur le prix
+                    const priceColor = (product.price || 0) > 1000 ? '#28a745' : (product.price || 0) > 500 ? '#fd7e14' : '#6c757d';
+                    
+                    productCard.innerHTML = `
+                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, ${priceColor}, ${priceColor}99);"></div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                            <div style="flex: 1;">
+                                <div class="product-name" style="font-size: 1.1rem; font-weight: 700; color: #333; margin-bottom: 5px; line-height: 1.3;">
+                                    ${product.reference || 'Sans référence'}
+                                </div>
+                                ${product.brand ? `<div style="background: #f8f9fa; color: #667eea; padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: 600; display: inline-block; margin-bottom: 10px;">
+                                    ${product.brand}
+                                </div>` : ''}
                             </div>
-                            ${product.brand ? `<div style="background: #f8f9fa; color: #667eea; padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: 600; display: inline-block; margin-bottom: 10px;">
-                                ${product.brand}
-                            </div>` : ''}
+                            <div class="product-price" style="font-size: 1.3rem; font-weight: 700; color: ${priceColor}; text-align: right;">
+                                ${formatCurrency(product.price || 0)}
+                            </div>
                         </div>
-                        <div class="product-price" style="font-size: 1.3rem; font-weight: 700; color: ${priceColor}; text-align: right;">
-                            ${formatCurrency(product.price || 0)}
+                        
+                        <div class="product-details" style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
+                            ${product.format ? `<div style="margin-bottom: 5px;"><strong style="color: #333;">📦 Format:</strong> ${product.format}</div>` : ''}
+                            ${product.margin ? `<div><strong style="color: #333;">📊 Marge:</strong> ${product.margin}</div>` : ''}
                         </div>
-                    </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: auto;">
+                            <button class="btn" onclick="showProductModal('${normalizedId}')" 
+                                    style="flex: 1; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
+                                ✏️ Modifier
+                            </button>
+                            <button class="btn" onclick="deleteProduct('${normalizedId}')" 
+                                    style="background: #fff; color: #dc3545; border: 2px solid #dc3545; padding: 10px 15px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
+                                ⚙️
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(productCard);
+                });
+                
+                currentIndex = endIndex;
+                
+                if (currentIndex < visibleProducts.length) {
+                    // Continuer avec le prochain batch
+                    requestAnimationFrame(renderBatch);
+                } else {
+                    // Affichage terminé
+                    console.log('⚡ Affichage optimisé terminé -', visibleProducts.length, 'cartes créées');
                     
-                    <div class="product-details" style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
-                        ${product.format ? `<div style="margin-bottom: 5px;"><strong style="color: #333;">📦 Format:</strong> ${product.format}</div>` : ''}
-                        ${product.margin ? `<div><strong style="color: #333;">📊 Marge:</strong> ${product.margin}</div>` : ''}
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px; margin-top: auto;">
-                        <button class="btn" onclick="showProductModal('${normalizedId}')" 
-                                style="flex: 1; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
-                            ✏️ Modifier
-                        </button>
-                        <button class="btn" onclick="deleteProduct('${normalizedId}')" 
-                                style="background: #fff; color: #dc3545; border: 2px solid #dc3545; padding: 10px 15px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
-                            ⚙️
-                        </button>
-                    </div>
-                `;
-                container.appendChild(productCard);
-            });
+                    // Mettre à jour le filtre des marques
+                    requestAnimationFrame(() => {
+                        updateBrandFilter();
+                    });
+                }
+            }
             
-            console.log('✅ Affichage terminé -', visibleProducts.length, 'cartes créées');
-            
-            // Mettre à jour le filtre des marques
-            updateBrandFilter();
+            // Démarrer le rendu par batch
+            if (visibleProducts.length > 0) {
+                requestAnimationFrame(renderBatch);
+            }
         }
         
         // === MODAL DES PRODUITS ARCHIVÉS ===
@@ -19103,13 +19159,15 @@ Date [ESPACES] Client [ESPACES] Montant
                         </div>
                         <div class="form-group">
                             <label>Unité</label>
-                            <select onchange="updateEntryLine(${line.id}, 'unit', this.value)">
-                                <option value="Cartons" ${line.unit === 'Cartons' ? 'selected' : ''}>Cartons</option>
-                                <option value="Pièces" ${line.unit === 'Pièces' ? 'selected' : ''}>Pièces</option>
-                                <option value="Kg" ${line.unit === 'Kg' ? 'selected' : ''}>Kg</option>
-                                <option value="Litres" ${line.unit === 'Litres' ? 'selected' : ''}>Litres</option>
-                                <option value="Autres" ${line.unit === 'Autres' ? 'selected' : ''}>Autres</option>
-                            </select>
+                            <input type="text" list="unitsList${line.id}" value="${line.unit || ''}" placeholder="Ex: Cartons, Pièces, Kg..." onchange="updateEntryLine(${line.id}, 'unit', this.value)">
+                            <datalist id="unitsList${line.id}">
+                                <option value="Cartons">
+                                <option value="Pièces">
+                                <option value="Kg">
+                                <option value="Litres">
+                                <option value="Sachets">
+                                <option value="Boîtes">
+                            </datalist>
                         </div>
                         <div class="form-group">
                             <label>Coût Unitaire (CFA)</label>
@@ -19142,6 +19200,24 @@ Date [ESPACES] Client [ESPACES] Montant
                     productValue = productValue.split(' - ')[0].trim();
                 }
                 line.product = productValue;
+                
+                // 🆕 PRÉ-REMPLISSAGE AUTOMATIQUE : Rechercher le produit dans productsData
+                const selectedProduct = productsData.find(p => 
+                    p.reference && p.reference.toLowerCase() === productValue.toLowerCase()
+                );
+                
+                if (selectedProduct) {
+                    // Pré-remplir l'unité avec le format du produit
+                    if (selectedProduct.format) {
+                        line.unit = selectedProduct.format;
+                    }
+                    
+                    // Pré-remplir le coût unitaire avec le prix du produit
+                    if (selectedProduct.price && selectedProduct.price > 0) {
+                        line.unitCost = selectedProduct.price;
+                        line.totalCost = line.quantity * line.unitCost;
+                    }
+                }
             } else if (field === 'quantity') {
                 line.quantity = parseFloat(value) || 0;
                 line.totalCost = line.quantity * line.unitCost;
@@ -19228,13 +19304,15 @@ Date [ESPACES] Client [ESPACES] Montant
                         </div>
                         <div class="form-group">
                             <label>Unité</label>
-                            <select onchange="updateExitLine(${line.id}, 'unit', this.value)">
-                                <option value="Cartons" ${line.unit === 'Cartons' ? 'selected' : ''}>Cartons</option>
-                                <option value="Pièces" ${line.unit === 'Pièces' ? 'selected' : ''}>Pièces</option>
-                                <option value="Kg" ${line.unit === 'Kg' ? 'selected' : ''}>Kg</option>
-                                <option value="Litres" ${line.unit === 'Litres' ? 'selected' : ''}>Litres</option>
-                                <option value="Autres" ${line.unit === 'Autres' ? 'selected' : ''}>Autres</option>
-                            </select>
+                            <input type="text" list="unitsListExit${line.id}" value="${line.unit || ''}" placeholder="Ex: Cartons, Pièces, Kg..." onchange="updateExitLine(${line.id}, 'unit', this.value)">
+                            <datalist id="unitsListExit${line.id}">
+                                <option value="Cartons">
+                                <option value="Pièces">
+                                <option value="Kg">
+                                <option value="Litres">
+                                <option value="Sachets">
+                                <option value="Boîtes">
+                            </datalist>
                         </div>
                         <div class="form-group">
                             <label>Coût Unitaire (CFA)</label>
@@ -19267,6 +19345,24 @@ Date [ESPACES] Client [ESPACES] Montant
                     productValue = productValue.split(' - ')[0].trim();
                 }
                 line.product = productValue;
+                
+                // 🆕 PRÉ-REMPLISSAGE AUTOMATIQUE : Rechercher le produit dans productsData
+                const selectedProduct = productsData.find(p => 
+                    p.reference && p.reference.toLowerCase() === productValue.toLowerCase()
+                );
+                
+                if (selectedProduct) {
+                    // Pré-remplir l'unité avec le format du produit
+                    if (selectedProduct.format) {
+                        line.unit = selectedProduct.format;
+                    }
+                    
+                    // Pré-remplir le coût unitaire avec le prix du produit
+                    if (selectedProduct.price && selectedProduct.price > 0) {
+                        line.unitCost = selectedProduct.price;
+                        line.totalCost = line.quantity * line.unitCost;
+                    }
+                }
             } else if (field === 'quantity') {
                 line.quantity = parseFloat(value) || 0;
                 line.totalCost = line.quantity * line.unitCost;
@@ -20305,12 +20401,12 @@ Date [ESPACES] Client [ESPACES] Montant
         }
 
         function updateCharts() {
-            updateEvolutionChart();
+            updateProductEvolutionChart();
             updateClientChart();
             updateArticleChart();
         }
 
-        function updateEvolutionChart() {
+        function updateProductEvolutionChart() {
             const ctx = document.getElementById('evolutionChart');
             if (!ctx) return;
             
@@ -20318,79 +20414,96 @@ Date [ESPACES] Client [ESPACES] Montant
                 charts.evolution.destroy();
             }
             
-            // Appliquer les mêmes filtres aux encaissements que pour les ventes
+            const productFilter = document.getElementById('productEvolutionFilter')?.value || '';
             const dateStart = document.getElementById('dateStart').value;
             const dateEnd = document.getElementById('dateEnd').value;
-            const clientFilter = document.getElementById('clientFilter').value;
             
-            const filteredPayments = paymentsData.filter(payment => {
-                let include = true;
-                
-                if (dateStart) {
-                    const paymentDate = parseDate(payment.date);
-                    const startDate = new Date(dateStart);
-                    if (paymentDate < startDate) include = false;
-                }
-                
-                if (dateEnd) {
-                    const paymentDate = parseDate(payment.date);
-                    const endDate = new Date(dateEnd);
-                    if (paymentDate > endDate) include = false;
-                }
-                
-                if (clientFilter && payment.client !== clientFilter) {
-                    include = false;
-                }
-                
-                return include;
-            });
+            // Calculer les ventes mensuelles par produit
+            const monthlySalesByProduct = {};
             
-            // Données CA par date (filtrées)
-            const dailySales = {};
             filteredData.forEach(sale => {
                 const date = parseDate(sale.date);
-                if (date) {
-                    const dateKey = date.toISOString().split('T')[0];
-                    dailySales[dateKey] = (dailySales[dateKey] || 0) + sale.valeur;
+                if (!date) return;
+                
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const product = sale.product || 'Non défini';
+                const quantity = parseFloat(sale.quantity) || 0;
+                
+                if (!monthlySalesByProduct[product]) {
+                    monthlySalesByProduct[product] = {};
                 }
+                
+                monthlySalesByProduct[product][monthKey] = (monthlySalesByProduct[product][monthKey] || 0) + quantity;
             });
             
-            // Données encaissements par date (filtrés avec les mêmes critères)
-            const dailyPayments = {};
-            filteredPayments.forEach(payment => {
-                const date = parseDate(payment.date);
-                if (date) {
-                    const dateKey = date.toISOString().split('T')[0];
-                    dailyPayments[dateKey] = (dailyPayments[dateKey] || 0) + payment.amount;
-                }
+            // Obtenir les 10 produits les plus vendus (par quantité totale)
+            const productTotals = Object.entries(monthlySalesByProduct).map(([product, months]) => {
+                const total = Object.values(months).reduce((sum, qty) => sum + qty, 0);
+                return { product, total, months };
+            }).sort((a, b) => b.total - a.total).slice(0, 10);
+            
+            // Mettre à jour le filtre de produits
+            const filterSelect = document.getElementById('productEvolutionFilter');
+            if (filterSelect) {
+                const currentValue = filterSelect.value;
+                filterSelect.innerHTML = '<option value="">🔍 Tous les produits</option>';
+                productTotals.forEach(({ product }) => {
+                    const option = document.createElement('option');
+                    option.value = product;
+                    option.textContent = product;
+                    if (product === currentValue) option.selected = true;
+                    filterSelect.appendChild(option);
+                });
+            }
+            
+            // Filtrer les produits si un filtre est appliqué
+            let productsToDisplay = productFilter ? 
+                productTotals.filter(p => p.product === productFilter) : 
+                productTotals;
+            
+            // Obtenir tous les mois uniques et les trier
+            const allMonths = new Set();
+            productsToDisplay.forEach(({ months }) => {
+                Object.keys(months).forEach(month => allMonths.add(month));
+            });
+            const sortedMonths = Array.from(allMonths).sort();
+            
+            // Générer les labels (format: Jan 2024)
+            const labels = sortedMonths.map(monthKey => {
+                const [year, month] = monthKey.split('-');
+                const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+                return `${monthNames[parseInt(month) - 1]} ${year}`;
             });
             
-            const allDates = [...new Set([...Object.keys(dailySales), ...Object.keys(dailyPayments)])].sort();
-            const labels = allDates.map(date => new Date(date).toLocaleDateString('fr-FR'));
-            const salesDataChart = allDates.map(date => dailySales[date] || 0);
-            const paymentsDataChart = allDates.map(date => dailyPayments[date] || 0);
+            // Palette de couleurs distinctes pour les produits
+            const colorPalette = [
+                '#667eea', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
+                '#1abc9c', '#e67e22', '#3498db', '#e91e63', '#00bcd4'
+            ];
+            
+            // Créer les datasets
+            const datasets = productsToDisplay.map((productData, index) => {
+                const color = colorPalette[index % colorPalette.length];
+                const data = sortedMonths.map(month => productData.months[month] || 0);
+                
+                return {
+                    label: productData.product,
+                    data: data,
+                    backgroundColor: color + '20',
+                    borderColor: color,
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                };
+            });
             
             charts.evolution = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: 'CA Journalier',
-                        data: salesDataChart,
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        borderColor: '#667eea',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.4
-                    }, {
-                        label: 'Encaissements',
-                        data: paymentsDataChart,
-                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
-                        borderColor: '#2ecc71',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.4
-                    }]
+                    datasets: datasets
                 },
                 options: {
                     responsive: true,
@@ -20400,7 +20513,18 @@ Date [ESPACES] Client [ESPACES] Montant
                             position: 'top',
                             labels: {
                                 font: {
-                                    size: window.innerWidth < 768 ? 10 : 12
+                                    size: window.innerWidth < 768 ? 9 : 11
+                                },
+                                padding: 10,
+                                boxWidth: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    return `${label}: ${value.toLocaleString()} unités`;
                                 }
                             }
                         }
@@ -20421,10 +20545,14 @@ Date [ESPACES] Client [ESPACES] Montant
                                     size: window.innerWidth < 768 ? 8 : 10
                                 },
                                 callback: function(value) {
-                                    return formatCurrency(value);
+                                    return value.toLocaleString() + ' unités';
                                 }
                             }
                         }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
                     }
                 }
             });
@@ -22180,24 +22308,22 @@ Date [ESPACES] Client [ESPACES] Montant
             Posez-moi vos questions en langage naturel ! 😊`;
         }
         
-        // Initialisation de Chart.js et test de compatibilité
+        // Initialisation optimisée de Chart.js avec requestAnimationFrame
         function initializeChartJS() {
-            console.log('🔧 Initialisation de Chart.js...');
-            
             if (typeof Chart === 'undefined') {
                 console.error('❌ Chart.js n\'est pas chargé !');
                 return false;
             }
             
-            console.log('✅ Chart.js version:', Chart.version);
+            // Configuration globale optimisée
+            requestAnimationFrame(() => {
+                Chart.defaults.font.family = "'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif";
+                Chart.defaults.font.size = 12;
+                Chart.defaults.responsive = true;
+                Chart.defaults.maintainAspectRatio = false;
+                console.log('⚡ Chart.js configuré (v' + Chart.version + ')');
+            });
             
-            // Configuration globale pour tous les graphiques
-            Chart.defaults.font.family = "'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif";
-            Chart.defaults.font.size = 12;
-            Chart.defaults.responsive = true;
-            Chart.defaults.maintainAspectRatio = false;
-            
-            console.log('✅ Configuration Chart.js appliquée');
             return true;
         }
         
@@ -24141,6 +24267,197 @@ Date [ESPACES] Client [ESPACES] Montant
         window.showModule = showModule;
         window.showSection = showSection;
         window.syncLocalProductsAndInventory = syncLocalProductsAndInventory;
+
+        // ========================================
+        // FONCTIONS GESTION CONFORMITÉ PRODUITS
+        // ========================================
+        
+        // Variables globales pour la conformité
+        let conformityData = [];
+        
+        // Fonction principale pour vérifier la conformité des produits
+        function checkProductsConformity() {
+            console.log('🔍 Vérification de la conformité des produits...');
+            
+            if (!productsData || productsData.length === 0) {
+                console.log('⚠️ Aucun produit trouvé pour la vérification de conformité');
+                updateConformityStats(0, 0, 0);
+                return;
+            }
+            
+            conformityData = [];
+            let conformProducts = 0;
+            let nonConformProducts = 0;
+            
+            productsData.forEach(product => {
+                const issues = [];
+                let isConform = true;
+                
+                // Vérifier le format
+                const format = product.format || '';
+                if (!format || format.trim() === '' || format.toLowerCase() === 'à définir') {
+                    issues.push('Format manquant');
+                    isConform = false;
+                }
+                
+                // Vérifier le prix de vente
+                const price = parseFloat(product.prix || product.price || 0);
+                if (!price || price <= 0 || (product.prix && product.prix.toString().toLowerCase() === 'à définir')) {
+                    issues.push('Prix de vente manquant');
+                    isConform = false;
+                }
+                
+                const productAnalysis = {
+                    id: product.id,
+                    name: product.reference || product.nom || product.name || 'Produit sans nom',
+                    format: format || 'Non renseigné',
+                    price: price || 0,
+                    isConform: isConform,
+                    issues: issues,
+                    rawProduct: product
+                };
+                
+                conformityData.push(productAnalysis);
+                
+                if (isConform) {
+                    conformProducts++;
+                } else {
+                    nonConformProducts++;
+                }
+            });
+            
+            // Trier par produits non conformes en premier
+            conformityData.sort((a, b) => {
+                if (a.isConform === b.isConform) {
+                    return a.name.localeCompare(b.name);
+                }
+                return a.isConform ? 1 : -1;
+            });
+            
+            updateConformityStats(conformProducts, nonConformProducts, productsData.length);
+            filterConformityProducts();
+            
+            console.log(`✅ Conformité vérifiée: ${conformProducts} conformes, ${nonConformProducts} non conformes`);
+        }
+        
+        // Fonction pour mettre à jour les statistiques de conformité
+        function updateConformityStats(conformCount, nonConformCount, totalCount) {
+            const conformityPercentage = totalCount > 0 ? Math.round((conformCount / totalCount) * 100) : 0;
+            
+            const conformProductsCountEl = document.getElementById('conformProductsCount');
+            const nonConformProductsCountEl = document.getElementById('nonConformProductsCount');
+            const conformityPercentageEl = document.getElementById('conformityPercentage');
+            
+            if (conformProductsCountEl) conformProductsCountEl.textContent = conformCount.toLocaleString();
+            if (nonConformProductsCountEl) nonConformProductsCountEl.textContent = nonConformCount.toLocaleString();
+            if (conformityPercentageEl) conformityPercentageEl.textContent = conformityPercentage + '%';
+        }
+        
+        // Fonction pour filtrer et afficher les produits selon les critères
+        function filterConformityProducts() {
+            const conformityFilter = document.getElementById('conformityFilter')?.value || 'nonconform';
+            const issueTypeFilter = document.getElementById('issueTypeFilter')?.value || 'all';
+            
+            let filteredData = [...conformityData];
+            
+            // Filtre par conformité
+            if (conformityFilter === 'conform') {
+                filteredData = filteredData.filter(product => product.isConform);
+            } else if (conformityFilter === 'nonconform') {
+                filteredData = filteredData.filter(product => !product.isConform);
+            }
+            
+            // Filtre par type de problème
+            if (issueTypeFilter !== 'all' && conformityFilter !== 'conform') {
+                filteredData = filteredData.filter(product => {
+                    switch (issueTypeFilter) {
+                        case 'format':
+                            return product.issues.some(issue => issue.includes('Format'));
+                        case 'price':
+                            return product.issues.some(issue => issue.includes('Prix'));
+                        case 'both':
+                            return product.issues.length >= 2;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            displayConformityTable(filteredData);
+        }
+        
+        // Fonction pour afficher le tableau de conformité
+        function displayConformityTable(data) {
+            const tableBody = document.getElementById('conformityTableBody');
+            if (!tableBody) return;
+            
+            tableBody.innerHTML = '';
+            
+            if (data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666; padding: 20px;">Aucun produit trouvé avec les critères sélectionnés</td></tr>';
+                return;
+            }
+            
+            data.forEach(product => {
+                const row = document.createElement('tr');
+                row.style.cursor = 'pointer';
+                
+                // Couleur de fond selon la conformité
+                if (!product.isConform) {
+                    row.style.backgroundColor = 'rgba(220, 53, 69, 0.05)';
+                } else {
+                    row.style.backgroundColor = 'rgba(40, 167, 69, 0.05)';
+                }
+                
+                // Formater les problèmes
+                const issuesHtml = product.issues.length > 0 
+                    ? product.issues.map(issue => `<span style="color: #dc3545; font-size: 12px;">• ${issue}</span>`).join('<br>')
+                    : '<span style="color: #28a745;">✅ Conforme</span>';
+                
+                // Formater le prix
+                const priceDisplay = product.price > 0 
+                    ? formatCurrency(product.price)
+                    : '<span style="color: #dc3545;">Non renseigné</span>';
+                
+                // Formater le format
+                const formatDisplay = (product.format && product.format !== 'Non renseigné') 
+                    ? product.format
+                    : '<span style="color: #dc3545;">Non renseigné</span>';
+                
+                row.innerHTML = `
+                    <td style="font-weight: 600;">${product.name}</td>
+                    <td style="text-align: center;">${formatDisplay}</td>
+                    <td style="text-align: center;">${priceDisplay}</td>
+                    <td style="text-align: center;">${issuesHtml}</td>
+                    <td style="text-align: center;">
+                        <button class="btn btn-warning" onclick="editProductFromConformity('${product.id}')" style="padding: 5px 10px; font-size: 12px;">
+                            🔧 Modifier
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Réinitialiser le tri du tableau
+            const conformityTable = document.getElementById('conformityTable');
+            if (conformityTable) {
+                reinitializeTableSorting(conformityTable);
+            }
+        }
+        
+        // Fonction pour modifier un produit depuis l'onglet conformité
+        function editProductFromConformity(productId) {
+            console.log('🔧 Modification du produit depuis Conformité:', productId);
+            
+            // Basculer vers l'onglet Produits
+            showSettingsSection('products');
+            
+            // Attendre un peu pour que l'onglet soit affiché
+            setTimeout(() => {
+                showProductModal(productId);
+            }, 100);
+        }
 
         // ========================================
         // FONCTIONS GESTION FACTURES GROUPÉES
