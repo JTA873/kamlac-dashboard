@@ -3472,6 +3472,12 @@
                         </select>
                     </div>
                     <div class="filter-group">
+                        <label for="articleFilter">Article</label>
+                        <select id="articleFilter" onchange="applyFilters()">
+                            <option value="">Tous les articles</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
                         <button class="btn btn-info" onclick="setAllTimeFilters()">📅 Toutes périodes</button>
                     </div>
                     <div class="filter-group">
@@ -20164,6 +20170,9 @@ Date [ESPACES] Client [ESPACES] Montant
         function populateFilters() {
             const clients = [...new Set(salesData.map(sale => sale.client))].sort();
             populateSelect('clientFilter', clients, 'Tous les clients');
+            
+            const articles = [...new Set(salesData.map(sale => sale.produit))].filter(Boolean).sort();
+            populateSelect('articleFilter', articles, 'Tous les articles');
         }
 
         function populateSelect(selectId, options, defaultText) {
@@ -20202,6 +20211,7 @@ Date [ESPACES] Client [ESPACES] Montant
             const dateStart = document.getElementById('dateStart').value;
             const dateEnd = document.getElementById('dateEnd').value;
             const clientFilter = document.getElementById('clientFilter').value;
+            const articleFilter = document.getElementById('articleFilter').value;
             
             filteredData = salesData.filter(sale => {
                 let include = true;
@@ -20215,6 +20225,7 @@ Date [ESPACES] Client [ESPACES] Montant
                 }
                 
                 if (clientFilter && sale.client !== clientFilter) include = false;
+                if (articleFilter && sale.produit !== articleFilter) include = false;
                 
                 return include;
             });
@@ -20244,6 +20255,7 @@ Date [ESPACES] Client [ESPACES] Montant
             const dateStart = document.getElementById('dateStart').value;
             const dateEnd = document.getElementById('dateEnd').value;
             const clientFilter = document.getElementById('clientFilter').value;
+            const articleFilter = document.getElementById('articleFilter').value;
             
             const filteredPayments = paymentsData.filter(payment => {
                 let include = true;
@@ -20524,6 +20536,7 @@ Date [ESPACES] Client [ESPACES] Montant
         function resetFilters() {
             setDefaultDates();
             document.getElementById('clientFilter').value = '';
+            document.getElementById('articleFilter').value = '';
             applyFilters();
         }
 
