@@ -3487,6 +3487,9 @@
                     <div class="filter-group">
                         <button class="btn btn-warning" onclick="resetFilters()">📅 Mois en cours</button>
                     </div>
+                    <div class="filter-group">
+                        <button class="btn btn-secondary" onclick="clearAllFilters()" style="background: #6c757d;">🔄 Réinitialiser</button>
+                    </div>
                 </div>
             </div>
             <div class="kpi-grid" id="kpiGrid">
@@ -3550,9 +3553,21 @@
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div class="chart-card">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h3 class="chart-title" style="margin: 0;">📊 Top 10 Produits - Évolution Mensuelle</h3>
-                            <select id="productEvolutionFilter" onchange="updateProductEvolutionChart()" style="padding: 6px 12px; border: 1px solid #e9ecef; border-radius: 8px; background: white; cursor: pointer; font-size: 13px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px;">
+                            <div style="flex: 1;">
+                                <h3 class="chart-title" style="margin: 0 0 8px 0;">📊 Top 10 Produits - Évolution Mensuelle</h3>
+                                <div style="display: flex; gap: 5px; flex-wrap: nowrap; overflow-x: auto;">
+                                    <button onclick="setProductEvolutionPeriod('all')" class="period-btn" style="padding: 4px 8px; border: 1px solid #e9ecef; border-radius: 6px; background: #667eea; color: white; cursor: pointer; font-size: 11px; white-space: nowrap;">Tout</button>
+                                    <button onclick="setProductEvolutionPeriod('year', 2024)" class="period-btn" style="padding: 4px 10px; border: 1px solid #e9ecef; border-radius: 6px; background: white; cursor: pointer; font-size: 11px; white-space: nowrap;">2024</button>
+                                    <button onclick="setProductEvolutionPeriod('year', 2025)" class="period-btn" style="padding: 4px 10px; border: 1px solid #e9ecef; border-radius: 6px; background: white; cursor: pointer; font-size: 11px; white-space: nowrap;">2025</button>
+                                    <button onclick="setProductEvolutionPeriod('year', 2026)" class="period-btn" style="padding: 4px 10px; border: 1px solid #e9ecef; border-radius: 6px; background: white; cursor: pointer; font-size: 11px; white-space: nowrap;">2026</button>
+                                    <button onclick="setProductEvolutionPeriod('year', 2027)" class="period-btn" style="padding: 4px 10px; border: 1px solid #e9ecef; border-radius: 6px; background: white; cursor: pointer; font-size: 11px; white-space: nowrap;">2027</button>
+                                    <button onclick="setProductEvolutionPeriod('year', 2028)" class="period-btn" style="padding: 4px 10px; border: 1px solid #e9ecef; border-radius: 6px; background: white; cursor: pointer; font-size: 11px; white-space: nowrap;">2028</button>
+                                    <button onclick="setProductEvolutionPeriod('year', 2029)" class="period-btn" style="padding: 4px 10px; border: 1px solid #e9ecef; border-radius: 6px; background: white; cursor: pointer; font-size: 11px; white-space: nowrap;">2029</button>
+                                    <button onclick="setProductEvolutionPeriod('year', 2030)" class="period-btn" style="padding: 4px 10px; border: 1px solid #e9ecef; border-radius: 6px; background: white; cursor: pointer; font-size: 11px; white-space: nowrap;">2030</button>
+                                </div>
+                            </div>
+                            <select id="productEvolutionFilter" onchange="updateProductEvolutionChart()" style="padding: 6px 12px; border: 1px solid #e9ecef; border-radius: 8px; background: white; cursor: pointer; font-size: 13px; min-width: 150px;">
                                 <option value="">🔍 Tous les produits</option>
                             </select>
                         </div>
@@ -19447,7 +19462,7 @@ Date [ESPACES] Client [ESPACES] Montant
             }
             
             const validLines = salesLines.filter(line => 
-                (line.productId || line.product) && line.quantity > 0 && line.unitPrice > 0
+                (line.productId || line.product) && line.quantity > 0 && line.unitPrice >= 0
             );
             
             if (validLines.length === 0) {
@@ -20400,6 +20415,27 @@ Date [ESPACES] Client [ESPACES] Montant
             }
         }
 
+        // Variable globale pour stocker le filtre de période
+        let productEvolutionPeriodFilter = { type: 'all' };
+
+        function setProductEvolutionPeriod(type, value) {
+            // Mettre à jour la variable globale
+            productEvolutionPeriodFilter = { type, value };
+            
+            // Mettre à jour les styles des boutons
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.style.background = 'white';
+                btn.style.color = '#333';
+            });
+            
+            // Mettre en surbrillance le bouton actif
+            event.target.style.background = '#667eea';
+            event.target.style.color = 'white';
+            
+            // Mettre à jour le graphique
+            updateProductEvolutionChart();
+        }
+
         function updateCharts() {
             updateProductEvolutionChart();
             updateClientChart();
@@ -20415,18 +20451,41 @@ Date [ESPACES] Client [ESPACES] Montant
             }
             
             const productFilter = document.getElementById('productEvolutionFilter')?.value || '';
-            const dateStart = document.getElementById('dateStart').value;
-            const dateEnd = document.getElementById('dateEnd').value;
+            
+            // Produits à exclure par défaut
+            const excludedProducts = ['REGUL', 'reprise de données', 'reprise de donnees'];
+            
+            // Utiliser toutes les données de vente (pas seulement filteredData)
+            let dataToUse = salesData;
+            
+            // Appliquer le filtre de période si défini
+            if (productEvolutionPeriodFilter.type === 'month') {
+                dataToUse = salesData.filter(sale => {
+                    const date = parseDate(sale.date);
+                    return date && date.getMonth() + 1 === productEvolutionPeriodFilter.value;
+                });
+            } else if (productEvolutionPeriodFilter.type === 'year') {
+                dataToUse = salesData.filter(sale => {
+                    const date = parseDate(sale.date);
+                    return date && date.getFullYear() === productEvolutionPeriodFilter.value;
+                });
+            }
             
             // Calculer les ventes mensuelles par produit
             const monthlySalesByProduct = {};
             
-            filteredData.forEach(sale => {
+            dataToUse.forEach(sale => {
                 const date = parseDate(sale.date);
                 if (!date) return;
                 
-                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
                 const product = sale.product || 'Non défini';
+                
+                // Exclure les produits indésirables
+                if (excludedProducts.some(excluded => product.toLowerCase().includes(excluded.toLowerCase()))) {
+                    return;
+                }
+                
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
                 const quantity = parseFloat(sale.quantity) || 0;
                 
                 if (!monthlySalesByProduct[product]) {
@@ -20486,6 +20545,27 @@ Date [ESPACES] Client [ESPACES] Montant
                 const color = colorPalette[index % colorPalette.length];
                 const data = sortedMonths.map(month => productData.months[month] || 0);
                 
+                // Calculer les moyennes par semestre pour ce produit
+                const semestre1Data = [];
+                const semestre2Data = [];
+                
+                sortedMonths.forEach(monthKey => {
+                    const [year, month] = monthKey.split('-');
+                    const monthNum = parseInt(month);
+                    const qty = productData.months[monthKey] || 0;
+                    
+                    if (monthNum >= 1 && monthNum <= 6) {
+                        semestre1Data.push(qty);
+                    } else {
+                        semestre2Data.push(qty);
+                    }
+                });
+                
+                const avgS1 = semestre1Data.length > 0 ? 
+                    semestre1Data.reduce((sum, val) => sum + val, 0) / semestre1Data.length : 0;
+                const avgS2 = semestre2Data.length > 0 ? 
+                    semestre2Data.reduce((sum, val) => sum + val, 0) / semestre2Data.length : 0;
+                
                 return {
                     label: productData.product,
                     data: data,
@@ -20495,7 +20575,10 @@ Date [ESPACES] Client [ESPACES] Montant
                     fill: false,
                     tension: 0.4,
                     pointRadius: 4,
-                    pointHoverRadius: 6
+                    pointHoverRadius: 6,
+                    // Stocker les moyennes dans le dataset pour l'infobulle
+                    avgSemestre1: avgS1,
+                    avgSemestre2: avgS2
                 };
             });
             
@@ -20510,7 +20593,7 @@ Date [ESPACES] Client [ESPACES] Montant
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'top',
+                            position: 'bottom',
                             labels: {
                                 font: {
                                     size: window.innerWidth < 768 ? 9 : 11
@@ -20525,6 +20608,15 @@ Date [ESPACES] Client [ESPACES] Montant
                                     const label = context.dataset.label || '';
                                     const value = context.parsed.y;
                                     return `${label}: ${value.toLocaleString()} unités`;
+                                },
+                                afterLabel: function(context) {
+                                    const avgS1 = context.dataset.avgSemestre1 || 0;
+                                    const avgS2 = context.dataset.avgSemestre2 || 0;
+                                    return [
+                                        '',
+                                        `📊 Moy. S1: ${avgS1.toFixed(1)} unités`,
+                                        `📊 Moy. S2: ${avgS2.toFixed(1)} unités`
+                                    ];
                                 }
                             }
                         }
@@ -20551,8 +20643,8 @@ Date [ESPACES] Client [ESPACES] Montant
                         }
                     },
                     interaction: {
-                        mode: 'index',
-                        intersect: false
+                        mode: 'point',
+                        intersect: true
                     }
                 }
             });
@@ -20663,6 +20755,14 @@ Date [ESPACES] Client [ESPACES] Montant
 
         function resetFilters() {
             setDefaultDates();
+            document.getElementById('clientFilter').value = '';
+            document.getElementById('articleFilter').value = '';
+            applyFilters();
+        }
+
+        function clearAllFilters() {
+            document.getElementById('dateStart').value = '';
+            document.getElementById('dateEnd').value = '';
             document.getElementById('clientFilter').value = '';
             document.getElementById('articleFilter').value = '';
             applyFilters();
