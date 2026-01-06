@@ -5318,7 +5318,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 </div>
                             </div>
                         </div>
-                    </div>
+                        
+                        <!-- Section DEBUGALL supprimée - Tests de déploiement terminés -->
+                            <div id="debugAllProgress" style="margin-top: 15px; display: none;">
+                                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px;">
+                                    <div style="font-weight: bold; margin-bottom: 10px;">📊 Progression du test :</div>
+                                    <div id="debugAllStep" style="color: #007bff; margin-bottom: 10px;">Initialisation...</div>
+                                    <div id="debugAllResults" style="font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; text-align: left;"></div>
+                                </div>
+                            </div>
+                        </div>
                         
                         <button onclick="lockAdmin()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 10px 20px; border-radius: 20px; cursor: pointer;">🔒 Verrouiller</button>
                     </div>
@@ -5959,7 +5968,22 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
     </div>
 
     <script>
+        // Mode debug conditionnel pour les performances
+        const DEBUG_MODE = false; // Désactivé pour les performances
         let PERFORMANCE_MODE = true; // Mode haute performance activé par défaut
+        
+        // Fonctions de log conditionnelles
+        function debugLog(...args) {
+            if (DEBUG_MODE) console.log(...args);
+        }
+        
+        function debugWarn(...args) {
+            if (DEBUG_MODE) console.warn(...args);
+        }
+        
+        function debugError(...args) {
+            console.error(...args); // Erreurs toujours affichées
+        }
         
         // Variables globales
         let salesData = [];
@@ -6038,9 +6062,33 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             markDataLoaded(type);
         }
         
-
+        // 🔥 FONCTION DEBUG FIREBASE SUPPRESSION 🔥
+        async function debugFirebaseDelete(collection, localId, action = "SUPPRESSION") {
+            console.group(`🔥 FIREBASE ${action} DEBUG - Collection: ${collection}`);
+            if (isFirebaseReady()) {
+                
+                // Afficher un aperçu de la collection avant suppression
+                await debugFirebaseCollectionOverview(collection);
+            }
+            
+            console.groupEnd();
+        }
         
-
+        // 🎯 FONCTION DEBUG RECHERCHE DOCUMENTS FIREBASE 🎯  
+        function debugFirebaseSearch(doc, localId, index) {
+            const data = doc.data();
+            console.log(`🔍 Document ${index + 1}:`, {
+                firebaseDocId: doc.id,
+                dataId: data.id,
+                dataIdType: typeof data.id,
+                localId: localId,
+                localIdType: typeof localId,
+                match_strict: data.id === localId,
+                match_loose: data.id == localId,
+                match_string: data.id === localId.toString(),
+                match_any: data.id == localId || data.id === localId.toString()
+            });
+        }
         
         // 📋 FONCTION RÉSUMÉ SUPPRESSION FIREBASE 📋
         function debugFirebaseDeleteSummary(success, firebaseDocId, localId, collection, method = 'direct') {
@@ -6184,7 +6232,32 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
         }
         
-
+        // 📊 FONCTION APERÇU COLLECTION FIREBASE 📊
+        async function debugFirebaseCollectionOverview(collection) {
+            if (!isFirebaseReady()) {
+                console.warn(`❌ Firebase non disponible pour l'aperçu de ${collection}`);
+                return;
+            }
+            
+            try {
+                console.group(`📊 APERÇU COLLECTION FIREBASE: ${collection}`);
+                const snapshot = await db.collection(collection).get();
+                console.log(`📝 Nombre total de documents: ${snapshot.size}`);
+                
+                if (snapshot.size > 0) {
+                    console.log(`📋 Liste des documents:`);
+                    snapshot.forEach((doc, index) => {
+                        const data = doc.data();
+                        console.log(`   ${index + 1}. Firebase ID: "${doc.id}" → Data ID: "${data.id}" (${typeof data.id})`);
+                    });
+                } else {
+                    console.log(`📭 Collection vide`);
+                }
+                console.groupEnd();
+            } catch (error) {
+                console.error(`❌ Erreur lors de l'aperçu de ${collection}:`, error.message);
+            }
+        }
         
         let salesLines = [];
         let entryLines = [];
