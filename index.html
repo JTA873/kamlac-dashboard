@@ -328,13 +328,17 @@
             flex: 1;
             margin-left: 60px;
             min-height: 100vh;
-            padding: 10px;
+            padding: 10px 15px;
             background: var(--bg-primary);
             transition: margin-left 0.3s ease;
+            max-width: calc(100vw - 60px);
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .dashboard-container.expanded {
             margin-left: 0;
+            max-width: 100vw;
         }
         
         .header {
@@ -580,13 +584,19 @@
         
         .card {
             background: var(--bg-secondary);
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px;
             box-shadow: var(--shadow);
             margin-bottom: 20px;
             border: 1px solid var(--border-color);
             transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
             animation: slideInFromLeft 0.6s ease-out;
+        }
+        
+        @media (min-width: 768px) {
+            .card {
+                padding: 20px;
+            }
         }
         
         .card:hover {
@@ -1142,6 +1152,35 @@
             grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 12px;
             margin: 15px 0;
+        }
+        
+        .export-kpi-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+        }
+        
+        .export-kpi-label {
+            font-size: 14px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        
+        .export-kpi-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .export-kpi-unit {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .low-stock {
+            color: #dc3545 !important;
+            font-weight: bold;
         }
         
         .stat-item {
@@ -2362,9 +2401,9 @@
         /* === MODULES === */
         .module {
             display: none;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
             border-radius: 10px;
             transition: all 0.3s ease;
             width: 100%;
@@ -3400,6 +3439,47 @@
                 </ul>
             </div>
 
+            <!-- Module Gestion Export -->
+            <div class="sidebar-section" id="sidebar-export-section">
+                <div class="sidebar-section-title" onclick="toggleSidebarSection('sidebar-export-section')">
+                    <span>🚚</span>
+                    <span class="section-text">Gestion Export</span>
+                    <span class="expand-arrow">▶</span>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('export'); showExportSection('export-dashboard');" id="sidebar-export-dashboard" data-tooltip="Dashboard Export">
+                            <span>📊</span>
+                            <span class="menu-text">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('export'); showExportSection('export-import');" id="sidebar-export-import" data-tooltip="Importer MP">
+                            <span>📥</span>
+                            <span class="menu-text">Importer MP</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('export'); showExportSection('export-export');" id="sidebar-export-export" data-tooltip="Exporter PF">
+                            <span>📤</span>
+                            <span class="menu-text">Exporter PF</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('export'); showExportSection('export-details');" id="sidebar-export-details" data-tooltip="Détails Imports">
+                            <span>📋</span>
+                            <span class="menu-text">Détails Imports</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item">
+                        <a onclick="showModule('export'); showExportSection('export-history');" id="sidebar-export-history" data-tooltip="Historique">
+                            <span>📜</span>
+                            <span class="menu-text">Historique</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
             <!-- Module Admin -->
             <div class="sidebar-section" id="sidebar-admin-section">
                 <div class="sidebar-section-title" onclick="showModule('admin')" style="cursor: pointer;">
@@ -3831,6 +3911,28 @@
                                     <span id="totalInvoice" style="font-size: clamp(1.2rem, 4vw, 1.5rem); font-weight: 700; color: #667eea;">0 CFA</span>
                                 </div>
                             </div>
+                            
+                            <!-- Nouveau : Gestion Export -->
+                            <div style="background: #fff3cd; padding: 15px; border-radius: 10px; border: 2px solid #ffc107;">
+                                <h4 style="color: #856404; margin-bottom: 10px;">🚚 Gestion Export & Matières Premières</h4>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                    <input type="checkbox" id="enableExportTracking" onchange="toggleExportTracking()" style="width: 20px; height: 20px; cursor: pointer;">
+                                    <label for="enableExportTracking" style="cursor: pointer; font-weight: bold;">Activer le suivi des MP pour cette facture</label>
+                                </div>
+                                <div id="exportTrackingOptions" style="display: none;">
+                                    <div class="form-group" style="margin-bottom: 10px;">
+                                        <label for="invoiceDestinationCountry" style="font-size: 14px; color: #856404;">Pays de Destination *</label>
+                                        <select id="invoiceDestinationCountry" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                                            <option value="">Sélectionner...</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn" onclick="previewExportConsumption()" style="background: #17a2b8; color: white; width: 100%; margin-bottom: 10px;">
+                                        👁️ Prévisualiser Consommation MP à l'Export
+                                    </button>
+                                    <div id="exportPreviewResult" style="background: white; padding: 10px; border-radius: 5px; display: none;"></div>
+                                </div>
+                            </div>
+                            
                             <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
                                 <button class="btn btn-primary" onclick="saveInvoice()" style="flex: 1; min-width: 150px;">💾 Enregistrer</button>
                                 <button class="btn btn-warning" onclick="clearInvoice()" style="flex: 1; min-width: 150px;">🔄 Nouvelle</button>
@@ -4657,7 +4759,7 @@
             <!-- Inventaire Section -->
             <div id="stock-inventory" class="section">
                 <div class="card">
-                    <h2 style="margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.5rem);">� Tableau de Bord Stocks</h2>
+                    <h2 style="margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.5rem);">  Tableau de Bord Stocks</h2>
                     
                     <!-- KPI Summary -->
                     <div class="stats-row" style="margin-bottom: 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white;">
@@ -4697,7 +4799,7 @@
                                 </select>
                             </div>
                             <div class="filter-group">
-                                <label for="stockSortFilter" style="font-weight: 600; color: #495057;">� Trier par</label>
+                                <label for="stockSortFilter" style="font-weight: 600; color: #495057;">  Trier par</label>
                                 <select id="stockSortFilter" onchange="applyStockFilters()" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 5px;">
                                     <option value="quantity_asc">Stock Croissant</option>
                                     <option value="quantity_desc">Stock Décroissant</option>
@@ -4801,7 +4903,7 @@
 
                     <!-- Export et Gestion -->
                     <div class="invoice-section">
-                        <h3 style="margin-bottom: 15px; color: #667eea;">� Export des Données Stocks</h3>
+                        <h3 style="margin-bottom: 15px; color: #667eea;">  Export des Données Stocks</h3>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Export Mouvements Excel</label>
@@ -4821,6 +4923,195 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Module Gestion Export -->
+    <div id="exportModule" class="module">
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">🚚 Gestion des Exports & Matières Premières</h2>
+            
+            <!-- Navigation Module Export -->
+            <div class="settings-nav" style="margin-bottom: 20px;">
+                <button class="settings-tab active" onclick="showExportSection('export-dashboard')">📊 Dashboard</button>
+                <button class="settings-tab" onclick="showExportSection('export-articles')">🏷️ Articles MP</button>
+                <button class="settings-tab" onclick="showExportSection('export-compositions')">🔧 Compositions</button>
+                <button class="settings-tab" onclick="showExportSection('export-import')">📥 Importer</button>
+                <button class="settings-tab" onclick="showExportSection('export-export')">📤 Exporter</button>
+                <button class="settings-tab" onclick="showExportSection('export-details')">📋 Détails</button>
+                <button class="settings-tab" onclick="showExportSection('export-history')">📜 Historique</button>
+            </div>
+            
+            <!-- Dashboard Section -->
+            <div id="export-dashboard" class="settings-section active">
+                <h3 style="color: #667eea; margin-bottom: 20px;">📊 Tableau de Bord des Stocks MP</h3>
+                <div class="export-kpi-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
+                    <!-- KPI cards generated dynamically by updateExportDashboard() -->
+                </div>
+
+                <h4 style="color: #667eea; margin-bottom: 15px;">📍 Stocks en Cours par Pays de Destination</h4>
+                <div id="export-stocks-by-country" style="margin-bottom: 30px;">
+                    <!-- Généré dynamiquement -->
+                </div>
+
+                <div id="export-low-stock-alert"></div>
+                <h4 style="color: #667eea; margin-bottom: 15px;">📦 Importations Récentes</h4>
+                <div id="export-recent-imports"></div>
+            </div>
+
+            <!-- Articles MP Section -->
+            <div id="export-articles" class="settings-section">
+                <h3 style="color: #667eea; margin-bottom: 20px;">🏷️ Gestion des Articles (Matières Premières)</h3>
+                
+                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+                    <p style="margin: 0; color: #856404;">💡 <strong>Info:</strong> Définissez ici tous les types d'articles/matières premières que vous importez. Vous pourrez ensuite définir pour chaque produit fini les quantités de ces articles nécessaires à sa fabrication.</p>
+                </div>
+                
+                <form id="export-article-form" onsubmit="event.preventDefault(); addExportArticle();" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="color: #667eea; margin-bottom: 15px;">➕ Ajouter un Article</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Nom de l'article *</label>
+                            <input type="text" id="export-article-name" placeholder="Ex: Cartons, Boîtes, Thé, BOPP..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Unité de mesure *</label>
+                            <input type="text" id="export-article-unit" placeholder="Ex: unités, kg, litres..." required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">✅ Ajouter l'Article</button>
+                </form>
+                
+                <h4 style="color: #667eea; margin-bottom: 15px;">📋 Liste des Articles</h4>
+                <div id="export-articles-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;"></div>
+            </div>
+
+            <!-- Compositions Section -->
+            <div id="export-compositions" class="settings-section">
+                <h3 style="color: #667eea; margin-bottom: 20px;">🔧 Configuration des Compositions Produits</h3>
+                
+                <div style="background: #d1ecf1; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #17a2b8;">
+                    <p style="margin: 0; color: #0c5460;">💡 <strong>Info:</strong> Définissez pour chaque produit fini les quantités d'articles (MP) nécessaires à sa fabrication. Ces données seront utilisées pour calculer automatiquement la consommation lors des exportations.</p>
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="color: #667eea; margin-bottom: 15px;">🎯 Sélectionner un Produit</h4>
+                    <div class="form-group">
+                        <label>Produit *</label>
+                        <select id="export-comp-product-select" onchange="loadProductComposition()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                            <option value="">Sélectionner un produit...</option>
+                        </select>
+                    </div>
+                    
+                    <div id="export-comp-config" style="display: none; margin-top: 20px;">
+                        <h4 style="color: #667eea; margin-bottom: 15px;">📝 Composition pour <span id="export-comp-product-name" style="color: #28a745;"></span></h4>
+                        <p style="margin-bottom: 15px; font-size: 14px;">Définissez la quantité de chaque article nécessaire pour produire <strong>1 unité</strong> de ce produit:</p>
+                        <div id="export-comp-fields"></div>
+                        <button onclick="saveProductComposition()" class="btn btn-primary" style="margin-top: 15px;">💾 Enregistrer la Composition</button>
+                    </div>
+                </div>
+                
+                <h4 style="color: #667eea; margin-bottom: 15px;">📊 Compositions Configurées</h4>
+                <div id="export-compositions-summary"></div>
+            </div>
+
+            <!-- Import Section -->
+            <div id="export-import" class="settings-section">
+                <h3 style="color: #667eea; margin-bottom: 20px;">📥 Nouvelle Importation</h3>
+                <form id="export-import-form" onsubmit="event.preventDefault(); handleExportImport();">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Référence Commande *</label>
+                            <input type="text" id="export-import-ref" placeholder="Ex: KTB001" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Pays Destination *</label>
+                            <select id="export-import-country" required>
+                                <option value="">Sélectionner...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Nouveau pays (si absent)</label>
+                            <input type="text" id="export-import-new-country" placeholder="Ex: Mali">
+                            <button type="button" onclick="addDestinationCountry()" style="margin-top: 5px; padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">➕ Ajouter</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Date d'importation *</label>
+                            <input type="date" id="export-import-date" required>
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 20px 0 10px 0; color: #667eea;">Quantités Importées</h4>
+                    <div id="export-import-fields" class="form-grid">
+                        <!-- Les champs seront générés dynamiquement selon les articles définis -->
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">✅ Enregistrer l'Importation</button>
+                </form>
+                <div id="export-import-message" style="margin-top: 15px;"></div>
+            </div>
+
+            <!-- Export Section -->
+            <div id="export-export" class="settings-section">
+                <h3 style="color: #667eea; margin-bottom: 20px;">📤 Nouvelle Exportation</h3>
+                
+                <form id="export-export-form" onsubmit="event.preventDefault(); handleExportExport();">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Produit *</label>
+                            <select id="export-export-product" required onchange="updateExportExportPreview()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                                <option value="">Sélectionner un produit...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Importation Source *</label>
+                            <select id="export-export-import" required onchange="updateExportExportPreview()">
+                                <option value="">Sélectionner une importation...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Quantité de Produits *</label>
+                            <input type="number" id="export-export-quantity" min="1" required oninput="updateExportExportPreview()" placeholder="Nombre d'unités">
+                        </div>
+                        <div class="form-group">
+                            <label>Date d'exportation *</label>
+                            <input type="date" id="export-export-date" required>
+                        </div>
+                    </div>
+
+                    <div id="export-export-preview"></div>
+                    <button type="submit" class="btn btn-primary">✅ Confirmer l'Exportation</button>
+                </form>
+                <div id="export-export-message" style="margin-top: 15px;"></div>
+            </div>
+
+            <!-- Details Section -->
+            <div id="export-details" class="settings-section">
+                <h3 style="color: #667eea; margin-bottom: 20px;">📋 Détail par Importation</h3>
+                <div id="export-import-details-list"></div>
+            </div>
+
+            <!-- History Section -->
+            <div id="export-history" class="settings-section">
+                <h3 style="color: #667eea; margin-bottom: 20px;">📜 Historique des Mouvements</h3>
+                <div style="margin-bottom: 15px;">
+                    <button class="btn" onclick="filterExportHistory('all')" style="font-size: 12px; padding: 6px 12px;">Tous</button>
+                    <button class="btn" onclick="filterExportHistory('import')" style="font-size: 12px; padding: 6px 12px;">Importations</button>
+                    <button class="btn" onclick="filterExportHistory('export')" style="font-size: 12px; padding: 6px 12px;">Exportations</button>
+                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f5f5f5;">
+                            <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0;">Date</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0;">Type</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0;">Référence</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0;">Pays</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0;">Détails</th>
+                        </tr>
+                    </thead>
+                    <tbody id="export-history-tbody"></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -5027,16 +5318,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Section DEBUGALL supprimée - Tests de déploiement terminés -->
-                            <div id="debugAllProgress" style="margin-top: 15px; display: none;">
-                                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px;">
-                                    <div style="font-weight: bold; margin-bottom: 10px;">📊 Progression du test :</div>
-                                    <div id="debugAllStep" style="color: #007bff; margin-bottom: 10px;">Initialisation...</div>
-                                    <div id="debugAllResults" style="font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; text-align: left;"></div>
-                                </div>
-                            </div>
-                        </div>
+                    </div>
                         
                         <button onclick="lockAdmin()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 10px 20px; border-radius: 20px; cursor: pointer;">🔒 Verrouiller</button>
                     </div>
@@ -5677,22 +5959,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
     </div>
 
     <script>
-        // Mode debug conditionnel pour les performances
-        const DEBUG_MODE = false; // Désactivé pour les performances
         let PERFORMANCE_MODE = true; // Mode haute performance activé par défaut
-        
-        // Fonctions de log conditionnelles
-        function debugLog(...args) {
-            if (DEBUG_MODE) console.log(...args);
-        }
-        
-        function debugWarn(...args) {
-            if (DEBUG_MODE) console.warn(...args);
-        }
-        
-        function debugError(...args) {
-            console.error(...args); // Erreurs toujours affichées
-        }
         
         // Variables globales
         let salesData = [];
@@ -5703,6 +5970,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         let filteredRecapPayments = [];
         let charts = {};
         let db = null;
+        
+        // Variables globales module Export
+        let exportsImports = JSON.parse(localStorage.getItem('kamlac_exports_imports')) || [];
+        let exportsExports = JSON.parse(localStorage.getItem('kamlac_exports_exports')) || [];
+        let exportArticles = JSON.parse(localStorage.getItem('kamlac_export_articles')) || [
+            { id: 1, name: 'Cartons MP', unit: 'unités' },
+            { id: 2, name: 'Boîtes', unit: 'unités' },
+            { id: 3, name: 'Thé', unit: 'kg' },
+            { id: 4, name: 'BOPP', unit: 'unités' }
+        ];
+        let productCompositions = JSON.parse(localStorage.getItem('kamlac_product_compositions')) || {};
+        let destinationCountries = JSON.parse(localStorage.getItem('kamlac_destination_countries')) || ['Guinée', 'Gambie'];
         
         // Variables globales Firebase
         let isFirebaseInitialized = false;
@@ -5759,33 +6038,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             markDataLoaded(type);
         }
         
-        // 🔥 FONCTION DEBUG FIREBASE SUPPRESSION 🔥
-        async function debugFirebaseDelete(collection, localId, action = "SUPPRESSION") {
-            console.group(`🔥 FIREBASE ${action} DEBUG - Collection: ${collection}`);
-            if (isFirebaseReady()) {
-                
-                // Afficher un aperçu de la collection avant suppression
-                await debugFirebaseCollectionOverview(collection);
-            }
-            
-            console.groupEnd();
-        }
+
         
-        // 🎯 FONCTION DEBUG RECHERCHE DOCUMENTS FIREBASE 🎯  
-        function debugFirebaseSearch(doc, localId, index) {
-            const data = doc.data();
-            console.log(`🔍 Document ${index + 1}:`, {
-                firebaseDocId: doc.id,
-                dataId: data.id,
-                dataIdType: typeof data.id,
-                localId: localId,
-                localIdType: typeof localId,
-                match_strict: data.id === localId,
-                match_loose: data.id == localId,
-                match_string: data.id === localId.toString(),
-                match_any: data.id == localId || data.id === localId.toString()
-            });
-        }
+
         
         // 📋 FONCTION RÉSUMÉ SUPPRESSION FIREBASE 📋
         function debugFirebaseDeleteSummary(success, firebaseDocId, localId, collection, method = 'direct') {
@@ -5829,7 +6084,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 }
                 
             } else if (type === 'exits') {
-                console.log(`� Avant nettoyage:`);
+                console.log(`  Avant nettoyage:`);
                 console.log(`   stockExitsData: ${stockExitsData.length} éléments`);
                 console.log(`   localStorage stockExits: ${(JSON.parse(localStorage.getItem('stockExits') || '[]')).length} éléments`);
                 
@@ -5858,7 +6113,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             console.groupEnd();
         }
         
-        // � FONCTION RECHARGEMENT FIREBASE UNIQUEMENT 🔥
+        //   FONCTION RECHARGEMENT FIREBASE UNIQUEMENT 🔥
         async function reloadFromFirebaseOnly() {
             console.group(`🔥 RECHARGEMENT FIREBASE UNIQUEMENT`);
             
@@ -5929,32 +6184,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
         }
         
-        // 📊 FONCTION APERÇU COLLECTION FIREBASE 📊
-        async function debugFirebaseCollectionOverview(collection) {
-            if (!isFirebaseReady()) {
-                console.warn(`❌ Firebase non disponible pour l'aperçu de ${collection}`);
-                return;
-            }
-            
-            try {
-                console.group(`📊 APERÇU COLLECTION FIREBASE: ${collection}`);
-                const snapshot = await db.collection(collection).get();
-                console.log(`📝 Nombre total de documents: ${snapshot.size}`);
-                
-                if (snapshot.size > 0) {
-                    console.log(`📋 Liste des documents:`);
-                    snapshot.forEach((doc, index) => {
-                        const data = doc.data();
-                        console.log(`   ${index + 1}. Firebase ID: "${doc.id}" → Data ID: "${data.id}" (${typeof data.id})`);
-                    });
-                } else {
-                    console.log(`📭 Collection vide`);
-                }
-                console.groupEnd();
-            } catch (error) {
-                console.error(`❌ Erreur lors de l'aperçu de ${collection}:`, error.message);
-            }
-        }
+
         
         let salesLines = [];
         let entryLines = [];
@@ -6186,6 +6416,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 if (!moduleInitialized.commercial) {
                     initializeCommercialModule();
                 }
+            } else if (moduleId === 'export') {
+                if (!moduleInitialized.export) {
+                    initializeExportModule();
+                    moduleInitialized.export = true;
+                }
             } else if (moduleId === 'admin') {
                 if (!moduleInitialized.admin) {
                     initializeAdminModule();
@@ -6298,6 +6533,1068 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // Ajouter le bouton de debug
             addDebugButton();
+        }
+        
+        // ========================================
+        // MODULE GESTION EXPORT - FONCTIONS
+        // ========================================
+        
+        function initializeExportModule() {
+            console.log('🚚 Initialisation module Gestion Export...');
+            
+            // Charger les données
+            exportsImports = JSON.parse(localStorage.getItem('kamlac_exports_imports')) || [];
+            exportsExports = JSON.parse(localStorage.getItem('kamlac_exports_exports')) || [];
+            exportArticles = JSON.parse(localStorage.getItem('kamlac_export_articles')) || [
+                { id: 1, name: 'Cartons MP', unit: 'unités' },
+                { id: 2, name: 'Boîtes', unit: 'unités' },
+                { id: 3, name: 'Thé', unit: 'kg' },
+                { id: 4, name: 'BOPP', unit: 'unités' }
+            ];
+            productCompositions = JSON.parse(localStorage.getItem('kamlac_product_compositions')) || {};
+            destinationCountries = JSON.parse(localStorage.getItem('kamlac_destination_countries')) || ['Guinée', 'Gambie'];
+            
+            // Initialiser les dates
+            const today = new Date().toISOString().split('T')[0];
+            const importDateField = document.getElementById('export-import-date');
+            const exportDateField = document.getElementById('export-export-date');
+            if (importDateField) importDateField.value = today;
+            if (exportDateField) exportDateField.value = today;
+            
+            // Mettre à jour l'affichage
+            updateExportArticlesList();
+            updateDestinationCountriesDropdowns();
+            updateExportDashboard();
+            showExportSection('export-dashboard');
+            
+            console.log(`✅ Module Export initialisé: ${exportsImports.length} importations, ${exportArticles.length} articles, ${destinationCountries.length} pays`);
+        }
+        
+        function showExportSection(sectionId) {
+            // Cacher toutes les sections
+            const sections = document.querySelectorAll('#exportModule .settings-section');
+            sections.forEach(section => section.classList.remove('active'));
+            
+            // Cacher tous les onglets
+            const tabs = document.querySelectorAll('#exportModule .settings-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Afficher la section sélectionnée
+            const selectedSection = document.getElementById(sectionId);
+            if (selectedSection) {
+                selectedSection.classList.add('active');
+            }
+            
+            // Activer l'onglet correspondant
+            const correspondingTab = document.querySelector(`[onclick="showExportSection('${sectionId}')"]`);
+            if (correspondingTab) {
+                correspondingTab.classList.add('active');
+            }
+            
+            // Mettre à jour les données selon la section
+            switch(sectionId) {
+                case 'export-dashboard':
+                    updateExportDashboard();
+                    break;
+                case 'export-articles':
+                    updateExportArticlesList();
+                    break;
+                case 'export-compositions':
+                    updateProductCompositionsUI();
+                    break;
+                case 'export-import':
+                    updateExportImportFields();
+                    break;
+                case 'export-export':
+                    updateExportExportProductList();
+                    updateExportExportImportList();
+                    break;
+                case 'export-details':
+                    updateExportImportDetails();
+                    break;
+                case 'export-history':
+                    updateExportHistory();
+                    break;
+            }
+            
+            // Mettre à jour la sidebar
+            updateSidebarActive('export', sectionId);
+            
+            // Fermer la sidebar sur mobile
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('show');
+            }
+        }
+        
+        // Gestion des Pays de Destination
+        function addDestinationCountry() {
+            const countryInput = document.getElementById('export-import-new-country');
+            const countryName = countryInput.value.trim();
+            
+            if (!countryName) {
+                alert('Veuillez entrer un nom de pays');
+                return;
+            }
+            
+            // Vérifier si le pays existe déjà
+            if (destinationCountries.some(c => c.toLowerCase() === countryName.toLowerCase())) {
+                alert('Ce pays existe déjà dans la liste');
+                return;
+            }
+            
+            destinationCountries.push(countryName);
+            localStorage.setItem('kamlac_destination_countries', JSON.stringify(destinationCountries));
+            
+            countryInput.value = '';
+            updateDestinationCountriesDropdowns();
+            showAlert(`✅ Pays "${countryName}" ajouté avec succès`, 'success');
+        }
+        
+        function updateDestinationCountriesDropdowns() {
+            // Mettre à jour le dropdown dans import
+            const importCountrySelect = document.getElementById('export-import-country');
+            if (importCountrySelect) {
+                const currentValue = importCountrySelect.value;
+                importCountrySelect.innerHTML = '<option value="">Sélectionner...</option>';
+                destinationCountries.forEach(country => {
+                    const flagEmoji = getCountryFlag(country);
+                    importCountrySelect.innerHTML += `<option value="${country}">${flagEmoji} ${country}</option>`;
+                });
+                if (currentValue) importCountrySelect.value = currentValue;
+            }
+            
+            // Mettre à jour le dropdown dans saisie vente
+            const invoiceCountrySelect = document.getElementById('invoiceDestinationCountry');
+            if (invoiceCountrySelect) {
+                const currentValue = invoiceCountrySelect.value;
+                invoiceCountrySelect.innerHTML = '<option value="">Sélectionner...</option>';
+                destinationCountries.forEach(country => {
+                    const flagEmoji = getCountryFlag(country);
+                    invoiceCountrySelect.innerHTML += `<option value="${country}">${flagEmoji} ${country}</option>`;
+                });
+                if (currentValue) invoiceCountrySelect.value = currentValue;
+            }
+        }
+        
+        function getCountryFlag(countryName) {
+            const flags = {
+                'Guinée': '🇬🇳',
+                'Gambie': '🇬🇲',
+                'Mali': '🇲🇱',
+                'Sénégal': '🇸🇳',
+                'Côte d\'Ivoire': '🇨🇮',
+                'Burkina Faso': '🇧🇫',
+                'Niger': '🇳🇪',
+                'Bénin': '🇧🇯',
+                'Togo': '🇹🇬',
+                'Ghana': '🇬🇭'
+            };
+            return flags[countryName] || '🌍';
+        }
+        
+        // Gestion des Articles MP
+        function addExportArticle() {
+            const name = document.getElementById('export-article-name').value.trim();
+            const unit = document.getElementById('export-article-unit').value.trim();
+            
+            if (!name || !unit) {
+                alert('Veuillez remplir tous les champs');
+                return;
+            }
+            
+            // Vérifier si l'article existe déjà
+            if (exportArticles.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+                alert('Cet article existe déjà');
+                return;
+            }
+            
+            const newArticle = {
+                id: Date.now(),
+                name: name,
+                unit: unit
+            };
+            
+            exportArticles.push(newArticle);
+            localStorage.setItem('kamlac_export_articles', JSON.stringify(exportArticles));
+            
+            document.getElementById('export-article-form').reset();
+            updateExportArticlesList();
+            updateExportImportFields();
+            
+            showAlert(`✅ Article "${name}" ajouté avec succès`, 'success');
+        }
+        
+        function deleteExportArticle(articleId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) return;
+            
+            exportArticles = exportArticles.filter(a => a.id !== articleId);
+            localStorage.setItem('kamlac_export_articles', JSON.stringify(exportArticles));
+            
+            updateExportArticlesList();
+            updateExportImportFields();
+            showAlert('✅ Article supprimé', 'success');
+        }
+        
+        function updateExportArticlesList() {
+            const listEl = document.getElementById('export-articles-list');
+            if (!listEl) return;
+            
+            if (exportArticles.length === 0) {
+                listEl.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999;">Aucun article défini. Ajoutez-en un ci-dessus.</p>';
+                return;
+            }
+            
+            let html = '';
+            exportArticles.forEach(article => {
+                html += `
+                    <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                            <h4 style="margin: 0; color: #667eea; font-size: 16px;">${article.name}</h4>
+                            <button onclick="deleteExportArticle(${article.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+                        </div>
+                        <p style="margin: 0; color: #666; font-size: 14px;">📏 Unité: <strong>${article.unit}</strong></p>
+                    </div>
+                `;
+            });
+            
+            listEl.innerHTML = html;
+        }
+        
+        // Gestion des Compositions Produits
+        function updateProductCompositionsUI() {
+            // Mettre à jour le sélecteur de produits
+            const select = document.getElementById('export-comp-product-select');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Sélectionner un produit...</option>';
+            productsData.forEach(product => {
+                if (product.reference) {
+                    select.innerHTML += `<option value="${product.reference}">${product.reference}</option>`;
+                }
+            });
+            
+            // Mettre à jour le résumé des compositions
+            updateCompositionsSummary();
+        }
+        
+        function loadProductComposition() {
+            const select = document.getElementById('export-comp-product-select');
+            const productName = select.value;
+            const configDiv = document.getElementById('export-comp-config');
+            const productNameSpan = document.getElementById('export-comp-product-name');
+            
+            if (!productName) {
+                configDiv.style.display = 'none';
+                return;
+            }
+            
+            productNameSpan.textContent = productName;
+            configDiv.style.display = 'block';
+            
+            // Générer les champs pour chaque article
+            const fieldsDiv = document.getElementById('export-comp-fields');
+            const currentComposition = productCompositions[productName] || {};
+            
+            let html = '<div class="form-grid">';
+            exportArticles.forEach(article => {
+                const value = currentComposition[article.id] || 0;
+                html += `
+                    <div class="form-group">
+                        <label>${article.name} (${article.unit})</label>
+                        <input type="number" 
+                               id="comp-article-${article.id}" 
+                               min="0" 
+                               step="0.01" 
+                               value="${value}"
+                               placeholder="0">
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            fieldsDiv.innerHTML = html;
+        }
+        
+        function saveProductComposition() {
+            const productName = document.getElementById('export-comp-product-select').value;
+            if (!productName) return;
+            
+            const composition = {};
+            let hasValues = false;
+            
+            exportArticles.forEach(article => {
+                const input = document.getElementById(`comp-article-${article.id}`);
+                const value = parseFloat(input.value) || 0;
+                if (value > 0) {
+                    composition[article.id] = value;
+                    hasValues = true;
+                }
+            });
+            
+            if (!hasValues) {
+                alert('Veuillez définir au moins une quantité');
+                return;
+            }
+            
+            productCompositions[productName] = composition;
+            localStorage.setItem('kamlac_product_compositions', JSON.stringify(productCompositions));
+            
+            showAlert(`✅ Composition enregistrée pour ${productName}`, 'success');
+            updateCompositionsSummary();
+        }
+        
+        function updateCompositionsSummary() {
+            const summaryDiv = document.getElementById('export-compositions-summary');
+            if (!summaryDiv) return;
+            
+            const configuredProducts = Object.keys(productCompositions);
+            
+            if (configuredProducts.length === 0) {
+                summaryDiv.innerHTML = '<p style="text-align: center; color: #999;">Aucune composition configurée</p>';
+                return;
+            }
+            
+            let html = '<div style="display: grid; gap: 15px;">';
+            configuredProducts.forEach(productName => {
+                const composition = productCompositions[productName];
+                html += `
+                    <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                            <h4 style="margin: 0; color: #667eea;">${productName}</h4>
+                            <button onclick="deleteProductComposition('${productName}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+                        </div>
+                        <p style="font-size: 13px; color: #666; margin-bottom: 8px;"><strong>Composition pour 1 unité:</strong></p>
+                        <ul style="margin: 0; padding-left: 20px; font-size: 13px;">
+                `;
+                
+                Object.keys(composition).forEach(articleId => {
+                    const article = exportArticles.find(a => a.id == articleId);
+                    if (article) {
+                        html += `<li>${article.name}: ${composition[articleId]} ${article.unit}</li>`;
+                    }
+                });
+                
+                html += `
+                        </ul>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            summaryDiv.innerHTML = html;
+        }
+        
+        function deleteProductComposition(productName) {
+            if (!confirm(`Supprimer la composition de ${productName} ?`)) return;
+            
+            delete productCompositions[productName];
+            localStorage.setItem('kamlac_product_compositions', JSON.stringify(productCompositions));
+            
+            updateCompositionsSummary();
+            showAlert('✅ Composition supprimée', 'success');
+        }
+        
+        // Mettre à jour les champs d'importation dynamiquement
+        function updateExportImportFields() {
+            const fieldsDiv = document.getElementById('export-import-fields');
+            if (!fieldsDiv) return;
+            
+            let html = '';
+            exportArticles.forEach(article => {
+                html += `
+                    <div class="form-group">
+                        <label>${article.name} (${article.unit})</label>
+                        <input type="number" id="export-import-article-${article.id}" min="0" step="0.01" value="0">
+                    </div>
+                `;
+            });
+            
+            fieldsDiv.innerHTML = html;
+        }
+        
+        // Mettre à jour le sélecteur de produits pour l'export
+        function updateExportExportProductList() {
+            const select = document.getElementById('export-export-product');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Sélectionner un produit...</option>';
+            
+            // Afficher uniquement les produits qui ont une composition définie
+            productsData.forEach(product => {
+                if (product.reference && productCompositions[product.reference]) {
+                    select.innerHTML += `<option value="${product.reference}">${product.reference}</option>`;
+                }
+            });
+        }
+        
+        function handleExportImport() {
+            const country = document.getElementById('export-import-country').value;
+            
+            if (!country) {
+                alert('Veuillez sélectionner un pays de destination');
+                return;
+            }
+            
+            const importData = {
+                id: Date.now(),
+                ref: document.getElementById('export-import-ref').value.toUpperCase(),
+                country: country,
+                date: document.getElementById('export-import-date').value,
+                initial: {},
+                remaining: {},
+                exports: []
+            };
+            
+            // Collecter les quantités pour chaque article
+            exportArticles.forEach(article => {
+                const input = document.getElementById(`export-import-article-${article.id}`);
+                const value = parseFloat(input.value) || 0;
+                importData.initial[article.id] = value;
+                importData.remaining[article.id] = value;
+            });
+            
+            exportsImports.push(importData);
+            localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
+            
+            document.getElementById('export-import-message').innerHTML = 
+                '<div style="padding: 10px; background: #d4edda; color: #155724; border-radius: 5px; margin-top: 10px;">✅ Importation enregistrée avec succès!</div>';
+            
+            document.getElementById('export-import-form').reset();
+            document.getElementById('export-import-date').value = new Date().toISOString().split('T')[0];
+            updateExportImportFields();
+            updateDestinationCountriesDropdowns();
+            
+            updateExportDashboard();
+            setTimeout(() => {
+                document.getElementById('export-import-message').innerHTML = '';
+            }, 3000);
+        }
+        
+        function handleExportExport() {
+            const productName = document.getElementById('export-export-product').value;
+            const importId = parseInt(document.getElementById('export-export-import').value);
+            const quantity = parseInt(document.getElementById('export-export-quantity').value);
+            
+            if (!productName) {
+                alert('Veuillez sélectionner un produit');
+                return;
+            }
+            
+            const composition = productCompositions[productName];
+            if (!composition) {
+                alert('Ce produit n\'a pas de composition définie. Veuillez la configurer dans l\'onglet "Compositions"');
+                return;
+            }
+            
+            const importItem = exportsImports.find(imp => imp.id === importId);
+            if (!importItem) {
+                alert('Importation non trouvée!');
+                return;
+            }
+            
+            // Calculer les quantités requises
+            const required = {};
+            Object.keys(composition).forEach(articleId => {
+                required[articleId] = composition[articleId] * quantity;
+            });
+            
+            // Vérifier stock suffisant
+            let stockSufficient = true;
+            Object.keys(required).forEach(articleId => {
+                if ((importItem.remaining[articleId] || 0) < required[articleId]) {
+                    stockSufficient = false;
+                }
+            });
+            
+            if (!stockSufficient) {
+                alert('⚠️ Stock insuffisant pour cette exportation!');
+                return;
+            }
+            
+            // Déduire du stock
+            Object.keys(required).forEach(articleId => {
+                importItem.remaining[articleId] = (importItem.remaining[articleId] || 0) - required[articleId];
+            });
+            
+            const exportData = {
+                id: Date.now(),
+                importRef: importItem.ref,
+                country: importItem.country,
+                date: document.getElementById('export-export-date').value,
+                productName: productName,
+                quantity: quantity,
+                composition: composition,
+                used: required
+            };
+            
+            importItem.exports.push(exportData);
+            exportsExports.push(exportData);
+            
+            localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
+            localStorage.setItem('kamlac_exports_exports', JSON.stringify(exportsExports));
+            
+            document.getElementById('export-export-message').innerHTML = 
+                '<div style="padding: 10px; background: #d4edda; color: #155724; border-radius: 5px; margin-top: 10px;">✅ Exportation enregistrée avec succès!</div>';
+            
+            document.getElementById('export-export-form').reset();
+            document.getElementById('export-export-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('export-export-preview').innerHTML = '';
+            updateExportExportProductList();
+            
+            updateExportDashboard();
+            updateExportExportImportList();
+            
+            setTimeout(() => {
+                document.getElementById('export-export-message').innerHTML = '';
+            }, 3000);
+        }
+        
+        function updateExportExportPreview() {
+            const productName = document.getElementById('export-export-product').value;
+            const importId = parseInt(document.getElementById('export-export-import').value);
+            const quantity = parseInt(document.getElementById('export-export-quantity').value) || 0;
+            
+            if (!productName || !importId || quantity === 0) {
+                document.getElementById('export-export-preview').innerHTML = '';
+                return;
+            }
+            
+            const composition = productCompositions[productName];
+            if (!composition) {
+                document.getElementById('export-export-preview').innerHTML = '<div style="padding: 15px; background: #fff3cd; color: #856404; border-radius: 5px; border: 1px solid #ffeaa7;">⚠️ Ce produit n\'a pas de composition définie</div>';
+                return;
+            }
+            
+            const importItem = exportsImports.find(imp => imp.id === importId);
+            if (!importItem) return;
+            
+            const required = {};
+            let isValid = true;
+            Object.keys(composition).forEach(articleId => {
+                const qty = composition[articleId] * quantity;
+                required[articleId] = qty;
+                if ((importItem.remaining[articleId] || 0) < qty) {
+                    isValid = false;
+                }
+            });
+            
+            let itemsHTML = '';
+            Object.keys(required).forEach(articleId => {
+                const article = exportArticles.find(a => a.id === parseInt(articleId));
+                if (article) {
+                    const available = importItem.remaining[articleId] || 0;
+                    const needed = required[articleId];
+                    const isInsufficient = available < needed;
+                    const displayNeeded = article.unit === 'kg' ? needed.toFixed(2) : needed;
+                    const displayAvailable = article.unit === 'kg' ? available.toFixed(2) : available;
+                    itemsHTML += `<li style="${isInsufficient ? 'color: #dc3545; font-weight: bold;' : ''}">${article.name}: ${displayNeeded} ${article.unit} (Disponible: ${displayAvailable})</li>`;
+                }
+            });
+            
+            document.getElementById('export-export-preview').innerHTML = `
+                <div style="padding: 15px; background: ${isValid ? '#d4edda' : '#f8d7da'}; color: ${isValid ? '#155724' : '#721c24'}; border-radius: 5px; border: 1px solid ${isValid ? '#c3e6cb' : '#f5c6cb'};">
+                    <p><strong>Produit:</strong> ${productName} × ${quantity}</p>
+                    <p><strong>Importation:</strong> ${importItem.ref} (${importItem.country})</p>
+                    <p><strong>Quantités requises:</strong></p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        ${itemsHTML}
+                    </ul>
+                    ${!isValid ? '<p style="font-weight: bold;">⚠️ Stock insuffisant!</p>' : ''}
+                </div>
+            `;
+        }
+        
+        function updateExportDashboard() {
+            // Calculate totals dynamically for all articles
+            const totals = {};
+            exportArticles.forEach(article => {
+                totals[article.id] = 0;
+            });
+            
+            // Calculer les stocks par pays
+            const stocksByCountry = {};
+            destinationCountries.forEach(country => {
+                stocksByCountry[country] = {
+                    imports: 0,
+                    articles: {}
+                };
+                exportArticles.forEach(article => {
+                    stocksByCountry[country].articles[article.id] = 0;
+                });
+            });
+            
+            exportsImports.forEach(imp => {
+                exportArticles.forEach(article => {
+                    totals[article.id] += (imp.remaining[article.id] || 0);
+                });
+                
+                // Check if import has any remaining stock
+                let hasStock = false;
+                Object.keys(imp.remaining).forEach(key => {
+                    if (imp.remaining[key] > 0) hasStock = true;
+                });
+                
+                // Comptabiliser par pays
+                if (imp.country && stocksByCountry[imp.country]) {
+                    if (hasStock) {
+                        stocksByCountry[imp.country].imports++;
+                    }
+                    exportArticles.forEach(article => {
+                        stocksByCountry[imp.country].articles[article.id] += (imp.remaining[article.id] || 0);
+                    });
+                }
+            });
+            
+            // Generate KPI cards dynamically
+            const kpiContainer = document.querySelector('.export-kpi-container');
+            if (kpiContainer) {
+                let kpiHTML = '';
+                exportArticles.forEach(article => {
+                    const total = totals[article.id] || 0;
+                    const displayTotal = article.unit === 'kg' ? total.toFixed(2) : total;
+                    kpiHTML += `
+                        <div class="export-kpi-card">
+                            <div class="export-kpi-label">${article.name}</div>
+                            <div class="export-kpi-value" id="export-total-${article.id}">${displayTotal}</div>
+                            <div class="export-kpi-unit">${article.unit}</div>
+                        </div>
+                    `;
+                });
+                kpiContainer.innerHTML = kpiHTML;
+            }
+            
+            // Afficher les stocks par pays
+            const stocksByCountryContainer = document.getElementById('export-stocks-by-country');
+            if (stocksByCountryContainer) {
+                let countriesHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">';
+                
+                destinationCountries.forEach(country => {
+                    const stats = stocksByCountry[country];
+                    const flagEmoji = getCountryFlag(country);
+                    const colorIndex = destinationCountries.indexOf(country);
+                    const colors = [
+                        ['#4CAF50', '#45a049'],
+                        ['#2196F3', '#1976D2'],
+                        ['#FF9800', '#F57C00'],
+                        ['#9C27B0', '#7B1FA2'],
+                        ['#F44336', '#D32F2F'],
+                        ['#00BCD4', '#0097A7']
+                    ];
+                    const color = colors[colorIndex % colors.length];
+                    
+                    countriesHTML += `
+                        <div style="background: linear-gradient(135deg, ${color[0]} 0%, ${color[1]} 100%); padding: 20px; border-radius: 10px; color: white;">
+                            <h4 style="font-size: 16px; margin-bottom: 10px;">${flagEmoji} ${country}</h4>
+                            <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">${stats.imports}</div>
+                            <div style="font-size: 12px; opacity: 0.8; margin-bottom: 15px;">importations actives</div>
+                            <div style="border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px; font-size: 13px;">
+                    `;
+                    
+                    exportArticles.forEach(article => {
+                        const qty = stats.articles[article.id] || 0;
+                        const display = article.unit === 'kg' ? qty.toFixed(2) : qty;
+                        countriesHTML += `<div style="margin-bottom: 5px;">${article.name}: <strong>${display}</strong> ${article.unit}</div>`;
+                    });
+                    
+                    countriesHTML += `
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                countriesHTML += '</div>';
+                stocksByCountryContainer.innerHTML = countriesHTML;
+            }
+            
+            // Low stock alerts (simplified - check if any article is low)
+            let alerts = [];
+            exportArticles.forEach(article => {
+                const total = totals[article.id] || 0;
+                // Alert if less than 100 units (or 100kg for kg-based articles)
+                if (total < 100) {
+                    alerts.push(article.name);
+                }
+            });
+            
+            const alertEl = document.getElementById('export-low-stock-alert');
+            if (alertEl) {
+                if (alerts.length > 0) {
+                    alertEl.innerHTML = `
+                        <div style="padding: 15px; background: #fff3cd; color: #856404; border-radius: 5px; margin-bottom: 20px; border: 1px solid #ffeaa7;">
+                            ⚠️ <strong>Alerte Stock Faible:</strong> ${alerts.join(', ')}
+                        </div>
+                    `;
+                } else {
+                    alertEl.innerHTML = '';
+                }
+            }
+            
+            // Recent imports
+            updateExportRecentImports();
+        }
+        
+        function updateExportRecentImports() {
+            const recentImports = exportsImports.slice(-5).reverse();
+            let html = '';
+            
+            recentImports.forEach(imp => {
+                const badgeClass = imp.country === 'Guinée' ? 'badge-guinee' : 'badge-gambie';
+                
+                // Generate dynamic article display
+                let articlesHTML = '';
+                exportArticles.forEach(article => {
+                    const initial = imp.initial[article.id] || 0;
+                    const remaining = imp.remaining[article.id] || 0;
+                    const displayInitial = article.unit === 'kg' ? initial.toFixed(2) : initial;
+                    const displayRemaining = article.unit === 'kg' ? remaining.toFixed(2) : remaining;
+                    const lowStockClass = (remaining < initial * 0.2) ? 'low-stock' : '';
+                    
+                    articlesHTML += `
+                        <div>
+                            <strong>${article.name}:</strong><br>
+                            <span class="${lowStockClass}">${displayRemaining}/${displayInitial} ${article.unit}</span>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                    <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div>
+                                <span style="font-size: 18px; font-weight: bold; color: #667eea;">${imp.ref}</span>
+                                <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; background: ${imp.country === 'Guinée' ? '#4CAF50' : '#2196F3'}; color: white;">${imp.country}</span>
+                            </div>
+                            <small>${imp.date}</small>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 14px;">
+                            ${articlesHTML}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            const recentEl = document.getElementById('export-recent-imports');
+            if (recentEl) {
+                recentEl.innerHTML = html || '<p>Aucune importation enregistrée</p>';
+            }
+        }
+        
+        function updateExportExportImportList() {
+            const select = document.getElementById('export-export-import');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Sélectionner une importation...</option>';
+            
+            exportsImports.filter(imp => {
+                // Check if any article has remaining stock
+                let hasStock = false;
+                Object.keys(imp.remaining).forEach(key => {
+                    if (imp.remaining[key] > 0) hasStock = true;
+                });
+                return hasStock;
+            }).forEach(imp => {
+                // Show first 2 articles with stock in dropdown
+                let stockInfo = '';
+                let count = 0;
+                exportArticles.forEach(article => {
+                    if (count < 2 && imp.remaining[article.id] > 0) {
+                        const display = article.unit === 'kg' ? imp.remaining[article.id].toFixed(2) : imp.remaining[article.id];
+                        stockInfo += `${article.name}: ${display}, `;
+                        count++;
+                    }
+                });
+                stockInfo = stockInfo.slice(0, -2); // Remove last comma
+                
+                select.innerHTML += `
+                    <option value="${imp.id}">
+                        ${imp.ref} - ${imp.country} (${stockInfo})
+                    </option>
+                `;
+            });
+        }
+        
+        function updateExportImportDetails() {
+            let html = '';
+            
+            exportsImports.forEach(imp => {
+                const totalExports = imp.exports.length;
+                
+                // Calculate percentage used for each article dynamically
+                const percentUsed = {};
+                let articlesStatsHTML = '';
+                exportArticles.forEach(article => {
+                    const initial = imp.initial[article.id] || 0;
+                    const remaining = imp.remaining[article.id] || 0;
+                    percentUsed[article.id] = initial > 0 ? ((1 - remaining / initial) * 100).toFixed(1) : 0;
+                    
+                    const displayInitial = article.unit === 'kg' ? initial.toFixed(2) : initial;
+                    const displayRemaining = article.unit === 'kg' ? remaining.toFixed(2) : remaining;
+                    
+                    articlesStatsHTML += `
+                        <div>
+                            <strong>${article.name}</strong><br>
+                            Restant: <strong>${displayRemaining}</strong> / ${displayInitial} ${article.unit}<br>
+                            <small>Utilisé: ${percentUsed[article.id]}%</small>
+                        </div>
+                    `;
+                });
+                
+                // Build export history table dynamically
+                let exportTableHTML = '';
+                if (imp.exports.length > 0) {
+                    let tableHeaders = '<th style="padding: 8px; text-align: left;">Date</th><th style="padding: 8px; text-align: left;">Produit</th><th style="padding: 8px; text-align: left;">Quantité</th>';
+                    exportArticles.forEach(article => {
+                        tableHeaders += `<th style="padding: 8px; text-align: left;">${article.name}</th>`;
+                    });
+                    
+                    let tableRows = '';
+                    imp.exports.forEach(exp => {
+                        let articleCells = '';
+                        exportArticles.forEach(article => {
+                            const used = exp.used[article.id] || 0;
+                            const display = article.unit === 'kg' ? used.toFixed(2) : used;
+                            articleCells += `<td style="padding: 8px;">${display}</td>`;
+                        });
+                        
+                        tableRows += `
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 8px;">${exp.date}</td>
+                                <td style="padding: 8px;">${exp.productName || '-'}</td>
+                                <td style="padding: 8px;">${exp.quantity || '-'}</td>
+                                ${articleCells}
+                            </tr>
+                        `;
+                    });
+                    
+                    exportTableHTML = `
+                        <details style="margin-top: 10px;">
+                            <summary style="cursor: pointer; font-weight: bold; color: #667eea;">
+                                📤 Voir les exportations (${imp.exports.length})
+                            </summary>
+                            <table style="width: 100%; margin-top: 10px; font-size: 13px; border-collapse: collapse;">
+                                <tr style="background: #f5f5f5;">
+                                    ${tableHeaders}
+                                </tr>
+                                ${tableRows}
+                            </table>
+                        </details>
+                    `;
+                } else {
+                    exportTableHTML = '<p style="color: #999; font-size: 13px; margin-top: 10px;">Aucune exportation pour cette importation</p>';
+                }
+                
+                html += `
+                    <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div>
+                                <span style="font-size: 18px; font-weight: bold; color: #667eea;">${imp.ref}</span>
+                                <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; background: ${imp.country === 'Guinée' ? '#4CAF50' : '#2196F3'}; color: white;">${imp.country}</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <small>${imp.date}</small><br>
+                                <small>${totalExports} exportation(s)</small>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 15px 0; font-size: 14px;">
+                            ${articlesStatsHTML}
+                        </div>
+                        
+                        ${exportTableHTML}
+                    </div>
+                `;
+            });
+            
+            const detailsEl = document.getElementById('export-import-details-list');
+            if (detailsEl) {
+                detailsEl.innerHTML = html || '<p>Aucune importation enregistrée</p>';
+            }
+        }
+        
+        function updateExportHistory(filter = 'all') {
+            const history = [];
+            
+            exportsImports.forEach(imp => {
+                if (filter === 'all' || filter === 'import') {
+                    // Build dynamic details for import
+                    let details = '';
+                    exportArticles.forEach(article => {
+                        const qty = imp.initial[article.id] || 0;
+                        const display = article.unit === 'kg' ? qty.toFixed(2) : qty;
+                        details += `${article.name}: ${display} ${article.unit}, `;
+                    });
+                    details = details.slice(0, -2); // Remove last comma
+                    
+                    history.push({
+                        date: imp.date,
+                        type: 'import',
+                        ref: imp.ref,
+                        country: imp.country,
+                        details: details
+                    });
+                }
+            });
+            
+            exportsExports.forEach(exp => {
+                if (filter === 'all' || filter === 'export') {
+                    // Build dynamic details for export
+                    let details = `${exp.productName || 'Produit'} × ${exp.quantity || 0} - Utilisé: `;
+                    exportArticles.forEach(article => {
+                        const used = exp.used[article.id] || 0;
+                        const display = article.unit === 'kg' ? used.toFixed(2) : used;
+                        details += `${article.name} ${display}, `;
+                    });
+                    details = details.slice(0, -2); // Remove last comma
+                    
+                    history.push({
+                        date: exp.date,
+                        type: 'export',
+                        ref: exp.importRef,
+                        country: exp.country,
+                        details: details
+                    });
+                }
+            });
+            
+            history.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            let html = '';
+            history.forEach(item => {
+                const badgeColor = item.country === 'Guinée' ? '#4CAF50' : '#2196F3';
+                html += `
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 12px;">${item.date}</td>
+                        <td style="padding: 12px;">${item.type === 'import' ? '📥 Import' : '📤 Export'}</td>
+                        <td style="padding: 12px;">${item.ref}</td>
+                        <td style="padding: 12px;"><span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; background: ${badgeColor}; color: white;">${item.country}</span></td>
+                        <td style="padding: 12px;">${item.details}</td>
+                    </tr>
+                `;
+            });
+            
+            const historyEl = document.getElementById('export-history-tbody');
+            if (historyEl) {
+                historyEl.innerHTML = html || '<tr><td colspan="5" style="text-align: center; padding: 20px;">Aucun historique</td></tr>';
+            }
+        }
+        
+        function filterExportHistory(filter) {
+            updateExportHistory(filter);
+        }
+        
+        // Fonctions pour la section vente
+        function toggleExportTracking() {
+            const checkbox = document.getElementById('enableExportTracking');
+            const options = document.getElementById('exportTrackingOptions');
+            if (checkbox && options) {
+                options.style.display = checkbox.checked ? 'block' : 'none';
+                if (checkbox.checked) {
+                    // Mettre à jour la liste des pays quand on active
+                    updateDestinationCountriesDropdowns();
+                }
+            }
+        }
+        
+        function previewExportConsumption() {
+            // Get current sale lines
+            const lines = document.querySelectorAll('#salesLines .sale-line');
+            if (lines.length === 0) {
+                alert('Aucune ligne de vente à prévisualiser');
+                return;
+            }
+            
+            // Initialize dynamic totals
+            let totalConsumption = {};
+            exportArticles.forEach(article => {
+                totalConsumption[article.id] = 0;
+            });
+            
+            let details = [];
+            
+            lines.forEach(line => {
+                const productSelect = line.querySelector('[id^="saleProduct"]');
+                const quantityInput = line.querySelector('[id^="saleQuantity"]');
+                
+                if (productSelect && quantityInput) {
+                    const productName = productSelect.value;
+                    const quantity = parseInt(quantityInput.value) || 0;
+                    
+                    if (productName && quantity > 0) {
+                        const composition = productCompositions[productName];
+                        
+                        if (composition) {
+                            let lineDetails = `<strong>${productName}</strong> x ${quantity} = `;
+                            Object.keys(composition).forEach(articleId => {
+                                const article = exportArticles.find(a => a.id === parseInt(articleId));
+                                if (article) {
+                                    const consumed = composition[articleId] * quantity;
+                                    totalConsumption[articleId] += consumed;
+                                    const display = article.unit === 'kg' ? consumed.toFixed(2) : consumed;
+                                    lineDetails += `${display} ${article.name}, `;
+                                }
+                            });
+                            lineDetails = lineDetails.slice(0, -2); // Remove last comma
+                            details.push(`<li>${lineDetails}</li>`);
+                        } else {
+                            details.push(`<li><strong>${productName}</strong> x ${quantity} = <span style="color: orange;">Composition non définie</span></li>`);
+                        }
+                    }
+                }
+            });
+            
+            // Check available stock dynamically
+            const totals = {};
+            exportArticles.forEach(article => {
+                totals[article.id] = 0;
+            });
+            
+            exportsImports.forEach(imp => {
+                exportArticles.forEach(article => {
+                    totals[article.id] += (imp.remaining[article.id] || 0);
+                });
+            });
+            
+            let isStockSufficient = true;
+            let stockListHTML = '';
+            exportArticles.forEach(article => {
+                const required = totalConsumption[article.id] || 0;
+                const available = totals[article.id] || 0;
+                const displayRequired = article.unit === 'kg' ? required.toFixed(2) : required;
+                const displayAvailable = article.unit === 'kg' ? available.toFixed(2) : available;
+                
+                if (required > available) {
+                    isStockSufficient = false;
+                    stockListHTML += `<li style="color: #dc3545; font-weight: bold;">${article.name}: ${displayRequired} ${article.unit} (Disponible: ${displayAvailable})</li>`;
+                } else {
+                    stockListHTML += `<li>${article.name}: ${displayRequired} ${article.unit} (Disponible: ${displayAvailable})</li>`;
+                }
+            });
+            
+            const statusIcon = isStockSufficient ? '✅' : '⚠️';
+            const bgColor = isStockSufficient ? '#d4edda' : '#f8d7da';
+            const textColor = isStockSufficient ? '#155724' : '#721c24';
+            
+            const previewHtml = `
+                <div style="background: ${bgColor}; color: ${textColor}; padding: 15px; border-radius: 5px;">
+                    <h4 style="margin-bottom: 10px;">${statusIcon} Prévisualisation Consommation MP</h4>
+                    <p><strong>Détail par ligne:</strong></p>
+                    <ul style="margin: 10px 0; padding-left: 20px; font-size: 13px;">
+                        ${details.join('')}
+                    </ul>
+                    <hr style="margin: 15px 0; border: none; border-top: 1px solid currentColor; opacity: 0.3;">
+                    <p><strong>Consommation totale requise:</strong></p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        ${stockListHTML}
+                    </ul>
+                    ${!isStockSufficient ? '<p style="font-weight: bold; margin-top: 10px;">⚠️ Stock insuffisant pour cette facture!</p>' : '<p style="font-weight: bold; margin-top: 10px; color: #155724;">✅ Stock suffisant</p>'}
+                </div>
+            `;
+            
+            const previewEl = document.getElementById('exportPreviewResult');
+            if (previewEl) {
+                previewEl.innerHTML = previewHtml;
+                previewEl.style.display = 'block';
+            }
         }
         
         // ========================================
@@ -7473,7 +8770,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce mouvement ?')) return;
             
-            console.log(`�️ Suppression mouvement: ${source}/${id}`);
+            console.log(` ️ Suppression mouvement: ${source}/${id}`);
             
             // ✅ BLOQUER les listeners Firebase pendant la suppression
             deletionInProgress = true;
@@ -7492,14 +8789,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     try {
                         // CORRECTION: Utiliser where() au lieu de doc()
                         const idStr = id.toString();
-                        console.log(`�️ Suppression Firebase entrée ID: ${idStr}`);
+                        console.log(` ️ Suppression Firebase entrée ID: ${idStr}`);
                         
                         const snapshot = await db.collection('stockEntries').where('id', '==', idStr).get();
                         
                         if (!snapshot.empty) {
                             const promises = [];
                             snapshot.forEach(doc => {
-                                console.log(`� Suppression document Firebase ID: ${doc.id} pour entrée ID: ${idStr}`);
+                                console.log(`  Suppression document Firebase ID: ${doc.id} pour entrée ID: ${idStr}`);
                                 promises.push(doc.ref.delete());
                             });
                             
@@ -7547,7 +8844,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     try {
                         // CORRECTION: Utiliser where() au lieu de doc()
                         const idStr = id.toString();
-                        console.log(`�️ Suppression Firebase sortie ID: ${idStr}`);
+                        console.log(` ️ Suppression Firebase sortie ID: ${idStr}`);
                         
                         const snapshot = await db.collection('stockExits').where('id', '==', idStr).get();
                         
@@ -7604,7 +8901,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         async function deleteStockEntry(id) {
             if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette entrée ?')) return;
             
-            console.log(`�️ Suppression entrée: ${id}`);
+            console.log(` ️ Suppression entrée: ${id}`);
             
             // ✅ BLOQUER les listeners Firebase pendant la suppression
             deletionInProgress = true;
@@ -7736,7 +9033,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         
                         allDocs.forEach(doc => {
                             const data = doc.data();
-                            console.log(`� Doc: ${doc.id} → ID: ${data.id} (type: ${typeof data.id})`);
+                            console.log(`  Doc: ${doc.id} → ID: ${data.id} (type: ${typeof data.id})`);
                             
                             // Comparaison flexible pour gérer les différents types
                             if (data.id == id || data.id === idStr || data.id == idStr) {
@@ -8112,11 +9409,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
                     <button onclick="showProductMovements('${productName.replace(/'/g, "\\'")}', this.closest('.modal-overlay'))" 
                             style="background: #17a2b8; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer;">
-                        � Voir Mouvements
+                          Voir Mouvements
                     </button>
                     <button onclick="exportProductData('${productName.replace(/'/g, "\\'")}', this.closest('.modal-overlay'))" 
                             style="background: #667eea; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer;">
-                        � Exporter Données
+                          Exporter Données
                     </button>
                     <button onclick="navigateToProductEdit('${productName.replace(/'/g, "\\'")}'); this.closest('.modal-overlay').remove();" 
                             style="background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer;">
@@ -13284,6 +14581,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
         const moduleInitialized = {
             commercial: false,
             stocks: false,
+            export: false,
             admin: false,
             formation: false
         };
@@ -13881,7 +15179,7 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                     throw new Error('Firebase non initialisé');
                 }
                 
-                updateStep('✅ Firebase connecté', '� Connexion Firebase vérifiée');
+                updateStep('✅ Firebase connecté', '  Connexion Firebase vérifiée');
                 updateStep('🎉 DEBUGALL TERMINÉ AVEC SUCCÈS', 'Test simplifié réussi');
                 
                 console.log('🎉 === DEBUGALL TERMINÉ AVEC SUCCÈS ===');
@@ -19589,6 +20887,118 @@ Date [ESPACES] Client [ESPACES] Montant
                     // Ne pas faire échouer la facturation si la mise à jour du stock échoue
                 }
                 
+                // ✅ NOUVEAU: Traitement automatique de l'export MP si activé
+                const exportTrackingCheckbox = document.getElementById('enableExportTracking');
+                if (exportTrackingCheckbox && exportTrackingCheckbox.checked) {
+                    try {
+                        console.log('🚚 Traitement automatique export MP activé...');
+                        
+                        // Calculate total consumption dynamically per article
+                        let totalConsumption = {};
+                        exportArticles.forEach(article => {
+                            totalConsumption[article.id] = 0;
+                        });
+                        
+                        let allProductsHaveComposition = true;
+                        let productsWithoutComposition = [];
+                        
+                        validLines.forEach(line => {
+                            const productName = line.product;
+                            const quantity = line.quantity || 0;
+                            
+                            const composition = productCompositions[productName];
+                            if (composition) {
+                                Object.keys(composition).forEach(articleId => {
+                                    totalConsumption[articleId] += composition[articleId] * quantity;
+                                });
+                            } else {
+                                allProductsHaveComposition = false;
+                                productsWithoutComposition.push(productName);
+                            }
+                        });
+                        
+                        if (!allProductsHaveComposition) {
+                            console.warn('⚠️ Certains produits n\'ont pas de composition définie:', productsWithoutComposition);
+                            showAlert(`⚠️ Export MP non comptabilisé: ${productsWithoutComposition.join(', ')} sans composition`, 'warning', 3000);
+                        } else {
+                            // Récupérer le pays de destination
+                            const destinationCountry = document.getElementById('invoiceDestinationCountry').value;
+                            if (!destinationCountry) {
+                                showAlert('⚠️ Veuillez sélectionner un pays de destination pour l\'export MP', 'warning', 3000);
+                                return;
+                            }
+                            
+                            // Find an import with enough stock for all articles AND matching destination country
+                            const availableImport = exportsImports.find(imp => {
+                                if (imp.country !== destinationCountry) return false;
+                                
+                                let hasEnough = true;
+                                Object.keys(totalConsumption).forEach(articleId => {
+                                    if ((imp.remaining[articleId] || 0) < totalConsumption[articleId]) {
+                                        hasEnough = false;
+                                    }
+                                });
+                                return hasEnough;
+                            });
+                            
+                            if (availableImport) {
+                                // Deduct quantities dynamically
+                                Object.keys(totalConsumption).forEach(articleId => {
+                                    availableImport.remaining[articleId] = (availableImport.remaining[articleId] || 0) - totalConsumption[articleId];
+                                });
+                                
+                                // Create export record
+                                const totalProductQuantity = validLines.reduce((sum, line) => sum + line.quantity, 0);
+                                const exportRecord = {
+                                    id: Date.now(),
+                                    importRef: availableImport.ref,
+                                    country: availableImport.country,
+                                    destinationCountry: destinationCountry,
+                                    date: date,
+                                    invoiceRef: invoiceNumber || `FAC-${Date.now()}`,
+                                    client: client,
+                                    productName: validLines.length === 1 ? validLines[0].product : `${validLines.length} produits`,
+                                    quantity: totalProductQuantity,
+                                    used: totalConsumption
+                                };
+                                
+                                availableImport.exports.push(exportRecord);
+                                exportsExports.push(exportRecord);
+                                
+                                // Save
+                                localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
+                                localStorage.setItem('kamlac_exports_exports', JSON.stringify(exportsExports));
+                                
+                                // Build message with consumed articles
+                                let consumedMsg = '';
+                                Object.keys(totalConsumption).forEach(articleId => {
+                                    const article = exportArticles.find(a => a.id === parseInt(articleId));
+                                    if (article && totalConsumption[articleId] > 0) {
+                                        const display = article.unit === 'kg' ? totalConsumption[articleId].toFixed(2) : totalConsumption[articleId];
+                                        consumedMsg += `${display} ${article.name}, `;
+                                    }
+                                });
+                                consumedMsg = consumedMsg.slice(0, -2); // Remove last comma
+                                
+                                console.log('✅ Export MP comptabilisé automatiquement');
+                                showAlert(`✅ Export MP comptabilisé vers ${destinationCountry}: ${consumedMsg}`, 'success', 3000);
+                                
+                                // Update export module if open
+                                if (typeof updateExportDashboard === 'function') {
+                                    updateExportDashboard();
+                                }
+                            } else {
+                                console.warn('⚠️ Pas assez de stock MP disponible pour cette facture');
+                                showAlert(`⚠️ Stock MP insuffisant pour ${destinationCountry} - Export non comptabilisé`, 'warning', 3000);
+                            }
+                        }
+                        
+                    } catch (exportError) {
+                        console.warn('⚠️ Erreur traitement export MP:', exportError);
+                        // Don't fail the invoicing
+                    }
+                }
+                
                 clearInvoice();
                 populateFilters();
                 populateRecapFilters();
@@ -19609,6 +21019,14 @@ Date [ESPACES] Client [ESPACES] Montant
         function clearInvoice() {
             document.getElementById('invoiceClient').value = '';
             document.getElementById('invoiceNumber').value = '';
+            
+            // Réinitialiser les options d'export
+            const exportCheckbox = document.getElementById('enableExportTracking');
+            const exportCountry = document.getElementById('invoiceDestinationCountry');
+            if (exportCheckbox) exportCheckbox.checked = false;
+            if (exportCountry) exportCountry.value = '';
+            toggleExportTracking();
+            
             setTodayForNewInvoice();
             salesLines = [];
             addSaleLine();
@@ -23954,7 +25372,7 @@ Date [ESPACES] Client [ESPACES] Montant
             }
         }, 5000); // Attendre 5 secondes que Firebase soit prêt
 
-        // � FONCTION DE SYNCHRONISATION INVENTORY → PRODUCTS
+        //   FONCTION DE SYNCHRONISATION INVENTORY → PRODUCTS
         async function syncInventoryToProducts() {
             console.log('🔄 === SYNCHRONISATION INVENTORY → PRODUCTS ===');
             
@@ -24104,7 +25522,7 @@ Date [ESPACES] Client [ESPACES] Montant
             }
         }
 
-        // �🔍 FONCTION DE DIAGNOSTIC DES PRODUITS/INVENTAIRE
+        //  🔍 FONCTION DE DIAGNOSTIC DES PRODUITS/INVENTAIRE
         async function diagnosticProductsInventory() {
             console.log('🔍 === DIAGNOSTIC COMPLET PRODUITS VS INVENTAIRE ===');
             
