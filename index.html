@@ -5025,11 +5025,11 @@
                             <label>Référence Commande *</label>
                             <input type="text" id="export-import-ref" placeholder="Ex: KTB001" required>
                         </div>
-                        <div class="form-group">
-                            <label>Pays Destination *</label>
-                            <select id="export-import-country" required>
-                                <option value="">Sélectionner...</option>
-                            </select>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Pays de Destination (un ou plusieurs) *</label>
+                            <div id="export-import-countries" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #ddd; max-height: 200px; overflow-y: auto;">
+                                <!-- Checkboxes générées dynamiquement -->
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Nouveau pays (si absent)</label>
@@ -5059,29 +5059,51 @@
                 <form id="export-export-form" onsubmit="event.preventDefault(); handleExportExport();">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>Produit *</label>
-                            <select id="export-export-product" required onchange="updateExportExportPreview()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                                <option value="">Sélectionner un produit...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Importation Source *</label>
-                            <select id="export-export-import" required onchange="updateExportExportPreview()">
-                                <option value="">Sélectionner une importation...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Quantité de Produits *</label>
-                            <input type="number" id="export-export-quantity" min="1" required oninput="updateExportExportPreview()" placeholder="Nombre d'unités">
+                            <label>Référence Facture *</label>
+                            <input type="text" id="export-export-invoice" placeholder="Ex: FAC-2025-001" required>
                         </div>
                         <div class="form-group">
                             <label>Date d'exportation *</label>
                             <input type="date" id="export-export-date" required>
                         </div>
+                        <div class="form-group">
+                            <label>Pays de Destination *</label>
+                            <select id="export-export-country" required onchange="updateExportImportsSelection()">
+                                <option value="">Sélectionner...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 20px 0 10px 0; color: #667eea;">📦 Produits à Exporter</h4>
+                    <div id="export-products-list" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <!-- Liste des produits ajoutés -->
+                    </div>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 8px; border: 2px dashed #667eea; margin-bottom: 15px;">
+                        <h5 style="color: #667eea; margin-bottom: 10px;">➕ Ajouter un Produit</h5>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Produit</label>
+                                <select id="export-add-product" onchange="updateExportAddPreview()">
+                                    <option value="">Sélectionner...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Quantité</label>
+                                <input type="number" id="export-add-quantity" min="0.01" step="0.01" placeholder="Nombre d'unités" oninput="updateExportAddPreview()">
+                            </div>
+                        </div>
+                        <div id="export-add-preview" style="margin: 10px 0;"></div>
+                        <button type="button" onclick="addProductToExport()" class="btn btn-success">✅ Ajouter ce Produit</button>
+                    </div>
+
+                    <h4 style="margin: 20px 0 10px 0; color: #667eea;">📥 Source des Matières Premières</h4>
+                    <div id="export-imports-selection" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <p style="color: #666; font-size: 14px;">Les importations disponibles pour le pays sélectionné s'afficheront ici. Cochez celles à utiliser.</p>
                     </div>
 
                     <div id="export-export-preview"></div>
-                    <button type="submit" class="btn btn-primary">✅ Confirmer l'Exportation</button>
+                    <button type="submit" class="btn btn-primary" style="font-size: 16px; padding: 12px 30px;">✅ Confirmer l'Exportation</button>
                 </form>
                 <div id="export-export-message" style="margin-top: 15px;"></div>
             </div>
@@ -6638,6 +6660,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             updateExportArticlesList();
             updateDestinationCountriesDropdowns();
             updateExportDashboard();
+            updateExportExportProductList();
+            
+            // Initialiser les containers
+            const productsListContainer = document.getElementById('export-products-list');
+            if (productsListContainer) {
+                productsListContainer.innerHTML = '<p style="color: #999; text-align: center; margin: 0;">Aucun produit ajouté</p>';
+            }
+            
+            const importsSelectionContainer = document.getElementById('export-imports-selection');
+            if (importsSelectionContainer) {
+                importsSelectionContainer.innerHTML = '<p style="color: #666; font-size: 14px; margin: 0;">Sélectionnez d\'abord un pays et ajoutez des produits.</p>';
+            }
+            
             showExportSection('export-dashboard');
             
             console.log(`✅ Module Export initialisé: ${exportsImports.length} importations, ${exportArticles.length} articles, ${destinationCountries.length} pays`);
@@ -6724,16 +6759,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         function updateDestinationCountriesDropdowns() {
-            // Mettre à jour le dropdown dans import
-            const importCountrySelect = document.getElementById('export-import-country');
-            if (importCountrySelect) {
-                const currentValue = importCountrySelect.value;
-                importCountrySelect.innerHTML = '<option value="">Sélectionner...</option>';
-                destinationCountries.forEach(country => {
-                    const flagEmoji = getCountryFlag(country);
-                    importCountrySelect.innerHTML += `<option value="${country}">${flagEmoji} ${country}</option>`;
-                });
-                if (currentValue) importCountrySelect.value = currentValue;
+            // Mettre à jour les checkboxes de pays dans l'import
+            const checkboxContainer = document.getElementById('export-import-countries');
+            if (checkboxContainer) {
+                checkboxContainer.innerHTML = destinationCountries.map(country => `
+                    <label style="display: flex; align-items: center; gap: 8px; padding: 8px; background: white; border-radius: 5px; cursor: pointer; border: 1px solid #ddd;">
+                        <input type="checkbox" value="${country}" style="width: 18px; height: 18px; cursor: pointer;">
+                        <span>${getCountryFlag(country)} ${country}</span>
+                    </label>
+                `).join('');
             }
             
             // Mettre à jour le dropdown dans saisie vente
@@ -6899,7 +6933,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 const input = document.getElementById(`comp-article-${article.id}`);
                 const value = parseFloat(input.value) || 0;
                 if (value > 0) {
-                    composition[article.id] = value;
+                    composition[article.id] = parseFloat(value.toFixed(2));
                     hasValues = true;
                 }
             });
@@ -6934,7 +6968,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px;">
                         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
                             <h4 style="margin: 0; color: #667eea;">${productName}</h4>
-                            <button onclick="deleteProductComposition('${productName}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+                            <div style="display: flex; gap: 5px;">
+                                <button onclick="editProductComposition('${productName}')" style="background: #ffc107; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">✏️ Éditer</button>
+                                <button onclick="deleteProductComposition('${productName}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+                            </div>
                         </div>
                         <p style="font-size: 13px; color: #666; margin-bottom: 8px;"><strong>Composition pour 1 unité:</strong></p>
                         <ul style="margin: 0; padding-left: 20px; font-size: 13px;">
@@ -6943,7 +6980,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 Object.keys(composition).forEach(articleId => {
                     const article = exportArticles.find(a => a.id == articleId);
                     if (article) {
-                        html += `<li>${article.name}: ${composition[articleId]} ${article.unit}</li>`;
+                        html += `<li>${article.name}: ${parseFloat(composition[articleId]).toFixed(2)} ${article.unit}</li>`;
                     }
                 });
                 
@@ -6955,6 +6992,26 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             html += '</div>';
             
             summaryDiv.innerHTML = html;
+        }
+        
+        function editProductComposition(productName) {
+            // Naviguer vers l'onglet Compositions
+            showExportSettings('export-compositions');
+            
+            // Sélectionner le produit
+            document.getElementById('export-comp-product-select').value = productName;
+            updateCompositionFields();
+            
+            // Charger les valeurs existantes
+            const composition = productCompositions[productName];
+            Object.keys(composition).forEach(articleId => {
+                const input = document.getElementById(`comp-article-${articleId}`);
+                if (input) {
+                    input.value = parseFloat(composition[articleId]).toFixed(2);
+                }
+            });
+            
+            showAlert(`✏️ Édition de la composition de ${productName}`, 'info');
         }
         
         function deleteProductComposition(productName) {
@@ -6987,31 +7044,51 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         // Mettre à jour le sélecteur de produits pour l'export
         function updateExportExportProductList() {
-            const select = document.getElementById('export-export-product');
-            if (!select) return;
-            
-            select.innerHTML = '<option value="">Sélectionner un produit...</option>';
-            
-            // Afficher uniquement les produits qui ont une composition définie
-            productsData.forEach(product => {
-                if (product.reference && productCompositions[product.reference]) {
-                    select.innerHTML += `<option value="${product.reference}">${product.reference}</option>`;
+            // Mettre à jour le select des produits à ajouter
+            const productSelect = document.getElementById('export-add-product');
+            if (productSelect) {
+                const currentValue = productSelect.value;
+                productSelect.innerHTML = '<option value="">Sélectionner...</option>';
+                
+                const configuredProducts = Object.keys(productCompositions);
+                configuredProducts.forEach(productName => {
+                    productSelect.innerHTML += `<option value="${productName}">${productName}</option>`;
+                });
+                
+                if (currentValue && configuredProducts.includes(currentValue)) {
+                    productSelect.value = currentValue;
                 }
-            });
+            }
+            
+            // Mettre à jour le select des pays
+            const countrySelect = document.getElementById('export-export-country');
+            if (countrySelect) {
+                const currentCountry = countrySelect.value;
+                countrySelect.innerHTML = '<option value="">Sélectionner...</option>';
+                destinationCountries.forEach(country => {
+                    countrySelect.innerHTML += `<option value="${country}">${getCountryFlag(country)} ${country}</option>`;
+                });
+                if (currentCountry && destinationCountries.includes(currentCountry)) {
+                    countrySelect.value = currentCountry;
+                }
+            }
         }
         
         function handleExportImport() {
-            const country = document.getElementById('export-import-country').value;
+            // Récupérer les pays sélectionnés via checkboxes
+            const selectedCountries = [];
+            const checkboxes = document.querySelectorAll('#export-import-countries input[type="checkbox"]:checked');
+            checkboxes.forEach(cb => selectedCountries.push(cb.value));
             
-            if (!country) {
-                alert('Veuillez sélectionner un pays de destination');
+            if (selectedCountries.length === 0) {
+                alert('Veuillez sélectionner au moins un pays de destination');
                 return;
             }
             
             const importData = {
                 id: Date.now(),
                 ref: document.getElementById('export-import-ref').value.toUpperCase(),
-                country: country,
+                countries: selectedCountries, // Array de pays au lieu d'un seul
                 date: document.getElementById('export-import-date').value,
                 initial: {},
                 remaining: {},
@@ -7022,8 +7099,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             exportArticles.forEach(article => {
                 const input = document.getElementById(`export-import-article-${article.id}`);
                 const value = parseFloat(input.value) || 0;
-                importData.initial[article.id] = value;
-                importData.remaining[article.id] = value;
+                importData.initial[article.id] = parseFloat(value.toFixed(2));
+                importData.remaining[article.id] = parseFloat(value.toFixed(2));
             });
             
             exportsImports.push(importData);
@@ -7043,64 +7120,267 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }, 3000);
         }
         
-        function handleExportExport() {
-            const productName = document.getElementById('export-export-product').value;
-            const importId = parseInt(document.getElementById('export-export-import').value);
-            const quantity = parseInt(document.getElementById('export-export-quantity').value);
+        // Variables globales pour l'export en cours
+        let currentExportProducts = []; // Liste des produits à exporter
+        
+        function addProductToExport() {
+            const productName = document.getElementById('export-add-product').value;
+            const quantity = parseFloat(document.getElementById('export-add-quantity').value);
             
-            if (!productName) {
-                alert('Veuillez sélectionner un produit');
+            if (!productName || !quantity || quantity <= 0) {
+                alert('Veuillez sélectionner un produit et une quantité valide');
                 return;
             }
             
             const composition = productCompositions[productName];
             if (!composition) {
-                alert('Ce produit n\'a pas de composition définie. Veuillez la configurer dans l\'onglet "Compositions"');
+                alert('Ce produit n\'a pas de composition définie');
                 return;
             }
             
-            const importItem = exportsImports.find(imp => imp.id === importId);
-            if (!importItem) {
-                alert('Importation non trouvée!');
+            // Ajouter le produit à la liste
+            currentExportProducts.push({
+                productName: productName,
+                quantity: parseFloat(quantity.toFixed(2)),
+                composition: composition
+            });
+            
+            // Réinitialiser les champs
+            document.getElementById('export-add-product').value = '';
+            document.getElementById('export-add-quantity').value = '';
+            document.getElementById('export-add-preview').innerHTML = '';
+            
+            updateExportProductsList();
+            updateExportImportsSelection();
+        }
+        
+        function removeProductFromExport(index) {
+            currentExportProducts.splice(index, 1);
+            updateExportProductsList();
+            updateExportImportsSelection();
+        }
+        
+        function updateExportProductsList() {
+            const container = document.getElementById('export-products-list');
+            if (currentExportProducts.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center; margin: 0;">Aucun produit ajouté</p>';
                 return;
             }
             
-            // Calculer les quantités requises
-            const required = {};
+            container.innerHTML = currentExportProducts.map((item, index) => `
+                <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ddd;">
+                    <div>
+                        <strong style="color: #667eea;">${item.productName}</strong>
+                        <span style="color: #666; margin-left: 10px;">× ${item.quantity.toFixed(2)} unités</span>
+                    </div>
+                    <button type="button" onclick="removeProductFromExport(${index})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">🗑️</button>
+                </div>
+            `).join('');
+        }
+        
+        function updateExportAddPreview() {
+            const productName = document.getElementById('export-add-product').value;
+            const quantity = parseFloat(document.getElementById('export-add-quantity').value);
+            const preview = document.getElementById('export-add-preview');
+            
+            if (!productName || !quantity || quantity <= 0) {
+                preview.innerHTML = '';
+                return;
+            }
+            
+            const composition = productCompositions[productName];
+            if (!composition) {
+                preview.innerHTML = '<p style="color: #dc3545; margin: 0;">⚠️ Composition non définie</p>';
+                return;
+            }
+            
+            let html = '<div style="background: #e7f3ff; padding: 10px; border-radius: 5px; font-size: 13px;">';
+            html += '<strong>Matières premières nécessaires :</strong><ul style="margin: 5px 0; padding-left: 20px;">';
             Object.keys(composition).forEach(articleId => {
-                required[articleId] = composition[articleId] * quantity;
+                const article = exportArticles.find(a => a.id == articleId);
+                if (article) {
+                    const needed = (composition[articleId] * quantity).toFixed(2);
+                    html += `<li>${article.name}: ${needed} ${article.unit}</li>`;
+                }
+            });
+            html += '</ul></div>';
+            preview.innerHTML = html;
+        }
+        
+        function updateExportImportsSelection() {
+            const container = document.getElementById('export-imports-selection');
+            const country = document.getElementById('export-export-country').value;
+            
+            if (!country || currentExportProducts.length === 0) {
+                container.innerHTML = '<p style="color: #666; font-size: 14px; margin: 0;">Sélectionnez d\'abord un pays et ajoutez des produits.</p>';
+                return;
+            }
+            
+            // Filtrer les imports par pays
+            const availableImports = exportsImports.filter(imp => 
+                imp.countries && imp.countries.includes(country)
+            );
+            
+            if (availableImports.length === 0) {
+                container.innerHTML = `<p style="color: #dc3545; margin: 0;">⚠️ Aucune importation disponible pour ${country}</p>`;
+                return;
+            }
+            
+            // Calculer les besoins totaux
+            const totalNeeds = {};
+            currentExportProducts.forEach(item => {
+                Object.keys(item.composition).forEach(articleId => {
+                    totalNeeds[articleId] = (totalNeeds[articleId] || 0) + (item.composition[articleId] * item.quantity);
+                });
+            });
+            
+            let html = '<p style="font-weight: 600; margin-bottom: 10px;">Cochez les importations à utiliser :</p>';
+            availableImports.forEach(imp => {
+                html += `
+                    <label style="display: block; background: white; padding: 12px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; border: 1px solid #ddd;">
+                        <input type="checkbox" value="${imp.id}" class="import-checkbox" style="margin-right: 10px;">
+                        <strong>${imp.ref}</strong> - ${imp.date}
+                        <div style="font-size: 12px; color: #666; margin-top: 5px;">Stock restant: ${
+                            Object.keys(imp.remaining).map(artId => {
+                                const art = exportArticles.find(a => a.id == artId);
+                                return art ? `${art.name}: ${(imp.remaining[artId] || 0).toFixed(2)}` : '';
+                            }).filter(x => x).join(', ')
+                        }</div>
+                    </label>
+                `;
+            });
+            
+            html += '<div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin-top: 10px; border-left: 4px solid #ffc107;">';
+            html += '<strong>Besoins totaux :</strong><ul style="margin: 5px 0; padding-left: 20px; font-size: 13px;">';
+            Object.keys(totalNeeds).forEach(articleId => {
+                const article = exportArticles.find(a => a.id == articleId);
+                if (article) {
+                    html += `<li>${article.name}: ${totalNeeds[articleId].toFixed(2)} ${article.unit}</li>`;
+                }
+            });
+            html += '</ul></div>';
+            
+            container.innerHTML = html;
+        }
+        
+        function handleExportExport() {
+            const invoiceRef = document.getElementById('export-export-invoice').value.trim().toUpperCase();
+            const date = document.getElementById('export-export-date').value;
+            const country = document.getElementById('export-export-country').value;
+            
+            if (!invoiceRef || !date || !country) {
+                alert('Veuillez remplir tous les champs obligatoires');
+                return;
+            }
+            
+            if (currentExportProducts.length === 0) {
+                alert('Veuillez ajouter au moins un produit à exporter');
+                return;
+            }
+            
+            // Récupérer les imports sélectionnés
+            const selectedImportIds = [];
+            document.querySelectorAll('.import-checkbox:checked').forEach(cb => {
+                selectedImportIds.push(parseInt(cb.value));
+            });
+            
+            if (selectedImportIds.length === 0) {
+                alert('Veuillez sélectionner au moins une importation source');
+                return;
+            }
+            
+            // Calculer les besoins totaux
+            const totalNeeds = {};
+            currentExportProducts.forEach(item => {
+                Object.keys(item.composition).forEach(articleId => {
+                    totalNeeds[articleId] = (totalNeeds[articleId] || 0) + (item.composition[articleId] * item.quantity);
+                });
+            });
+            
+            // Calculer le stock disponible total des imports sélectionnés
+            const totalAvailable = {};
+            selectedImportIds.forEach(importId => {
+                const imp = exportsImports.find(i => i.id === importId);
+                if (imp) {
+                    Object.keys(imp.remaining).forEach(articleId => {
+                        totalAvailable[articleId] = (totalAvailable[articleId] || 0) + (imp.remaining[articleId] || 0);
+                    });
+                }
             });
             
             // Vérifier stock suffisant
             let stockSufficient = true;
-            Object.keys(required).forEach(articleId => {
-                if ((importItem.remaining[articleId] || 0) < required[articleId]) {
+            let missingArticles = [];
+            Object.keys(totalNeeds).forEach(articleId => {
+                const needed = totalNeeds[articleId];
+                const available = totalAvailable[articleId] || 0;
+                if (available < needed) {
                     stockSufficient = false;
+                    const article = exportArticles.find(a => a.id == articleId);
+                    if (article) {
+                        missingArticles.push(`${article.name}: besoin ${needed.toFixed(2)} ${article.unit}, disponible ${available.toFixed(2)} ${article.unit}`);
+                    }
                 }
             });
             
             if (!stockSufficient) {
-                alert('⚠️ Stock insuffisant pour cette exportation!');
+                alert('⚠️ Stock insuffisant !\n\n' + missingArticles.join('\n'));
                 return;
             }
             
-            // Déduire du stock
-            Object.keys(required).forEach(articleId => {
-                importItem.remaining[articleId] = (importItem.remaining[articleId] || 0) - required[articleId];
+            // Déduire du stock (algorithme: utiliser d'abord le premier import, puis le suivant, etc.)
+            const remainingNeeds = {...totalNeeds};
+            const usedFromImports = {}; // Tracking de ce qui est prélevé de chaque import
+            
+            selectedImportIds.forEach(importId => {
+                const imp = exportsImports.find(i => i.id === importId);
+                if (!imp) return;
+                
+                usedFromImports[importId] = {};
+                
+                Object.keys(remainingNeeds).forEach(articleId => {
+                    if (remainingNeeds[articleId] > 0) {
+                        const available = imp.remaining[articleId] || 0;
+                        const toTake = Math.min(available, remainingNeeds[articleId]);
+                        
+                        if (toTake > 0) {
+                            imp.remaining[articleId] = parseFloat((available - toTake).toFixed(2));
+                            remainingNeeds[articleId] = parseFloat((remainingNeeds[articleId] - toTake).toFixed(2));
+                            usedFromImports[importId][articleId] = parseFloat(toTake.toFixed(2));
+                        }
+                    }
+                });
             });
             
+            // Créer l'enregistrement d'exportation
             const exportData = {
                 id: Date.now(),
-                importRef: importItem.ref,
-                country: importItem.country,
-                date: document.getElementById('export-export-date').value,
-                productName: productName,
-                quantity: quantity,
-                composition: composition,
-                used: required
+                invoiceRef: invoiceRef,
+                country: country,
+                date: date,
+                products: currentExportProducts.map(p => ({...p, quantity: parseFloat(p.quantity.toFixed(2))})),
+                totalUsed: Object.keys(totalNeeds).reduce((acc, artId) => {
+                    acc[artId] = parseFloat(totalNeeds[artId].toFixed(2));
+                    return acc;
+                }, {}),
+                sourceImports: selectedImportIds,
+                usedFromImports: usedFromImports
             };
             
-            importItem.exports.push(exportData);
+            // Ajouter aux exports de chaque import utilisé
+            selectedImportIds.forEach(importId => {
+                const imp = exportsImports.find(i => i.id === importId);
+                if (imp) {
+                    imp.exports.push({
+                        exportId: exportData.id,
+                        invoiceRef: invoiceRef,
+                        date: date,
+                        products: exportData.products,
+                        used: usedFromImports[importId]
+                    });
+                }
+            });
+            
             exportsExports.push(exportData);
             
             localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
@@ -7109,11 +7389,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             document.getElementById('export-export-message').innerHTML = 
                 '<div style="padding: 10px; background: #d4edda; color: #155724; border-radius: 5px; margin-top: 10px;">✅ Exportation enregistrée avec succès!</div>';
             
+            // Réinitialiser le formulaire
+            currentExportProducts = [];
             document.getElementById('export-export-form').reset();
             document.getElementById('export-export-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('export-products-list').innerHTML = '<p style="color: #999; text-align: center; margin: 0;">Aucun produit ajouté</p>';
+            document.getElementById('export-imports-selection').innerHTML = '<p style="color: #666; font-size: 14px; margin: 0;">Sélectionnez d\'abord un pays et ajoutez des produits.</p>';
             document.getElementById('export-export-preview').innerHTML = '';
-            updateExportExportProductList();
             
+            updateExportExportProductList();
             updateExportDashboard();
             updateExportExportImportList();
             
@@ -7207,15 +7491,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     if (imp.remaining[key] > 0) hasStock = true;
                 });
                 
-                // Comptabiliser par pays
-                if (imp.country && stocksByCountry[imp.country]) {
-                    if (hasStock) {
-                        stocksByCountry[imp.country].imports++;
+                // Comptabiliser par pays (un import peut être destiné à plusieurs pays)
+                const importCountries = imp.countries || (imp.country ? [imp.country] : []); // Compatibilité anciennes données
+                importCountries.forEach(country => {
+                    if (stocksByCountry[country]) {
+                        if (hasStock) {
+                            stocksByCountry[country].imports++;
+                        }
+                        exportArticles.forEach(article => {
+                            stocksByCountry[country].articles[article.id] += (imp.remaining[article.id] || 0);
+                        });
                     }
-                    exportArticles.forEach(article => {
-                        stocksByCountry[imp.country].articles[article.id] += (imp.remaining[article.id] || 0);
-                    });
-                }
+                });
             });
             
             // Generate KPI cards dynamically
@@ -7311,7 +7598,13 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             let html = '';
             
             recentImports.forEach(imp => {
-                const badgeClass = imp.country === 'Guinée' ? 'badge-guinee' : 'badge-gambie';
+                // Gérer multi-pays (compatibilité anciennes données)
+                const importCountries = imp.countries || (imp.country ? [imp.country] : []);
+                const countriesBadges = importCountries.map(country => {
+                    const flagEmoji = getCountryFlag(country);
+                    const bgColor = country === 'Guinée' ? '#4CAF50' : (country === 'Gambie' ? '#2196F3' : '#FF9800');
+                    return `<span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 5px; background: ${bgColor}; color: white;">${flagEmoji} ${country}</span>`;
+                }).join('');
                 
                 // Generate dynamic article display
                 let articlesHTML = '';
@@ -7332,10 +7625,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 
                 html += `
                     <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 5px;">
+                            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
                                 <span style="font-size: 18px; font-weight: bold; color: #667eea;">${imp.ref}</span>
-                                <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; background: ${imp.country === 'Guinée' ? '#4CAF50' : '#2196F3'}; color: white;">${imp.country}</span>
+                                ${countriesBadges}
                             </div>
                             <small>${imp.date}</small>
                         </div>
@@ -7415,7 +7708,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // Build export history table dynamically
                 let exportTableHTML = '';
                 if (imp.exports.length > 0) {
-                    let tableHeaders = '<th style="padding: 8px; text-align: left;">Date</th><th style="padding: 8px; text-align: left;">Produit</th><th style="padding: 8px; text-align: left;">Quantité</th>';
+                    let tableHeaders = '<th style="padding: 8px; text-align: left;">Date</th><th style="padding: 8px; text-align: left;">Réf. Facture</th><th style="padding: 8px; text-align: left;">Produits</th>';
                     exportArticles.forEach(article => {
                         tableHeaders += `<th style="padding: 8px; text-align: left;">${article.name}</th>`;
                     });
@@ -7424,16 +7717,24 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     imp.exports.forEach(exp => {
                         let articleCells = '';
                         exportArticles.forEach(article => {
-                            const used = exp.used[article.id] || 0;
-                            const display = article.unit === 'kg' ? used.toFixed(2) : used;
+                            const used = exp.used ? exp.used[article.id] || 0 : 0;
+                            const display = article.unit === 'kg' ? used.toFixed(2) : used.toFixed(2);
                             articleCells += `<td style="padding: 8px;">${display}</td>`;
                         });
+                        
+                        // Gérer nouveau format multi-produits
+                        let productsText = '';
+                        if (exp.products && Array.isArray(exp.products)) {
+                            productsText = exp.products.map(p => `${p.productName} ×${p.quantity.toFixed(2)}`).join(', ');
+                        } else {
+                            productsText = `${exp.productName || '-'} ×${exp.quantity || 0}`;
+                        }
                         
                         tableRows += `
                             <tr style="border-bottom: 1px solid #e0e0e0;">
                                 <td style="padding: 8px;">${exp.date}</td>
-                                <td style="padding: 8px;">${exp.productName || '-'}</td>
-                                <td style="padding: 8px;">${exp.quantity || '-'}</td>
+                                <td style="padding: 8px;">${exp.invoiceRef || '-'}</td>
+                                <td style="padding: 8px; font-size: 12px;">${productsText}</td>
                                 ${articleCells}
                             </tr>
                         `;
@@ -7456,12 +7757,20 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     exportTableHTML = '<p style="color: #999; font-size: 13px; margin-top: 10px;">Aucune exportation pour cette importation</p>';
                 }
                 
+                // Gérer multi-pays
+                const importCountries = imp.countries || (imp.country ? [imp.country] : []);
+                const countriesBadges = importCountries.map(country => {
+                    const flagEmoji = getCountryFlag(country);
+                    const bgColor = country === 'Guinée' ? '#4CAF50' : (country === 'Gambie' ? '#2196F3' : '#FF9800');
+                    return `<span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 5px; background: ${bgColor}; color: white;">${flagEmoji} ${country}</span>`;
+                }).join('');
+                
                 html += `
                     <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 5px;">
+                            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
                                 <span style="font-size: 18px; font-weight: bold; color: #667eea;">${imp.ref}</span>
-                                <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; background: ${imp.country === 'Guinée' ? '#4CAF50' : '#2196F3'}; color: white;">${imp.country}</span>
+                                ${countriesBadges}
                             </div>
                             <div style="text-align: right;">
                                 <small>${imp.date}</small><br>
@@ -7494,15 +7803,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     exportArticles.forEach(article => {
                         const qty = imp.initial[article.id] || 0;
                         const display = article.unit === 'kg' ? qty.toFixed(2) : qty;
-                        details += `${article.name}: ${display} ${article.unit}, `;
+                        if (qty > 0) details += `${article.name}: ${display} ${article.unit}, `;
                     });
                     details = details.slice(0, -2); // Remove last comma
+                    
+                    // Gérer multi-pays
+                    const importCountries = imp.countries || (imp.country ? [imp.country] : []);
                     
                     history.push({
                         date: imp.date,
                         type: 'import',
                         ref: imp.ref,
-                        country: imp.country,
+                        countries: importCountries,
                         details: details
                     });
                 }
@@ -7510,20 +7822,41 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             exportsExports.forEach(exp => {
                 if (filter === 'all' || filter === 'export') {
-                    // Build dynamic details for export
-                    let details = `${exp.productName || 'Produit'} × ${exp.quantity || 0} - Utilisé: `;
-                    exportArticles.forEach(article => {
-                        const used = exp.used[article.id] || 0;
-                        const display = article.unit === 'kg' ? used.toFixed(2) : used;
-                        details += `${article.name} ${display}, `;
-                    });
-                    details = details.slice(0, -2); // Remove last comma
+                    // Build dynamic details for export (nouveau format multi-produits)
+                    let details = '';
+                    if (exp.invoiceRef) {
+                        details += `Facture: ${exp.invoiceRef} - `;
+                    }
+                    
+                    if (exp.products && Array.isArray(exp.products)) {
+                        // Nouveau format multi-produits
+                        details += exp.products.map(p => `${p.productName} ×${p.quantity.toFixed(2)}`).join(', ');
+                        details += ' - MP: ';
+                        exportArticles.forEach(article => {
+                            const used = exp.totalUsed[article.id] || 0;
+                            if (used > 0) {
+                                const display = article.unit === 'kg' ? used.toFixed(2) : used.toFixed(2);
+                                details += `${article.name} ${display}, `;
+                            }
+                        });
+                    } else {
+                        // Ancien format single-produit (compatibilité)
+                        details += `${exp.productName || 'Produit'} × ${exp.quantity || 0} - `;
+                        exportArticles.forEach(article => {
+                            const used = exp.used ? exp.used[article.id] || 0 : 0;
+                            if (used > 0) {
+                                const display = article.unit === 'kg' ? used.toFixed(2) : used.toFixed(2);
+                                details += `${article.name} ${display}, `;
+                            }
+                        });
+                    }
+                    details = details.replace(/, $/, ''); // Remove last comma
                     
                     history.push({
                         date: exp.date,
                         type: 'export',
-                        ref: exp.importRef,
-                        country: exp.country,
+                        ref: exp.invoiceRef || exp.importRef || 'N/A',
+                        countries: [exp.country],
                         details: details
                     });
                 }
@@ -7533,14 +7866,20 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             let html = '';
             history.forEach(item => {
-                const badgeColor = item.country === 'Guinée' ? '#4CAF50' : '#2196F3';
+                // Afficher les badges de pays
+                const countriesBadges = item.countries.map(country => {
+                    const flagEmoji = getCountryFlag(country);
+                    const bgColor = country === 'Guinée' ? '#4CAF50' : (country === 'Gambie' ? '#2196F3' : '#FF9800');
+                    return `<span style="padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background: ${bgColor}; color: white; margin-right: 3px; display: inline-block;">${flagEmoji} ${country}</span>`;
+                }).join('');
+                
                 html += `
                     <tr style="border-bottom: 1px solid #e0e0e0;">
                         <td style="padding: 12px;">${item.date}</td>
                         <td style="padding: 12px;">${item.type === 'import' ? '📥 Import' : '📤 Export'}</td>
                         <td style="padding: 12px;">${item.ref}</td>
-                        <td style="padding: 12px;"><span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; background: ${badgeColor}; color: white;">${item.country}</span></td>
-                        <td style="padding: 12px;">${item.details}</td>
+                        <td style="padding: 12px;">${countriesBadges}</td>
+                        <td style="padding: 12px; font-size: 13px;">${item.details}</td>
                     </tr>
                 `;
             });
