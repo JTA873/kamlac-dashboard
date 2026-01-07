@@ -12160,18 +12160,50 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         function getCanonicalProductName(productName) {
             if (!productName) return productName;
             
+            // 🔍 DEBUG: Log pour les produits PM et GM
+            const isDebugProduct = productName.includes('Cereales PM') || productName.includes('Cereales GM');
+            if (isDebugProduct) {
+                console.log('🔍 [getCanonicalProductName] Traitement:', productName);
+            }
+            
             // Vérifier que productsData est disponible
             if (productsData.length === 0) {
+                if (isDebugProduct) console.log('   ⚠️ productsData vide, retour nom original');
                 return productName;
+            }
+            
+            // Fonction de normalisation avancée pour les noms de produits
+            function normalizeProductName(name) {
+                if (!name) return '';
+                
+                // Convertir en minuscules et nettoyer les espaces
+                let normalized = name.toLowerCase().trim().replace(/\s+/g, ' ');
+                
+                // Normaliser les variations courantes de formats
+                // Exemple: "50gr x 80" et "50gr x 8 x10" et "50gr x 8 x 10" → même chose (80 pièces)
+                // "x 80" devrait correspondre à "x 8 x 10" (8 sachets de 10 = 80)
+                normalized = normalized
+                    .replace(/x\s*8\s*x\s*10/gi, 'x80')  // "x 8 x 10" → "x80"
+                    .replace(/x\s*8\s*x\s*10/gi, 'x80')  // "x 8 x10" → "x80"
+                    .replace(/x\s*80/gi, 'x80')          // "x 80" → "x80"
+                    .replace(/\s+/g, '');                // Supprimer tous les espaces
+                
+                return normalized;
             }
             
             // D'abord, chercher par linkedProductId dans l'inventaire
             const inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
             const inventoryItem = inventoryData.find(item => item.product === productName);
             
+            if (isDebugProduct) {
+                console.log('   • inventoryItem trouvé:', !!inventoryItem);
+                if (inventoryItem) console.log('   • linkedProductId:', inventoryItem.linkedProductId);
+            }
+            
             if (inventoryItem && inventoryItem.linkedProductId) {
                 const linkedProduct = productsData.find(p => p.id === inventoryItem.linkedProductId);
                 if (linkedProduct) {
+                    if (isDebugProduct) console.log('   ✅ Lien trouvé via linkedProductId:', linkedProduct.reference);
                     return linkedProduct.reference;
                 }
             }
@@ -12179,23 +12211,44 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Sinon, chercher par correspondance exacte du nom
             const exactMatch = productsData.find(p => p.reference === productName);
             if (exactMatch) {
+                if (isDebugProduct) console.log('   ✅ Correspondance exacte trouvée:', exactMatch.reference);
                 return exactMatch.reference;
             }
             
-            // Sinon, chercher par correspondance approximative
-            const normalizedSearchName = productName.toLowerCase().trim().replace(/\s+/g, ' ');
+            // Chercher avec normalisation avancée
+            const normalizedSearchName = normalizeProductName(productName);
+            if (isDebugProduct) {
+                console.log('   • Nom normalisé recherché:', normalizedSearchName);
+            }
+            
+            const advancedMatch = productsData.find(p => {
+                const normalizedProductName = normalizeProductName(p.reference);
+                if (isDebugProduct && normalizedProductName.includes('cerealespm')) {
+                    console.log('   • Comparaison avec:', p.reference, '→', normalizedProductName);
+                }
+                return normalizedProductName === normalizedSearchName;
+            });
+            
+            if (advancedMatch) {
+                if (isDebugProduct) console.log('   ✅ Correspondance normalisée trouvée:', advancedMatch.reference);
+                return advancedMatch.reference;
+            }
+            
+            // Sinon, chercher par correspondance approximative (fallback)
+            const normalizedSearchNameSimple = productName.toLowerCase().trim().replace(/\s+/g, ' ');
             const fuzzyMatch = productsData.find(p => {
                 const normalizedProductName = p.reference.toLowerCase().trim().replace(/\s+/g, ' ');
-                return normalizedProductName === normalizedSearchName ||
-                       normalizedProductName.includes(normalizedSearchName) ||
-                       normalizedSearchName.includes(normalizedProductName);
+                return normalizedProductName.includes(normalizedSearchNameSimple) ||
+                       normalizedSearchNameSimple.includes(normalizedProductName);
             });
             
             if (fuzzyMatch) {
+                if (isDebugProduct) console.log('   ✅ Correspondance approximative trouvée:', fuzzyMatch.reference);
                 return fuzzyMatch.reference;
             }
             
             // Si aucune correspondance, retourner le nom original (anciens produits)
+            if (isDebugProduct) console.log('   ⚠️ Aucune correspondance, retour nom original');
             return productName;
         }
         
@@ -12267,6 +12320,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 const originalProductName = entry.product;
                 const canonicalProductName = getCanonicalProductName(originalProductName);
                 
+                // 🔍 DEBUG: Log pour les produits PM et GM
+                if (originalProductName && (originalProductName.includes('Cereales PM') || originalProductName.includes('Cereales GM'))) {
+                    console.log('🔍 [ENTRÉE] Debug produit céréales:');
+                    console.log('   • Nom original:', originalProductName);
+                    console.log('   • Nom canonique:', canonicalProductName);
+                    console.log('   • Quantité:', entry.quantity);
+                }
+                
                 if (!currentStockLevels[canonicalProductName]) {
                     currentStockLevels[canonicalProductName] = {
                         quantity: 0,
@@ -12289,6 +12350,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             stockExitsData.forEach(exit => {
                 const originalProductName = exit.product;
                 const canonicalProductName = getCanonicalProductName(originalProductName);
+                
+                // 🔍 DEBUG: Log pour les produits PM et GM
+                if (originalProductName && (originalProductName.includes('Cereales PM') || originalProductName.includes('Cereales GM'))) {
+                    console.log('🔍 [SORTIE] Debug produit céréales:');
+                    console.log('   • Nom original:', originalProductName);
+                    console.log('   • Nom canonique:', canonicalProductName);
+                    console.log('   • Quantité:', exit.quantity);
+                }
                 
                 if (!currentStockLevels[canonicalProductName]) {
                     currentStockLevels[canonicalProductName] = {
@@ -12315,6 +12384,19 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // Compter les stocks négatifs
                 if (level.quantity < 0) {
                     negativeStockCount++;
+                }
+            });
+            
+            // 🔍 DEBUG: Afficher les stocks des produits céréales
+            console.log('🔍 [RÉSUMÉ] Stocks des produits Cereales:');
+            Object.keys(currentStockLevels).forEach(product => {
+                if (product.includes('Cereales PM') || product.includes('Cereales GM')) {
+                    const level = currentStockLevels[product];
+                    console.log(`   • ${product}:`, {
+                        quantity: level.quantity,
+                        salesQuantity: level.salesQuantity,
+                        unit: level.unit
+                    });
                 }
             });
             
