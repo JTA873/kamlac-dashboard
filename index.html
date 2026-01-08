@@ -4945,9 +4945,17 @@
             
             <!-- Dashboard Section -->
             <div id="export-dashboard" class="settings-section active">
-                <h3 style="color: #667eea; margin-bottom: 20px;">📊 Tableau de Bord des Stocks MP</h3>
-                <div class="export-kpi-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
-                    <!-- KPI cards generated dynamically by updateExportDashboard() -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin: 0;">📊 Tableau de Bord des Stocks MP</h3>
+                    <button onclick="syncExportDataToFirebase()" class="btn btn-primary" style="background: #28a745; padding: 8px 15px;">
+                        <span style="font-size: 16px;">☁️</span> Sauvegarder vers Firebase
+                    </button>
+                </div>
+                
+                <!-- Jauges visuelles par article -->
+                <h4 style="color: #667eea; margin-bottom: 15px;">📊 Stocks par Article (Importé vs Consommé)</h4>
+                <div id="export-gauges-container" style="margin-bottom: 30px;">
+                    <!-- Jauges générées dynamiquement -->
                 </div>
 
                 <h4 style="color: #667eea; margin-bottom: 15px;">📍 Stocks en Cours par Pays de Destination</h4>
@@ -5070,7 +5078,9 @@
                             <label>Pays de Destination *</label>
                             <select id="export-export-country" required onchange="updateExportImportsSelection()">
                                 <option value="">Sélectionner...</option>
+                                <option value="__nouveau__" style="background: #e8f5e8; font-weight: bold;">➕ Ajouter un nouveau pays</option>
                             </select>
+                            <input type="text" id="export-export-new-country" placeholder="Nom du nouveau pays" style="display: none; margin-top: 10px; padding: 10px; border: 2px solid #28a745; border-radius: 4px; width: 100%;">
                         </div>
                     </div>
 
@@ -7251,15 +7261,37 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             // Mettre à jour le select des pays
             const countrySelect = document.getElementById('export-export-country');
+            const newCountryInput = document.getElementById('export-export-new-country');
+            
             if (countrySelect) {
                 const currentCountry = countrySelect.value;
                 countrySelect.innerHTML = '<option value="">Sélectionner...</option>';
+                countrySelect.innerHTML += '<option value="__nouveau__" style="background: #e8f5e8; font-weight: bold;">➕ Ajouter un nouveau pays</option>';
+                countrySelect.innerHTML += '<option disabled>──────────────────</option>';
+                
                 destinationCountries.forEach(country => {
                     countrySelect.innerHTML += `<option value="${country}">${getCountryFlag(country)} ${country}</option>`;
                 });
+                
                 if (currentCountry && destinationCountries.includes(currentCountry)) {
                     countrySelect.value = currentCountry;
+                } else if (currentCountry === '__nouveau__') {
+                    countrySelect.value = '__nouveau__';
+                    if (newCountryInput) newCountryInput.style.display = 'block';
                 }
+                
+                // Gérer le changement de sélection
+                countrySelect.onchange = function() {
+                    if (this.value === '__nouveau__') {
+                        if (newCountryInput) {
+                            newCountryInput.style.display = 'block';
+                            newCountryInput.focus();
+                        }
+                    } else {
+                        if (newCountryInput) newCountryInput.style.display = 'none';
+                    }
+                    updateExportImportsSelection();
+                };
             }
         }
         
@@ -7458,7 +7490,44 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         function handleExportExport() {
             const invoiceRef = document.getElementById('export-export-invoice').value.trim().toUpperCase();
             const date = document.getElementById('export-export-date').value;
-            const country = document.getElementById('export-export-country').value;
+            let country = document.getElementById('export-export-country').value;
+            
+            // Gérer l'ajout d'un nouveau pays
+            if (country === '__nouveau__') {
+                const newCountryInput = document.getElementById('export-export-new-country');
+                const newCountry = newCountryInput ? newCountryInput.value.trim() : '';
+                
+                if (!newCountry) {
+                    alert('Veuillez saisir le nom du nouveau pays');
+                    newCountryInput.focus();
+                    return;
+                }
+                
+                // Vérifier si le pays existe déjà
+                if (destinationCountries.includes(newCountry)) {
+                    alert('Ce pays existe déjà dans la liste');
+                    return;
+                }
+                
+                // Ajouter le nouveau pays
+                destinationCountries.push(newCountry);
+                localStorage.setItem('kamlac_destination_countries', JSON.stringify(destinationCountries));
+                
+                // Sauvegarder dans Firebase
+                if (isFirebaseReady()) {
+                    db.collection('exportSettings').doc('destinationCountries').set({
+                        countries: destinationCountries,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                
+                country = newCountry;
+                showAlert(`✅ Pays "${newCountry}" ajouté avec succès`, 'success');
+                
+                // Réinitialiser le select
+                updateDestinationCountriesDropdowns();
+                document.getElementById('export-export-country').value = newCountry;
+            }
             
             if (!invoiceRef || !date || !country) {
                 alert('Veuillez remplir tous les champs obligatoires');
@@ -7664,11 +7733,80 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         function updateExportDashboard() {
-            // Calculate totals dynamically for all articles
-            const totals = {};
+            console.log('🔄 Mise à jour dashboard Export...');
+            
+            // Calculer les totaux par article (importé et restant)
+            const totalsImported = {}; // Total importé
+            const totalsRemaining = {}; // Total restant
+            const totalsConsumed = {}; // Total consommé
+            
             exportArticles.forEach(article => {
-                totals[article.id] = 0;
+                totalsImported[article.id] = 0;
+                totalsRemaining[article.id] = 0;
+                totalsConsumed[article.id] = 0;
             });
+            
+            exportsImports.forEach(imp => {
+                exportArticles.forEach(article => {
+                    const imported = imp.initial[article.id] || 0;
+                    const remaining = imp.remaining[article.id] || 0;
+                    totalsImported[article.id] += imported;
+                    totalsRemaining[article.id] += remaining;
+                    totalsConsumed[article.id] += (imported - remaining);
+                });
+            });
+            
+            // Générer les jauges visuelles
+            const gaugesContainer = document.getElementById('export-gauges-container');
+            if (gaugesContainer) {
+                let gaugesHTML = '<div style="display: grid; gap: 20px;">';
+                
+                exportArticles.forEach(article => {
+                    const imported = totalsImported[article.id] || 0;
+                    const consumed = totalsConsumed[article.id] || 0;
+                    const remaining = totalsRemaining[article.id] || 0;
+                    const consumedPercent = imported > 0 ? (consumed / imported * 100) : 0;
+                    
+                    const displayImported = article.unit === 'kg' ? imported.toFixed(2) : Math.round(imported);
+                    const displayConsumed = article.unit === 'kg' ? consumed.toFixed(2) : Math.round(consumed);
+                    const displayRemaining = article.unit === 'kg' ? remaining.toFixed(2) : Math.round(remaining);
+                    
+                    gaugesHTML += `
+                        <div onclick="showArticleDetails(${article.id})" style="background: white; border: 2px solid #e0e0e0; border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.3)'; this.style.borderColor='#667eea';" onmouseout="this.style.boxShadow='none'; this.style.borderColor='#e0e0e0';">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="color: #667eea; margin: 0; font-size: 18px;">📦 ${article.name} <span style="font-size: 12px; color: #999;">🔍 Cliquer pour détails</span></h4>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 24px; font-weight: bold; color: #2ecc71;">${displayRemaining}</div>
+                                    <div style="font-size: 12px; color: #666;">restant / ${displayImported} ${article.unit}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Barre de progression -->
+                            <div style="position: relative; height: 40px; background: #e0e0e0; border-radius: 20px; overflow: hidden;">
+                                <!-- Partie restante (verte) -->
+                                <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${100 - consumedPercent}%; background: linear-gradient(90deg, #2ecc71, #27ae60); transition: width 0.5s;"></div>
+                                <!-- Partie consommée (rouge semi-transparente) -->
+                                <div style="position: absolute; right: 0; top: 0; height: 100%; width: ${consumedPercent}%; background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(192, 57, 43, 0.7)); transition: width 0.5s;"></div>
+                                
+                                <!-- Texte centré -->
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); font-size: 14px; z-index: 10;">
+                                    ${consumedPercent.toFixed(1)}% consommé (${displayConsumed} ${article.unit})
+                                </div>
+                            </div>
+                            
+                            <!-- Légende -->
+                            <div style="display: flex; justify-content: space-around; margin-top: 10px; font-size: 12px;">
+                                <div><span style="display: inline-block; width: 12px; height: 12px; background: #2ecc71; border-radius: 2px; margin-right: 5px;"></span>Disponible: ${displayRemaining}</div>
+                                <div><span style="display: inline-block; width: 12px; height: 12px; background: rgba(231, 76, 60, 0.7); border-radius: 2px; margin-right: 5px;"></span>Consommé: ${displayConsumed}</div>
+                                <div><span style="display: inline-block; width: 12px; height: 12px; background: #3498db; border-radius: 2px; margin-right: 5px;"></span>Importé: ${displayImported}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                gaugesHTML += '</div>';
+                gaugesContainer.innerHTML = gaugesHTML;
+            }
             
             // Calculer les stocks par pays
             const stocksByCountry = {};
@@ -7683,18 +7821,14 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             });
             
             exportsImports.forEach(imp => {
-                exportArticles.forEach(article => {
-                    totals[article.id] += (imp.remaining[article.id] || 0);
-                });
-                
                 // Check if import has any remaining stock
                 let hasStock = false;
                 Object.keys(imp.remaining).forEach(key => {
                     if (imp.remaining[key] > 0) hasStock = true;
                 });
                 
-                // Comptabiliser par pays (un import peut être destiné à plusieurs pays)
-                const importCountries = imp.countries || (imp.country ? [imp.country] : []); // Compatibilité anciennes données
+                // Comptabiliser par pays
+                const importCountries = imp.countries || (imp.country ? [imp.country] : []);
                 importCountries.forEach(country => {
                     if (stocksByCountry[country]) {
                         if (hasStock) {
@@ -7706,24 +7840,6 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     }
                 });
             });
-            
-            // Generate KPI cards dynamically
-            const kpiContainer = document.querySelector('.export-kpi-container');
-            if (kpiContainer) {
-                let kpiHTML = '';
-                exportArticles.forEach(article => {
-                    const total = totals[article.id] || 0;
-                    const displayTotal = article.unit === 'kg' ? total.toFixed(2) : total;
-                    kpiHTML += `
-                        <div class="export-kpi-card">
-                            <div class="export-kpi-label">${article.name}</div>
-                            <div class="export-kpi-value" id="export-total-${article.id}">${displayTotal}</div>
-                            <div class="export-kpi-unit">${article.unit}</div>
-                        </div>
-                    `;
-                });
-                kpiContainer.innerHTML = kpiHTML;
-            }
             
             // Afficher les stocks par pays
             const stocksByCountryContainer = document.getElementById('export-stocks-by-country');
@@ -7768,12 +7884,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 stocksByCountryContainer.innerHTML = countriesHTML;
             }
             
-            // Low stock alerts (simplified - check if any article is low)
+            // Low stock alerts
             let alerts = [];
             exportArticles.forEach(article => {
-                const total = totals[article.id] || 0;
+                const remaining = totalsRemaining[article.id] || 0;
                 // Alert if less than 100 units (or 100kg for kg-based articles)
-                if (total < 100) {
+                if (remaining < 100) {
                     alerts.push(article.name);
                 }
             });
@@ -7832,7 +7948,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 <span style="font-size: 18px; font-weight: bold; color: #667eea;">${imp.ref}</span>
                                 ${countriesBadges}
                             </div>
-                            <small>${imp.date}</small>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <small>${imp.date}</small>
+                                <button onclick="editImportation(${imp.id})" class="btn btn-primary" style="padding: 5px 12px; font-size: 12px; background: #667eea;">
+                                    ✏️ Modifier
+                                </button>
+                                <button onclick="deleteImportation(${imp.id})" class="btn" style="padding: 5px 12px; font-size: 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                    🗑️
+                                </button>
+                            </div>
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 14px;">
                             ${articlesHTML}
@@ -7846,6 +7970,396 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 recentEl.innerHTML = html || '<p>Aucune importation enregistrée</p>';
             }
         }
+        
+        // Fonction pour modifier une importation
+        function editImportation(importId) {
+            const imp = exportsImports.find(i => i.id === importId);
+            if (!imp) {
+                alert('Importation introuvable');
+                return;
+            }
+            
+            // Créer un modal de modification
+            const modalHTML = `
+                <div id="edit-import-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: white; border-radius: 15px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+                        <h3 style="color: #667eea; margin-bottom: 20px;">✏️ Modifier l'importation ${imp.ref}</h3>
+                        
+                        <div class="form-group">
+                            <label>Référence *</label>
+                            <input type="text" id="edit-import-ref" value="${imp.ref}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Date *</label>
+                            <input type="date" id="edit-import-date" value="${imp.date}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Pays de destination *</label>
+                            <div id="edit-import-countries" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px;">
+                                ${destinationCountries.map(country => {
+                                    const checked = (imp.countries || []).includes(country) ? 'checked' : '';
+                                    return `
+                                        <label style="display: flex; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 4px; cursor: pointer;">
+                                            <input type="checkbox" value="${country}" ${checked} style="margin-right: 8px;">
+                                            ${getCountryFlag(country)} ${country}
+                                        </label>
+                                    `;
+                                }).join('')}
+                                <label onclick="showAddNewCountryInEdit()" style="display: flex; align-items: center; padding: 8px; background: #e8f5e8; border: 2px dashed #28a745; border-radius: 4px; cursor: pointer; justify-content: center; font-weight: bold; color: #28a745;">
+                                    ➕ Nouveau pays
+                                </label>
+                            </div>
+                            <div id="edit-new-country-input" style="display: none; margin-top: 10px;">
+                                <input type="text" id="edit-new-country-name" placeholder="Nom du nouveau pays" style="width: 100%; padding: 10px; border: 2px solid #28a745; border-radius: 4px; margin-bottom: 10px;">
+                                <div style="display: flex; gap: 10px;">
+                                    <button onclick="addNewCountryFromEdit()" class="btn btn-primary" style="flex: 1; background: #28a745;">✅ Ajouter ce pays</button>
+                                    <button onclick="cancelAddNewCountry()" class="btn" style="flex: 1; background: #6c757d; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer;">❌ Annuler</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h4 style="color: #667eea; margin: 20px 0 10px;">Quantités par article</h4>
+                        ${exportArticles.map(article => {
+                            const initialQty = imp.initial[article.id] || 0;
+                            const remainingQty = imp.remaining[article.id] || 0;
+                            const consumedQty = initialQty - remainingQty;
+                            return `
+                                <div class="form-group">
+                                    <label>${article.name} (${article.unit})</label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                        <div>
+                                            <small style="color: #666;">Quantité initiale</small>
+                                            <input type="number" id="edit-import-initial-${article.id}" value="${initialQty}" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        </div>
+                                        <div>
+                                            <small style="color: #666;">Quantité restante</small>
+                                            <input type="number" id="edit-import-remaining-${article.id}" value="${remainingQty}" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                            <small style="color: #e74c3c;">Consommé: ${consumedQty.toFixed(2)}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button onclick="saveImportationEdit(${importId})" class="btn btn-primary" style="flex: 1;">✅ Enregistrer</button>
+                            <button onclick="closeEditImportModal()" class="btn" style="flex: 1; background: #6c757d; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">❌ Annuler</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+        
+        function closeEditImportModal() {
+            const modal = document.getElementById('edit-import-modal');
+            if (modal) modal.remove();
+        }
+        
+        function showAddNewCountryInEdit() {
+            const inputDiv = document.getElementById('edit-new-country-input');
+            if (inputDiv) {
+                inputDiv.style.display = 'block';
+                const input = document.getElementById('edit-new-country-name');
+                if (input) input.focus();
+            }
+        }
+        
+        function cancelAddNewCountry() {
+            const inputDiv = document.getElementById('edit-new-country-input');
+            if (inputDiv) inputDiv.style.display = 'none';
+            const input = document.getElementById('edit-new-country-name');
+            if (input) input.value = '';
+        }
+        
+        function addNewCountryFromEdit() {
+            const input = document.getElementById('edit-new-country-name');
+            const newCountry = input ? input.value.trim() : '';
+            
+            if (!newCountry) {
+                alert('Veuillez saisir le nom du pays');
+                input.focus();
+                return;
+            }
+            
+            // Vérifier si le pays existe déjà
+            if (destinationCountries.includes(newCountry)) {
+                alert('Ce pays existe déjà dans la liste');
+                return;
+            }
+            
+            // Ajouter le nouveau pays
+            destinationCountries.push(newCountry);
+            localStorage.setItem('kamlac_destination_countries', JSON.stringify(destinationCountries));
+            
+            // Sauvegarder dans Firebase
+            if (isFirebaseReady()) {
+                db.collection('exportSettings').doc('destinationCountries').set({
+                    countries: destinationCountries,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    console.log('✅ Nouveau pays sauvegardé dans Firebase');
+                });
+            }
+            
+            // Ajouter le checkbox pour le nouveau pays
+            const countriesDiv = document.getElementById('edit-import-countries');
+            if (countriesDiv) {
+                // Trouver le bouton "Nouveau pays" et insérer avant
+                const newCountryBtn = countriesDiv.querySelector('[onclick="showAddNewCountryInEdit()"]');
+                const newCheckbox = document.createElement('label');
+                newCheckbox.style.cssText = 'display: flex; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 4px; cursor: pointer;';
+                newCheckbox.innerHTML = `
+                    <input type="checkbox" value="${newCountry}" checked style="margin-right: 8px;">
+                    ${getCountryFlag(newCountry)} ${newCountry}
+                `;
+                
+                if (newCountryBtn) {
+                    countriesDiv.insertBefore(newCheckbox, newCountryBtn);
+                } else {
+                    countriesDiv.appendChild(newCheckbox);
+                }
+            }
+            
+            // Masquer et réinitialiser le formulaire
+            cancelAddNewCountry();
+            
+            showAlert(`✅ Pays "${newCountry}" ajouté avec succès`, 'success');
+        }
+        
+        
+        function saveImportationEdit(importId) {
+            const imp = exportsImports.find(i => i.id === importId);
+            if (!imp) return;
+            
+            // Récupérer les nouvelles valeurs
+            imp.ref = document.getElementById('edit-import-ref').value.toUpperCase();
+            imp.date = document.getElementById('edit-import-date').value;
+            
+            // Récupérer les pays sélectionnés
+            const selectedCountries = [];
+            document.querySelectorAll('#edit-import-countries input[type="checkbox"]:checked').forEach(cb => {
+                selectedCountries.push(cb.value);
+            });
+            
+            if (selectedCountries.length === 0) {
+                alert('Veuillez sélectionner au moins un pays de destination');
+                return;
+            }
+            
+            imp.countries = selectedCountries;
+            
+            // Récupérer les quantités
+            exportArticles.forEach(article => {
+                const initialInput = document.getElementById(`edit-import-initial-${article.id}`);
+                const remainingInput = document.getElementById(`edit-import-remaining-${article.id}`);
+                
+                if (initialInput && remainingInput) {
+                    imp.initial[article.id] = parseFloat(initialInput.value) || 0;
+                    imp.remaining[article.id] = parseFloat(remainingInput.value) || 0;
+                }
+            });
+            
+            // Sauvegarder
+            localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
+            saveExportImportToFirebase(imp);
+            
+            closeEditImportModal();
+            updateExportDashboard();
+            showAlert('✅ Importation modifiée avec succès', 'success');
+        }
+        
+        function deleteImportation(importId) {
+            const imp = exportsImports.find(i => i.id === importId);
+            if (!imp) return;
+            
+            if (!confirm(`Voulez-vous vraiment supprimer l'importation "${imp.ref}" ?\n\nCette action est irréversible.`)) {
+                return;
+            }
+            
+            // Supprimer de la liste
+            const index = exportsImports.findIndex(i => i.id === importId);
+            if (index > -1) {
+                exportsImports.splice(index, 1);
+            }
+            
+            // Sauvegarder
+            localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
+            
+            // Supprimer de Firebase
+            if (isFirebaseReady() && imp.firebaseId) {
+                db.collection('exportsImports').doc(imp.firebaseId).delete()
+                    .then(() => console.log('✅ Importation supprimée de Firebase'))
+                    .catch(err => console.error('❌ Erreur suppression Firebase:', err));
+            }
+            
+            updateExportDashboard();
+            showAlert('✅ Importation supprimée', 'success');
+        }
+        
+        // Fonction pour afficher les détails d'un article
+        function showArticleDetails(articleId) {
+            const article = exportArticles.find(a => a.id === articleId);
+            if (!article) return;
+            
+            // Récupérer toutes les importations contenant cet article
+            const articleImports = exportsImports.filter(imp => 
+                imp.initial[articleId] > 0
+            );
+            
+            // Récupérer toutes les exportations ayant consommé cet article
+            const articleExports = exportsExports.filter(exp => {
+                // Vérifier si cette exportation a consommé cet article
+                return exp.articlesConsumed && exp.articlesConsumed[articleId] > 0;
+            });
+            
+            // Calculer les totaux
+            let totalImported = 0;
+            let totalRemaining = 0;
+            let totalConsumed = 0;
+            
+            articleImports.forEach(imp => {
+                const imported = imp.initial[articleId] || 0;
+                const remaining = imp.remaining[articleId] || 0;
+                totalImported += imported;
+                totalRemaining += remaining;
+                totalConsumed += (imported - remaining);
+            });
+            
+            const displayUnit = article.unit === 'kg' ? '2' : '0';
+            
+            // Construire le HTML du modal
+            let modalHTML = `
+                <div id="article-details-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto;">
+                    <div style="background: white; border-radius: 15px; padding: 0; max-width: 900px; width: 100%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+                        <!-- En-tête -->
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 15px 15px 0 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h2 style="margin: 0 0 10px 0;">📦 ${article.name}</h2>
+                                    <div style="font-size: 14px; opacity: 0.9;">Détails complets des mouvements</div>
+                                </div>
+                                <button onclick="closeArticleDetailsModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">✕</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Corps -->
+                        <div style="padding: 25px; overflow-y: auto; flex: 1;">
+                            <!-- Statistiques globales -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px;">
+                                <div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                                    <div style="font-size: 28px; font-weight: bold; margin-bottom: 5px;">${totalImported.toFixed(displayUnit)}</div>
+                                    <div style="font-size: 12px; opacity: 0.9;">Total Importé (${article.unit})</div>
+                                </div>
+                                <div style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                                    <div style="font-size: 28px; font-weight: bold; margin-bottom: 5px;">${totalRemaining.toFixed(displayUnit)}</div>
+                                    <div style="font-size: 12px; opacity: 0.9;">Disponible (${article.unit})</div>
+                                </div>
+                                <div style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                                    <div style="font-size: 28px; font-weight: bold; margin-bottom: 5px;">${totalConsumed.toFixed(displayUnit)}</div>
+                                    <div style="font-size: 12px; opacity: 0.9;">Consommé (${article.unit})</div>
+                                </div>
+                                <div style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                                    <div style="font-size: 28px; font-weight: bold; margin-bottom: 5px;">${totalImported > 0 ? (totalConsumed / totalImported * 100).toFixed(1) : 0}%</div>
+                                    <div style="font-size: 12px; opacity: 0.9;">Taux de Consommation</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Importations -->
+                            <h3 style="color: #667eea; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                <span>📥</span> Importations (${articleImports.length})
+                            </h3>
+                            
+                            ${articleImports.length > 0 ? `
+                                <div style="display: grid; gap: 15px; margin-bottom: 30px;">
+                                    ${articleImports.map(imp => {
+                                        const imported = imp.initial[articleId] || 0;
+                                        const remaining = imp.remaining[articleId] || 0;
+                                        const consumed = imported - remaining;
+                                        const consumedPercent = imported > 0 ? (consumed / imported * 100) : 0;
+                                        const countries = imp.countries || (imp.country ? [imp.country] : []);
+                                        const countriesBadges = countries.map(c => `<span style="padding: 3px 8px; background: #667eea; color: white; border-radius: 12px; font-size: 11px; margin-left: 5px;">${getCountryFlag(c)} ${c}</span>`).join('');
+                                        
+                                        return `
+                                            <div style="background: #f8f9fa; border: 2px solid ${remaining > 0 ? '#2ecc71' : '#e0e0e0'}; border-radius: 10px; padding: 15px;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                                    <div>
+                                                        <strong style="color: #667eea; font-size: 16px;">${imp.ref}</strong>
+                                                        ${countriesBadges}
+                                                    </div>
+                                                    <span style="color: #666; font-size: 13px;">${imp.date}</span>
+                                                </div>
+                                                
+                                                <!-- Barre de progression mini -->
+                                                <div style="position: relative; height: 25px; background: #e0e0e0; border-radius: 12px; overflow: hidden; margin-bottom: 10px;">
+                                                    <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${100 - consumedPercent}%; background: #2ecc71;"></div>
+                                                    <div style="position: absolute; right: 0; top: 0; height: 100%; width: ${consumedPercent}%; background: rgba(231, 76, 60, 0.7);"></div>
+                                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); font-size: 11px; z-index: 10;">
+                                                        ${remaining.toFixed(displayUnit)} / ${imported.toFixed(displayUnit)} ${article.unit}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
+                                                    <span>✅ Importé: <strong>${imported.toFixed(displayUnit)}</strong></span>
+                                                    <span>📦 Restant: <strong style="color: #2ecc71;">${remaining.toFixed(displayUnit)}</strong></span>
+                                                    <span>📤 Consommé: <strong style="color: #e74c3c;">${consumed.toFixed(displayUnit)}</strong></span>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            ` : '<p style="color: #999; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px;">Aucune importation enregistrée pour cet article</p>'}
+                            
+                            <!-- Exportations -->
+                            <h3 style="color: #667eea; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                <span>📤</span> Exportations ayant consommé cet article (${articleExports.length})
+                            </h3>
+                            
+                            ${articleExports.length > 0 ? `
+                                <div style="display: grid; gap: 10px;">
+                                    ${articleExports.map(exp => {
+                                        const consumed = exp.articlesConsumed ? (exp.articlesConsumed[articleId] || 0) : 0;
+                                        return `
+                                            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; border-radius: 6px;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <div>
+                                                        <strong style="color: #856404;">${exp.invoiceRef}</strong>
+                                                        <span style="margin-left: 10px; color: #666; font-size: 13px;">${getCountryFlag(exp.country)} ${exp.country}</span>
+                                                    </div>
+                                                    <div style="text-align: right;">
+                                                        <div style="font-weight: bold; color: #e74c3c;">${consumed.toFixed(displayUnit)} ${article.unit}</div>
+                                                        <div style="font-size: 11px; color: #666;">${exp.date}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            ` : '<p style="color: #999; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px;">Aucune exportation n\'a encore consommé cet article</p>'}
+                        </div>
+                        
+                        <!-- Pied -->
+                        <div style="background: #f8f9fa; padding: 20px; border-top: 1px solid #e0e0e0; text-align: center;">
+                            <button onclick="closeArticleDetailsModal()" class="btn btn-primary" style="padding: 12px 30px;">
+                                Fermer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+        
+        function closeArticleDetailsModal() {
+            const modal = document.getElementById('article-details-modal');
+            if (modal) modal.remove();
+        }
+        
+        
         
         function updateExportExportImportList() {
             const select = document.getElementById('export-export-import');
