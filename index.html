@@ -6492,7 +6492,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         // FONCTIONS NAVIGATION MODULES
         // ========================================
         
-        function showModule(moduleId) {
+        async function showModule(moduleId) {
             // Cacher tous les modules
             const modules = document.querySelectorAll('.module');
             modules.forEach(module => {
@@ -6529,10 +6529,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     initializeCommercialModule();
                 }
             } else if (moduleId === 'export') {
-                if (!moduleInitialized.export) {
-                    initializeExportModule();
-                    moduleInitialized.export = true;
-                }
+                // Toujours recharger les données Export depuis Firebase pour avoir les dernières données
+                await initializeExportModule();
+                moduleInitialized.export = true;
             } else if (moduleId === 'admin') {
                 if (!moduleInitialized.admin) {
                     initializeAdminModule();
@@ -6651,7 +6650,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         // MODULE GESTION EXPORT - FONCTIONS
         // ========================================
         
-        function initializeExportModule() {
+        async function initializeExportModule() {
             debugLog('🚚 Initialisation module Gestion Export...');
             
             // Charger d'abord depuis localStorage pour un affichage rapide
@@ -6666,8 +6665,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             productCompositions = JSON.parse(localStorage.getItem('kamlac_product_compositions')) || {};
             destinationCountries = JSON.parse(localStorage.getItem('kamlac_destination_countries')) || ['Guinée', 'Gambie'];
             
-            // Charger depuis Firebase si disponible
-            loadExportDataFromFirebase();
+            // Charger depuis Firebase si disponible (await pour attendre la fin)
+            await loadExportDataFromFirebase();
             
             // Initialiser les dates
             const today = new Date().toISOString().split('T')[0];
@@ -6760,9 +6759,11 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         async function loadExportDataFromFirebase() {
             if (!isFirebaseReady()) {
-                debugLog('⚠️ Firebase non disponible pour charger les données Export');
+                console.log('⚠️ Firebase non disponible pour charger les données Export');
                 return;
             }
+            
+            console.log('🔄 Chargement des données Export depuis Firebase...');
             
             try {
                 // Charger les importations
@@ -6774,7 +6775,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     });
                     exportsImports = firebaseImports;
                     localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
-                    debugLog(`✅ ${exportsImports.length} importations chargées depuis Firebase`);
+                    console.log(`✅ ${exportsImports.length} importations chargées depuis Firebase`);
+                } else {
+                    console.log('ℹ️ Aucune importation trouvée dans Firebase');
                 }
                 
                 // Charger les exportations
@@ -6786,7 +6789,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     });
                     exportsExports = firebaseExports;
                     localStorage.setItem('kamlac_exports_exports', JSON.stringify(exportsExports));
-                    debugLog(`✅ ${exportsExports.length} exportations chargées depuis Firebase`);
+                    console.log(`✅ ${exportsExports.length} exportations chargées depuis Firebase`);
+                } else {
+                    console.log('ℹ️ Aucune exportation trouvée dans Firebase');
                 }
                 
                 // Charger les articles
@@ -6799,8 +6804,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     if (firebaseArticles.length > 0) {
                         exportArticles = firebaseArticles;
                         localStorage.setItem('kamlac_export_articles', JSON.stringify(exportArticles));
-                        debugLog(`✅ ${exportArticles.length} articles chargés depuis Firebase`);
+                        console.log(`✅ ${exportArticles.length} articles chargés depuis Firebase`);
                     }
+                } else {
+                    console.log('ℹ️ Aucun article trouvé dans Firebase, utilisation des valeurs par défaut');
                 }
                 
                 // Charger les pays de destination
@@ -6810,8 +6817,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     if (data.countries && data.countries.length > 0) {
                         destinationCountries = data.countries;
                         localStorage.setItem('kamlac_destination_countries', JSON.stringify(destinationCountries));
-                        debugLog(`✅ ${destinationCountries.length} pays chargés depuis Firebase`);
+                        console.log(`✅ ${destinationCountries.length} pays chargés depuis Firebase`);
                     }
+                } else {
+                    console.log('ℹ️ Aucun pays trouvé dans Firebase, utilisation des valeurs par défaut');
                 }
                 
                 // Charger les compositions
@@ -6821,14 +6830,18 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     if (data.compositions) {
                         productCompositions = data.compositions;
                         localStorage.setItem('kamlac_product_compositions', JSON.stringify(productCompositions));
-                        debugLog(`✅ Compositions chargées depuis Firebase`);
+                        console.log(`✅ Compositions chargées depuis Firebase`);
                     }
+                } else {
+                    console.log('ℹ️ Aucune composition trouvée dans Firebase');
                 }
                 
                 // Mettre à jour l'affichage
                 updateExportDashboard();
                 updateExportArticlesList();
                 updateDestinationCountriesDropdowns();
+                
+                console.log('✅ Chargement des données Export terminé avec succès');
                 
             } catch (error) {
                 console.error('❌ Erreur chargement données Export depuis Firebase:', error);
