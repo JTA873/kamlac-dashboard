@@ -4936,7 +4936,6 @@
             <div class="settings-nav" style="margin-bottom: 20px;">
                 <button class="settings-tab active" onclick="showExportSection('export-dashboard')">📊 Dashboard</button>
                 <button class="settings-tab" onclick="showExportSection('export-articles')">🏷️ Articles MP</button>
-                <button class="settings-tab" onclick="showExportSection('export-article-types')">🏷️ Types</button>
                 <button class="settings-tab" onclick="showExportSection('export-compositions')">🔧 Compositions</button>
                 <button class="settings-tab" onclick="showExportSection('export-import')">📥 Importer</button>
                 <button class="settings-tab" onclick="showExportSection('export-export')">📤 Exporter</button>
@@ -4970,6 +4969,19 @@
                 
                 <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
                     <p style="margin: 0; color: #856404;">💡 <strong>Info:</strong> Définissez ici tous les types d'articles/matières premières que vous importez. Vous pourrez ensuite définir pour chaque produit fini les quantités de ces articles nécessaires à sa fabrication.</p>
+                </div>
+                
+                <!-- Gestion des Types d'Articles -->
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e0e0e0;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">🏷️ Gérer les Types d'Articles</h4>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Les types permettent d'organiser votre inventaire (Cartons, Boîtes, Thé, etc.)</p>
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <input type="text" id="export-new-article-type" placeholder="Ex: Sacs, Étiquettes, Palettes..." style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                        <button onclick="addArticleType()" class="btn btn-primary">➕ Ajouter</button>
+                    </div>
+                    
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="article-types-list-inline"></div>
                 </div>
                 
                 <form id="export-article-form" onsubmit="event.preventDefault(); addExportArticle();" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
@@ -5035,22 +5047,7 @@
                 <div id="export-compositions-summary"></div>
             </div>
             
-            <!-- Types d'Articles Section -->
-            <div id="export-article-types" class="settings-section">
-                <h3 style="color: #667eea; margin-bottom: 20px;">🏷️ Types d'Articles</h3>
-                <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Gérez les types d'articles pour organiser votre inventaire (Cartons, Boîtes, etc.)</p>
-                
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">➕ Ajouter un Nouveau Type</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="export-new-article-type" placeholder="Ex: Sacs, Étiquettes, Palettes..." style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                        <button onclick="addArticleType()" class="btn btn-primary">Ajouter</button>
-                    </div>
-                </div>
-                
-                <h4 style="color: #667eea; margin-bottom: 15px;">📋 Types Disponibles</h4>
-                <div id="article-types-list" style="display: grid; gap: 10px;"></div>
-            </div>
+
 
             <!-- Import Section -->
             <div id="export-import" class="settings-section">
@@ -7104,18 +7101,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         function updateArticleTypesUI() {
-            const listContainer = document.getElementById('article-types-list');
+            const listContainer = document.getElementById('article-types-list-inline');
             if (!listContainer) return;
             
             listContainer.innerHTML = articleTypes.map(type => {
                 const articlesCount = exportArticles.filter(a => a.type === type).length;
                 return `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: white; border: 1px solid #ddd; border-radius: 8px;">
-                        <div>
-                            <strong style="color: #667eea; font-size: 15px;">${type}</strong>
-                            <span style="margin-left: 10px; color: #999; font-size: 13px;">(${articlesCount} article${articlesCount > 1 ? 's' : ''})</span>
-                        </div>
-                        <button onclick="removeArticleType('${type}')" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">🗑️ Supprimer</button>
+                    <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: white; border: 1px solid #ddd; border-radius: 20px; font-size: 13px;">
+                        <strong style="color: #667eea;">${type}</strong>
+                        <span style="color: #999; font-size: 12px;">(${articlesCount})</span>
+                        <button onclick="removeArticleType('${type}')" style="background: #e74c3c; color: white; border: none; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; font-size: 10px; padding: 0; display: flex; align-items: center; justify-content: center;" title="Supprimer">✕</button>
                     </div>
                 `;
             }).join('');
