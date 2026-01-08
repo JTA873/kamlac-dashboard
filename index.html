@@ -5165,6 +5165,7 @@
                             <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0;">Référence</th>
                             <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0;">Pays</th>
                             <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0;">Détails</th>
+                            <th style="padding: 12px; text-align: center; border-bottom: 1px solid #e0e0e0;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="export-history-tbody"></tbody>
@@ -8701,9 +8702,15 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                                 <span style="font-size: 18px; font-weight: bold; color: #667eea;">${imp.ref}</span>
                                 ${countriesBadges}
                             </div>
-                            <div style="text-align: right;">
-                                <small>${imp.date}</small><br>
-                                <small>${totalExports} exportation(s)</small>
+                            <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+                                <div>
+                                    <small>${imp.date}</small><br>
+                                    <small>${totalExports} exportation(s)</small>
+                                </div>
+                                <div style="display: flex; gap: 5px;">
+                                    <button onclick="editExportImport('${imp.ref}')" style="background: #667eea; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">✏️ Modifier</button>
+                                    <button onclick="deleteExportImport('${imp.ref}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">🗑️ Supprimer</button>
+                                </div>
                             </div>
                         </div>
                         
@@ -8809,6 +8816,10 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                         <td style="padding: 12px;">${item.ref}</td>
                         <td style="padding: 12px;">${countriesBadges}</td>
                         <td style="padding: 12px; font-size: 13px;">${item.details}</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <button onclick="editExportEntry('${item.type}', '${item.ref}')" style="background: #667eea; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-right: 5px;">✏️</button>
+                            <button onclick="deleteExportEntry('${item.type}', '${item.ref}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">🗑️</button>
+                        </td>
                     </tr>
                 `;
             });
@@ -8821,6 +8832,347 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         
         function filterExportHistory(filter) {
             updateExportHistory(filter);
+        }
+        
+        // Fonction pour éditer une importation
+        function editExportImport(ref) {
+            const imp = exportsImports.find(i => i.ref === ref);
+            if (!imp) {
+                alert('Importation non trouvée');
+                return;
+            }
+            
+            // Créer un formulaire de modification
+            let formHTML = `
+                <div style="text-align: left;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Référence:</label>
+                        <input type="text" id="edit-import-ref" value="${imp.ref}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Date:</label>
+                        <input type="date" id="edit-import-date" value="${imp.date}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Pays:</label>
+                        <div id="edit-import-countries"></div>
+                    </div>`;
+            
+            // Ajouter les champs pour chaque article
+            exportArticles.forEach(article => {
+                const qty = imp.initial[article.id] || 0;
+                formHTML += `
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">${article.name} (${article.unit}):</label>
+                        <input type="number" id="edit-import-article-${article.id}" value="${qty}" step="${article.unit === 'kg' ? '0.01' : '1'}" min="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>`;
+            });
+            
+            formHTML += '</div>';
+            
+            if (confirm('Voulez-vous modifier cette importation?')) {
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 10000;';
+                modal.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; max-height: 80vh; overflow-y: auto;">
+                        <h3 style="margin-top: 0; color: #667eea;">✏️ Modifier l'importation</h3>
+                        ${formHTML}
+                        <div style="margin-top: 20px; text-align: right;">
+                            <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: #999; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">Annuler</button>
+                            <button onclick="saveEditedImport('${ref}')" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">💾 Enregistrer</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // Gérer les pays
+                const countries = imp.countries || (imp.country ? [imp.country] : []);
+                const countriesDiv = document.getElementById('edit-import-countries');
+                if (countriesDiv) {
+                    let countriesHTML = '';
+                    ['Guinée', 'Gambie', 'Autres'].forEach(country => {
+                        const checked = countries.includes(country) ? 'checked' : '';
+                        countriesHTML += `
+                            <label style="display: block; margin-bottom: 5px;">
+                                <input type="checkbox" value="${country}" ${checked} style="margin-right: 5px;">
+                                ${country}
+                            </label>
+                        `;
+                    });
+                    countriesDiv.innerHTML = countriesHTML;
+                }
+            }
+        }
+        
+        // Fonction pour sauvegarder les modifications d'une importation
+        function saveEditedImport(oldRef) {
+            const imp = exportsImports.find(i => i.ref === oldRef);
+            if (!imp) return;
+            
+            // Récupérer les nouvelles valeurs
+            const newRef = document.getElementById('edit-import-ref').value;
+            const newDate = document.getElementById('edit-import-date').value;
+            
+            // Récupérer les pays sélectionnés
+            const selectedCountries = [];
+            document.querySelectorAll('#edit-import-countries input[type="checkbox"]:checked').forEach(cb => {
+                selectedCountries.push(cb.value);
+            });
+            
+            // Récupérer les quantités d'articles
+            const newInitial = {};
+            exportArticles.forEach(article => {
+                const input = document.getElementById(`edit-import-article-${article.id}`);
+                if (input) {
+                    newInitial[article.id] = parseFloat(input.value) || 0;
+                }
+            });
+            
+            // Mettre à jour l'objet
+            imp.ref = newRef;
+            imp.date = newDate;
+            imp.countries = selectedCountries;
+            imp.country = selectedCountries[0] || '';
+            imp.initial = newInitial;
+            
+            // Sauvegarder
+            localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
+            
+            // Fermer le modal
+            document.querySelectorAll('body > div').forEach(div => {
+                if (div.style.position === 'fixed') div.remove();
+            });
+            
+            // Rafraîchir l'affichage
+            updateExportImportDetails();
+            updateExportHistory();
+            alert('✅ Importation modifiée avec succès!');
+        }
+        
+        // Fonction pour supprimer une importation
+        function deleteExportImport(ref) {
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer l'importation ${ref}?\n\nCette action est irréversible et supprimera également toutes les exportations liées.`)) {
+                return;
+            }
+            
+            // Trouver l'index de l'importation
+            const index = exportsImports.findIndex(i => i.ref === ref);
+            if (index === -1) {
+                alert('Importation non trouvée');
+                return;
+            }
+            
+            // Supprimer les exportations liées
+            exportsExports = exportsExports.filter(exp => exp.importRef !== ref);
+            
+            // Supprimer l'importation
+            exportsImports.splice(index, 1);
+            
+            // Sauvegarder
+            localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
+            localStorage.setItem('kamlac_exports_exports', JSON.stringify(exportsExports));
+            
+            // Rafraîchir l'affichage
+            updateExportImportDetails();
+            updateExportHistory();
+            alert('✅ Importation supprimée avec succès!');
+        }
+        
+        // Fonction pour éditer une entrée dans l'historique
+        function editExportEntry(type, ref) {
+            if (type === 'import') {
+                editExportImport(ref);
+            } else {
+                editExportExport(ref);
+            }
+        }
+        
+        // Fonction pour éditer une exportation
+        function editExportExport(invoiceRef) {
+            const exp = exportsExports.find(e => e.invoiceRef === invoiceRef);
+            if (!exp) {
+                alert('Exportation non trouvée');
+                return;
+            }
+            
+            // Créer un formulaire de modification
+            let formHTML = `
+                <div style="text-align: left;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Facture:</label>
+                        <input type="text" id="edit-export-invoice" value="${exp.invoiceRef || ''}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Date:</label>
+                        <input type="date" id="edit-export-date" value="${exp.date}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Pays:</label>
+                        <select id="edit-export-country" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="Guinée" ${exp.country === 'Guinée' ? 'selected' : ''}>Guinée</option>
+                            <option value="Gambie" ${exp.country === 'Gambie' ? 'selected' : ''}>Gambie</option>
+                            <option value="Autres" ${exp.country === 'Autres' ? 'selected' : ''}>Autres</option>
+                        </select>
+                    </div>
+                    <h4 style="color: #667eea;">Produits finis exportés:</h4>
+                    <div id="edit-export-products"></div>
+                    <h4 style="color: #667eea; margin-top: 20px;">Matières premières consommées:</h4>
+                </div>`;
+            
+            // Ajouter les champs pour chaque article
+            exportArticles.forEach(article => {
+                const used = exp.totalUsed ? exp.totalUsed[article.id] || 0 : (exp.used ? exp.used[article.id] || 0 : 0);
+                formHTML += `
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">${article.name} (${article.unit}):</label>
+                        <input type="number" id="edit-export-article-${article.id}" value="${used}" step="${article.unit === 'kg' ? '0.01' : '1'}" min="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>`;
+            });
+            
+            if (confirm('Voulez-vous modifier cette exportation?')) {
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 10000;';
+                modal.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; max-height: 80vh; overflow-y: auto;">
+                        <h3 style="margin-top: 0; color: #667eea;">✏️ Modifier l'exportation</h3>
+                        ${formHTML}
+                        <div style="margin-top: 20px; text-align: right;">
+                            <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: #999; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">Annuler</button>
+                            <button onclick="saveEditedExport('${invoiceRef}')" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">💾 Enregistrer</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // Gérer les produits
+                const productsDiv = document.getElementById('edit-export-products');
+                if (productsDiv && exp.products && Array.isArray(exp.products)) {
+                    let productsHTML = '';
+                    exp.products.forEach((product, index) => {
+                        productsHTML += `
+                            <div style="margin-bottom: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                                <div style="margin-bottom: 5px;">
+                                    <label style="display: block; margin-bottom: 3px;">Produit:</label>
+                                    <input type="text" id="edit-product-name-${index}" value="${product.productName}" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 3px;">Quantité:</label>
+                                    <input type="number" id="edit-product-qty-${index}" value="${product.quantity}" step="0.01" min="0" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                            </div>
+                        `;
+                    });
+                    productsDiv.innerHTML = productsHTML;
+                } else if (productsDiv) {
+                    // Ancien format
+                    productsDiv.innerHTML = `
+                        <div style="margin-bottom: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                            <div style="margin-bottom: 5px;">
+                                <label style="display: block; margin-bottom: 3px;">Produit:</label>
+                                <input type="text" id="edit-product-name-0" value="${exp.productName || ''}" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 3px;">Quantité:</label>
+                                <input type="number" id="edit-product-qty-0" value="${exp.quantity || 0}" step="0.01" min="0" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        // Fonction pour sauvegarder les modifications d'une exportation
+        function saveEditedExport(oldInvoiceRef) {
+            const exp = exportsExports.find(e => e.invoiceRef === oldInvoiceRef);
+            if (!exp) return;
+            
+            // Récupérer les nouvelles valeurs
+            const newInvoiceRef = document.getElementById('edit-export-invoice').value;
+            const newDate = document.getElementById('edit-export-date').value;
+            const newCountry = document.getElementById('edit-export-country').value;
+            
+            // Récupérer les produits
+            const products = [];
+            let index = 0;
+            while (document.getElementById(`edit-product-name-${index}`)) {
+                const name = document.getElementById(`edit-product-name-${index}`).value;
+                const qty = parseFloat(document.getElementById(`edit-product-qty-${index}`).value) || 0;
+                if (name && qty > 0) {
+                    products.push({ productName: name, quantity: qty });
+                }
+                index++;
+            }
+            
+            // Récupérer les quantités d'articles (MP)
+            const newUsed = {};
+            exportArticles.forEach(article => {
+                const input = document.getElementById(`edit-export-article-${article.id}`);
+                if (input) {
+                    newUsed[article.id] = parseFloat(input.value) || 0;
+                }
+            });
+            
+            // Mettre à jour l'objet
+            exp.invoiceRef = newInvoiceRef;
+            exp.date = newDate;
+            exp.country = newCountry;
+            exp.totalUsed = newUsed;
+            exp.used = newUsed; // Compatibilité
+            
+            if (products.length > 0) {
+                exp.products = products;
+                if (products.length === 1) {
+                    exp.productName = products[0].productName;
+                    exp.quantity = products[0].quantity;
+                }
+            }
+            
+            // Sauvegarder
+            localStorage.setItem('kamlac_exports_exports', JSON.stringify(exportsExports));
+            
+            // Fermer le modal
+            document.querySelectorAll('body > div').forEach(div => {
+                if (div.style.position === 'fixed') div.remove();
+            });
+            
+            // Rafraîchir l'affichage
+            updateExportImportDetails();
+            updateExportHistory();
+            alert('✅ Exportation modifiée avec succès!');
+        }
+        
+        // Fonction pour supprimer une entrée dans l'historique
+        function deleteExportEntry(type, ref) {
+            if (type === 'import') {
+                deleteExportImport(ref);
+            } else {
+                deleteExportExport(ref);
+            }
+        }
+        
+        // Fonction pour supprimer une exportation
+        function deleteExportExport(invoiceRef) {
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer l'exportation ${invoiceRef}?\n\nCette action est irréversible.`)) {
+                return;
+            }
+            
+            // Trouver l'index de l'exportation
+            const index = exportsExports.findIndex(e => e.invoiceRef === invoiceRef);
+            if (index === -1) {
+                alert('Exportation non trouvée');
+                return;
+            }
+            
+            // Supprimer l'exportation
+            exportsExports.splice(index, 1);
+            
+            // Sauvegarder
+            localStorage.setItem('kamlac_exports_exports', JSON.stringify(exportsExports));
+            
+            // Rafraîchir l'affichage
+            updateExportImportDetails();
+            updateExportHistory();
+            alert('✅ Exportation supprimée avec succès!');
         }
         
         // Fonctions pour la section vente
