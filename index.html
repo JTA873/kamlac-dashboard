@@ -4936,6 +4936,7 @@
             <div class="settings-nav" style="margin-bottom: 20px;">
                 <button class="settings-tab active" onclick="showExportSection('export-dashboard')">📊 Dashboard</button>
                 <button class="settings-tab" onclick="showExportSection('export-articles')">🏷️ Articles MP</button>
+                <button class="settings-tab" onclick="showExportSection('export-article-types')">🏷️ Types</button>
                 <button class="settings-tab" onclick="showExportSection('export-compositions')">🔧 Compositions</button>
                 <button class="settings-tab" onclick="showExportSection('export-import')">📥 Importer</button>
                 <button class="settings-tab" onclick="showExportSection('export-export')">📤 Exporter</button>
@@ -4945,12 +4946,7 @@
             
             <!-- Dashboard Section -->
             <div id="export-dashboard" class="settings-section active">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="color: #667eea; margin: 0;">📊 Tableau de Bord des Stocks MP</h3>
-                    <button onclick="syncExportDataToFirebase()" class="btn btn-primary" style="background: #28a745; padding: 8px 15px;">
-                        <span style="font-size: 16px;">☁️</span> Sauvegarder vers Firebase
-                    </button>
-                </div>
+                <h3 style="color: #667eea; margin-bottom: 20px;">📊 Tableau de Bord des Stocks MP</h3>
                 
                 <!-- Jauges visuelles par article -->
                 <h4 style="color: #667eea; margin-bottom: 15px;">📊 Stocks par Article (Importé vs Consommé)</h4>
@@ -4980,8 +4976,23 @@
                     <h4 style="color: #667eea; margin-bottom: 15px;">➕ Ajouter un Article</h4>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>Nom de l'article *</label>
-                            <input type="text" id="export-article-name" placeholder="Ex: Cartons, Boîtes, Thé, BOPP..." required>
+                            <label>Type d'article *</label>
+                            <select id="export-article-type" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                                <option value="">Sélectionner...</option>
+                                <option value="Cartons">Cartons</option>
+                                <option value="Boîtes">Boîtes</option>
+                                <option value="Thé">Thé</option>
+                                <option value="BOPP">BOPP</option>
+                                <option value="Autre">Autre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Dimension/Format *</label>
+                            <input type="text" id="export-article-dimension" placeholder="Ex: 50x40x30cm, 1kg, 500g..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Nom complet de l'article *</label>
+                            <input type="text" id="export-article-name" placeholder="Ex: Cartons 50x40x30cm" required>
                         </div>
                         <div class="form-group">
                             <label>Unité de mesure *</label>
@@ -5022,6 +5033,23 @@
                 
                 <h4 style="color: #667eea; margin-bottom: 15px;">📊 Compositions Configurées</h4>
                 <div id="export-compositions-summary"></div>
+            </div>
+            
+            <!-- Types d'Articles Section -->
+            <div id="export-article-types" class="settings-section">
+                <h3 style="color: #667eea; margin-bottom: 20px;">🏷️ Types d'Articles</h3>
+                <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Gérez les types d'articles pour organiser votre inventaire (Cartons, Boîtes, etc.)</p>
+                
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">➕ Ajouter un Nouveau Type</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="export-new-article-type" placeholder="Ex: Sacs, Étiquettes, Palettes..." style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                        <button onclick="addArticleType()" class="btn btn-primary">Ajouter</button>
+                    </div>
+                </div>
+                
+                <h4 style="color: #667eea; margin-bottom: 15px;">📋 Types Disponibles</h4>
+                <div id="article-types-list" style="display: grid; gap: 10px;"></div>
             </div>
 
             <!-- Import Section -->
@@ -6055,6 +6083,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         ];
         let productCompositions = JSON.parse(localStorage.getItem('kamlac_product_compositions')) || {};
         let destinationCountries = JSON.parse(localStorage.getItem('kamlac_destination_countries')) || ['Guinée', 'Gambie'];
+        let articleTypes = JSON.parse(localStorage.getItem('kamlac_article_types')) || [
+            'Cartons', 'Boîtes', 'Thé', 'BOPP', 'Autre'
+        ];
         
         // Variables globales Firebase
         let isFirebaseInitialized = false;
@@ -6688,6 +6719,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             // Mettre à jour l'affichage
             updateExportArticlesList();
             updateDestinationCountriesDropdowns();
+            updateArticleTypesUI();
+            updateArticleTypeDropdowns();
             updateExportDashboard();
             updateExportExportProductList();
             
@@ -6846,10 +6879,25 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                     console.log('ℹ️ Aucune composition trouvée dans Firebase');
                 }
                 
+                // Charger les types d'articles
+                const typesDoc = await db.collection('exportSettings').doc('articleTypes').get();
+                if (typesDoc.exists) {
+                    const data = typesDoc.data();
+                    if (data.types && data.types.length > 0) {
+                        articleTypes = data.types;
+                        localStorage.setItem('kamlac_article_types', JSON.stringify(articleTypes));
+                        console.log(`✅ ${articleTypes.length} types d'articles chargés depuis Firebase`);
+                    }
+                } else {
+                    console.log('ℹ️ Aucun type d\'article trouvé dans Firebase, utilisation des valeurs par défaut');
+                }
+                
                 // Mettre à jour l'affichage
                 updateExportDashboard();
                 updateExportArticlesList();
                 updateDestinationCountriesDropdowns();
+                updateArticleTypesUI();
+                updateArticleTypeDropdowns();
                 
                 console.log('✅ Chargement des données Export terminé avec succès');
                 
@@ -6873,6 +6921,12 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 // Sauvegarder les pays
                 await db.collection('exportSettings').doc('destinationCountries').set({
                     countries: destinationCountries,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Sauvegarder les types d'articles
+                await db.collection('exportSettings').doc('articleTypes').set({
+                    types: articleTypes,
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
@@ -6992,12 +7046,105 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             return flags[countryName] || '🌍';
         }
         
+        // Gestion des Types d'Articles
+        function addArticleType() {
+            const typeInput = document.getElementById('export-new-article-type');
+            const typeName = typeInput.value.trim();
+            
+            if (!typeName) {
+                alert('Veuillez entrer un nom de type');
+                return;
+            }
+            
+            // Vérifier si le type existe déjà
+            if (articleTypes.some(t => t.toLowerCase() === typeName.toLowerCase())) {
+                alert('Ce type existe déjà dans la liste');
+                return;
+            }
+            
+            articleTypes.push(typeName);
+            localStorage.setItem('kamlac_article_types', JSON.stringify(articleTypes));
+            
+            // Sauvegarder dans Firebase
+            saveExportDataToFirebase();
+            
+            typeInput.value = '';
+            updateArticleTypesUI();
+            updateArticleTypeDropdowns();
+            showAlert(`✅ Type "${typeName}" ajouté avec succès`, 'success');
+        }
+        
+        function removeArticleType(typeName) {
+            // Vérifier si des articles utilisent ce type
+            const articlesWithType = exportArticles.filter(a => a.type === typeName);
+            if (articlesWithType.length > 0) {
+                if (!confirm(`⚠️ ${articlesWithType.length} article(s) utilise(nt) ce type. Ils seront reclassés en "Autre". Continuer ?`)) {
+                    return;
+                }
+                // Reclasser les articles en "Autre"
+                exportArticles.forEach(article => {
+                    if (article.type === typeName) {
+                        article.type = 'Autre';
+                    }
+                });
+                localStorage.setItem('kamlac_export_articles', JSON.stringify(exportArticles));
+                updateExportArticlesList();
+                updateExportDashboard();
+            }
+            
+            articleTypes = articleTypes.filter(t => t !== typeName);
+            localStorage.setItem('kamlac_article_types', JSON.stringify(articleTypes));
+            
+            // Sauvegarder dans Firebase
+            saveExportDataToFirebase();
+            
+            updateArticleTypesUI();
+            updateArticleTypeDropdowns();
+            showAlert(`✅ Type "${typeName}" supprimé`, 'success');
+        }
+        
+        function updateArticleTypesUI() {
+            const listContainer = document.getElementById('article-types-list');
+            if (!listContainer) return;
+            
+            listContainer.innerHTML = articleTypes.map(type => {
+                const articlesCount = exportArticles.filter(a => a.type === type).length;
+                return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: white; border: 1px solid #ddd; border-radius: 8px;">
+                        <div>
+                            <strong style="color: #667eea; font-size: 15px;">${type}</strong>
+                            <span style="margin-left: 10px; color: #999; font-size: 13px;">(${articlesCount} article${articlesCount > 1 ? 's' : ''})</span>
+                        </div>
+                        <button onclick="removeArticleType('${type}')" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">🗑️ Supprimer</button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function updateArticleTypeDropdowns() {
+            // Mettre à jour le dropdown dans le formulaire d'ajout d'article
+            const typeSelect = document.getElementById('export-article-type');
+            if (typeSelect) {
+                const currentValue = typeSelect.value;
+                const options = ['<option value="">Sélectionner...</option>'];
+                options.push(...articleTypes.map(type => 
+                    `<option value="${type}">${type}</option>`
+                ));
+                typeSelect.innerHTML = options.join('');
+                if (currentValue && articleTypes.includes(currentValue)) {
+                    typeSelect.value = currentValue;
+                }
+            }
+        }
+        
         // Gestion des Articles MP
         function addExportArticle() {
+            const type = document.getElementById('export-article-type').value.trim();
+            const dimension = document.getElementById('export-article-dimension').value.trim();
             const name = document.getElementById('export-article-name').value.trim();
             const unit = document.getElementById('export-article-unit').value.trim();
             
-            if (!name || !unit) {
+            if (!type || !dimension || !name || !unit) {
                 alert('Veuillez remplir tous les champs');
                 return;
             }
@@ -7010,6 +7157,8 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             const newArticle = {
                 id: Date.now(),
+                type: type,
+                dimension: dimension,
                 name: name,
                 unit: unit
             };
@@ -7052,19 +7201,111 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             let html = '';
             exportArticles.forEach(article => {
+                const type = article.type || 'Non défini';
+                const dimension = article.dimension || 'Non défini';
+                
                 html += `
                     <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px;">
                         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                            <h4 style="margin: 0; color: #667eea; font-size: 16px;">${article.name}</h4>
-                            <button onclick="deleteExportArticle(${article.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+                            <div style="flex: 1;">
+                                <div style="display: inline-block; padding: 3px 10px; background: #667eea; color: white; border-radius: 12px; font-size: 11px; margin-bottom: 8px;">${type}</div>
+                                <h4 style="margin: 5px 0; color: #333; font-size: 15px;">${article.name}</h4>
+                            </div>
+                            <div style="display: flex; gap: 5px;">
+                                <button onclick="editExportArticle(${article.id})" style="background: #667eea; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">✏️</button>
+                                <button onclick="deleteExportArticle(${article.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+                            </div>
                         </div>
-                        <p style="margin: 0; color: #666; font-size: 14px;">📏 Unité: <strong>${article.unit}</strong></p>
+                        <p style="margin: 5px 0; color: #666; font-size: 13px;">📐 Dimension: <strong>${dimension}</strong></p>
+                        <p style="margin: 5px 0; color: #666; font-size: 13px;">📏 Unité: <strong>${article.unit}</strong></p>
                     </div>
                 `;
             });
             
             listEl.innerHTML = html;
         }
+        
+        function editExportArticle(articleId) {
+            const article = exportArticles.find(a => a.id === articleId);
+            if (!article) return;
+            
+            // Générer les options de type dynamiquement
+            const typeOptions = articleTypes.map(type => 
+                `<option value="${type}" ${(article.type || '') === type ? 'selected' : ''}>${type}</option>`
+            ).join('');
+            
+            const modalHTML = `
+                <div id="edit-article-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: white; border-radius: 15px; padding: 30px; max-width: 500px; width: 90%;">
+                        <h3 style="color: #667eea; margin-bottom: 20px;">✏️ Modifier l'article</h3>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Type d'article *</label>
+                            <select id="edit-article-type" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                                <option value="">Sélectionner...</option>
+                                ${typeOptions}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Dimension/Format *</label>
+                            <input type="text" id="edit-article-dimension" value="${article.dimension || ''}" placeholder="Ex: 50x40x30cm, 1kg, 500g..." required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Nom complet *</label>
+                            <input type="text" id="edit-article-name" value="${article.name}" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Unité de mesure *</label>
+                            <input type="text" id="edit-article-unit" value="${article.unit}" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="saveArticleEdit(${articleId})" class="btn btn-primary" style="flex: 1;">✅ Enregistrer</button>
+                            <button onclick="closeEditArticleModal()" class="btn" style="flex: 1; background: #6c757d; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">❌ Annuler</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+        
+        function closeEditArticleModal() {
+            const modal = document.getElementById('edit-article-modal');
+            if (modal) modal.remove();
+        }
+        
+        function saveArticleEdit(articleId) {
+            const article = exportArticles.find(a => a.id === articleId);
+            if (!article) return;
+            
+            const type = document.getElementById('edit-article-type').value.trim();
+            const dimension = document.getElementById('edit-article-dimension').value.trim();
+            const name = document.getElementById('edit-article-name').value.trim();
+            const unit = document.getElementById('edit-article-unit').value.trim();
+            
+            if (!type || !dimension || !name || !unit) {
+                alert('Veuillez remplir tous les champs');
+                return;
+            }
+            
+            article.type = type;
+            article.dimension = dimension;
+            article.name = name;
+            article.unit = unit;
+            
+            localStorage.setItem('kamlac_export_articles', JSON.stringify(exportArticles));
+            saveExportDataToFirebase();
+            
+            closeEditArticleModal();
+            updateExportArticlesList();
+            updateExportDashboard();
+            showAlert('✅ Article modifié avec succès', 'success');
+        }
+        
         
         // Gestion des Compositions Produits
         function updateProductCompositionsUI() {
@@ -7756,49 +7997,109 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
                 });
             });
             
-            // Générer les jauges visuelles
+            // Générer les jauges visuelles groupées par type
             const gaugesContainer = document.getElementById('export-gauges-container');
             if (gaugesContainer) {
-                let gaugesHTML = '<div style="display: grid; gap: 20px;">';
-                
+                // Grouper les articles par type
+                const articlesByType = {};
                 exportArticles.forEach(article => {
-                    const imported = totalsImported[article.id] || 0;
-                    const consumed = totalsConsumed[article.id] || 0;
-                    const remaining = totalsRemaining[article.id] || 0;
-                    const consumedPercent = imported > 0 ? (consumed / imported * 100) : 0;
+                    const type = article.type || 'Autre';
+                    if (!articlesByType[type]) {
+                        articlesByType[type] = [];
+                    }
+                    articlesByType[type].push(article);
+                });
+                
+                let gaugesHTML = '<div style="display: grid; gap: 30px;">';
+                
+                // Pour chaque type, créer une section
+                Object.keys(articlesByType).sort().forEach(type => {
+                    const articles = articlesByType[type];
                     
-                    const displayImported = article.unit === 'kg' ? imported.toFixed(2) : Math.round(imported);
-                    const displayConsumed = article.unit === 'kg' ? consumed.toFixed(2) : Math.round(consumed);
-                    const displayRemaining = article.unit === 'kg' ? remaining.toFixed(2) : Math.round(remaining);
+                    // Calculer les totaux du type
+                    let typeImported = 0;
+                    let typeConsumed = 0;
+                    let typeRemaining = 0;
+                    
+                    articles.forEach(article => {
+                        typeImported += (totalsImported[article.id] || 0);
+                        typeConsumed += (totalsConsumed[article.id] || 0);
+                        typeRemaining += (totalsRemaining[article.id] || 0);
+                    });
+                    
+                    const typeConsumedPercent = typeImported > 0 ? (typeConsumed / typeImported * 100) : 0;
                     
                     gaugesHTML += `
-                        <div onclick="showArticleDetails(${article.id})" style="background: white; border: 2px solid #e0e0e0; border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.3)'; this.style.borderColor='#667eea';" onmouseout="this.style.boxShadow='none'; this.style.borderColor='#e0e0e0';">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h4 style="color: #667eea; margin: 0; font-size: 18px;">📦 ${article.name} <span style="font-size: 12px; color: #999;">🔍 Cliquer pour détails</span></h4>
-                                <div style="text-align: right;">
-                                    <div style="font-size: 24px; font-weight: bold; color: #2ecc71;">${displayRemaining}</div>
-                                    <div style="font-size: 12px; color: #666;">restant / ${displayImported} ${article.unit}</div>
-                                </div>
-                            </div>
+                        <div style="background: #f8f9fa; border: 2px solid #667eea; border-radius: 15px; padding: 20px;">
+                            <h3 style="color: #667eea; margin: 0 0 15px 0; font-size: 20px;">📦 ${type}</h3>
                             
-                            <!-- Barre de progression -->
-                            <div style="position: relative; height: 40px; background: #e0e0e0; border-radius: 20px; overflow: hidden;">
-                                <!-- Partie restante (verte) -->
-                                <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${100 - consumedPercent}%; background: linear-gradient(90deg, #2ecc71, #27ae60); transition: width 0.5s;"></div>
-                                <!-- Partie consommée (rouge semi-transparente) -->
-                                <div style="position: absolute; right: 0; top: 0; height: 100%; width: ${consumedPercent}%; background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(192, 57, 43, 0.7)); transition: width 0.5s;"></div>
+                            <!-- Jauge principale du type (cliquable) -->
+                            <div id="type-${type.replace(/\s+/g, '-')}" onclick="toggleTypeDetails('${type.replace(/\s+/g, '-')}')" style="background: white; border: 2px solid #667eea; border-radius: 10px; padding: 20px; cursor: pointer; margin-bottom: 15px; transition: all 0.3s ease;" onmouseover="this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.3)';" onmouseout="this.style.boxShadow='none';">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                    <h4 style="color: #667eea; margin: 0; font-size: 18px;">📊 Total ${type} <span style="font-size: 12px; color: #999;">🔍 Cliquer pour voir les formats</span></h4>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 24px; font-weight: bold; color: #2ecc71;">${Math.round(typeRemaining)}</div>
+                                        <div style="font-size: 12px; color: #666;">restant / ${Math.round(typeImported)}</div>
+                                    </div>
+                                </div>
                                 
-                                <!-- Texte centré -->
-                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); font-size: 14px; z-index: 10;">
-                                    ${consumedPercent.toFixed(1)}% consommé (${displayConsumed} ${article.unit})
+                                <!-- Barre de progression -->
+                                <div style="position: relative; height: 40px; background: #e0e0e0; border-radius: 20px; overflow: hidden;">
+                                    <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${100 - typeConsumedPercent}%; background: linear-gradient(90deg, #2ecc71, #27ae60); transition: width 0.5s;"></div>
+                                    <div style="position: absolute; right: 0; top: 0; height: 100%; width: ${typeConsumedPercent}%; background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(192, 57, 43, 0.7)); transition: width 0.5s;"></div>
+                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); font-size: 14px; z-index: 10;">
+                                        ${typeConsumedPercent.toFixed(1)}% consommé (${Math.round(typeConsumed)})
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; justify-content: space-around; margin-top: 10px; font-size: 12px;">
+                                    <div><span style="display: inline-block; width: 12px; height: 12px; background: #2ecc71; border-radius: 2px; margin-right: 5px;"></span>Disponible: ${Math.round(typeRemaining)}</div>
+                                    <div><span style="display: inline-block; width: 12px; height: 12px; background: rgba(231, 76, 60, 0.7); border-radius: 2px; margin-right: 5px;"></span>Consommé: ${Math.round(typeConsumed)}</div>
+                                    <div><span style="display: inline-block; width: 12px; height: 12px; background: #3498db; border-radius: 2px; margin-right: 5px;"></span>Importé: ${Math.round(typeImported)}</div>
                                 </div>
                             </div>
                             
-                            <!-- Légende -->
-                            <div style="display: flex; justify-content: space-around; margin-top: 10px; font-size: 12px;">
-                                <div><span style="display: inline-block; width: 12px; height: 12px; background: #2ecc71; border-radius: 2px; margin-right: 5px;"></span>Disponible: ${displayRemaining}</div>
-                                <div><span style="display: inline-block; width: 12px; height: 12px; background: rgba(231, 76, 60, 0.7); border-radius: 2px; margin-right: 5px;"></span>Consommé: ${displayConsumed}</div>
-                                <div><span style="display: inline-block; width: 12px; height: 12px; background: #3498db; border-radius: 2px; margin-right: 5px;"></span>Importé: ${displayImported}</div>
+                            <!-- Détails par format (masqué par défaut) -->
+                            <div id="type-details-${type.replace(/\s+/g, '-')}" style="display: none; margin-top: 15px;">
+                                ${articles.map(article => {
+                                    const imported = totalsImported[article.id] || 0;
+                                    const consumed = totalsConsumed[article.id] || 0;
+                                    const remaining = totalsRemaining[article.id] || 0;
+                                    const consumedPercent = imported > 0 ? (consumed / imported * 100) : 0;
+                                    
+                                    const displayImported = article.unit === 'kg' ? imported.toFixed(2) : Math.round(imported);
+                                    const displayConsumed = article.unit === 'kg' ? consumed.toFixed(2) : Math.round(consumed);
+                                    const displayRemaining = article.unit === 'kg' ? remaining.toFixed(2) : Math.round(remaining);
+                                    
+                                    return `
+                                        <div onclick="toggleArticleDetails(${article.id})" style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 10px; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.borderColor='#667eea';" onmouseout="this.style.borderColor='#ddd';">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                                <div>
+                                                    <div style="font-weight: bold; color: #333; font-size: 15px;">${article.name}</div>
+                                                    <div style="font-size: 12px; color: #666;">📐 ${article.dimension || 'N/A'}</div>
+                                                </div>
+                                                <div style="text-align: right;">
+                                                    <div style="font-size: 20px; font-weight: bold; color: #2ecc71;">${displayRemaining}</div>
+                                                    <div style="font-size: 11px; color: #666;">/ ${displayImported} ${article.unit}</div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div style="position: relative; height: 25px; background: #e0e0e0; border-radius: 12px; overflow: hidden;">
+                                                <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${100 - consumedPercent}%; background: #2ecc71;"></div>
+                                                <div style="position: absolute; right: 0; top: 0; height: 100%; width: ${consumedPercent}%; background: rgba(231, 76, 60, 0.7);"></div>
+                                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); font-size: 11px; z-index: 10;">
+                                                    ${consumedPercent.toFixed(1)}% consommé
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Détails de cet article (masqué par défaut) -->
+                                            <div id="article-details-${article.id}" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                                                <div style="font-size: 13px; color: #666; margin-bottom: 10px;">🔍 Détails des mouvements</div>
+                                                <div id="article-imports-${article.id}"></div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
                             </div>
                         </div>
                     `;
@@ -8201,163 +8502,80 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         }
         
         // Fonction pour afficher les détails d'un article
-        function showArticleDetails(articleId) {
-            const article = exportArticles.find(a => a.id === articleId);
-            if (!article) return;
-            
-            // Récupérer toutes les importations contenant cet article
-            const articleImports = exportsImports.filter(imp => 
-                imp.initial[articleId] > 0
-            );
-            
-            // Récupérer toutes les exportations ayant consommé cet article
-            const articleExports = exportsExports.filter(exp => {
-                // Vérifier si cette exportation a consommé cet article
-                return exp.articlesConsumed && exp.articlesConsumed[articleId] > 0;
-            });
-            
-            // Calculer les totaux
-            let totalImported = 0;
-            let totalRemaining = 0;
-            let totalConsumed = 0;
-            
-            articleImports.forEach(imp => {
-                const imported = imp.initial[articleId] || 0;
-                const remaining = imp.remaining[articleId] || 0;
-                totalImported += imported;
-                totalRemaining += remaining;
-                totalConsumed += (imported - remaining);
-            });
-            
-            const displayUnit = article.unit === 'kg' ? '2' : '0';
-            
-            // Construire le HTML du modal
-            let modalHTML = `
-                <div id="article-details-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto;">
-                    <div style="background: white; border-radius: 15px; padding: 0; max-width: 900px; width: 100%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
-                        <!-- En-tête -->
-                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 15px 15px 0 0;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h2 style="margin: 0 0 10px 0;">📦 ${article.name}</h2>
-                                    <div style="font-size: 14px; opacity: 0.9;">Détails complets des mouvements</div>
-                                </div>
-                                <button onclick="closeArticleDetailsModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">✕</button>
-                            </div>
-                        </div>
-                        
-                        <!-- Corps -->
-                        <div style="padding: 25px; overflow-y: auto; flex: 1;">
-                            <!-- Statistiques globales -->
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px;">
-                                <div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
-                                    <div style="font-size: 28px; font-weight: bold; margin-bottom: 5px;">${totalImported.toFixed(displayUnit)}</div>
-                                    <div style="font-size: 12px; opacity: 0.9;">Total Importé (${article.unit})</div>
-                                </div>
-                                <div style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
-                                    <div style="font-size: 28px; font-weight: bold; margin-bottom: 5px;">${totalRemaining.toFixed(displayUnit)}</div>
-                                    <div style="font-size: 12px; opacity: 0.9;">Disponible (${article.unit})</div>
-                                </div>
-                                <div style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
-                                    <div style="font-size: 28px; font-weight: bold; margin-bottom: 5px;">${totalConsumed.toFixed(displayUnit)}</div>
-                                    <div style="font-size: 12px; opacity: 0.9;">Consommé (${article.unit})</div>
-                                </div>
-                                <div style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
-                                    <div style="font-size: 28px; font-weight: bold; margin-bottom: 5px;">${totalImported > 0 ? (totalConsumed / totalImported * 100).toFixed(1) : 0}%</div>
-                                    <div style="font-size: 12px; opacity: 0.9;">Taux de Consommation</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Importations -->
-                            <h3 style="color: #667eea; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-                                <span>📥</span> Importations (${articleImports.length})
-                            </h3>
-                            
-                            ${articleImports.length > 0 ? `
-                                <div style="display: grid; gap: 15px; margin-bottom: 30px;">
-                                    ${articleImports.map(imp => {
-                                        const imported = imp.initial[articleId] || 0;
-                                        const remaining = imp.remaining[articleId] || 0;
-                                        const consumed = imported - remaining;
-                                        const consumedPercent = imported > 0 ? (consumed / imported * 100) : 0;
-                                        const countries = imp.countries || (imp.country ? [imp.country] : []);
-                                        const countriesBadges = countries.map(c => `<span style="padding: 3px 8px; background: #667eea; color: white; border-radius: 12px; font-size: 11px; margin-left: 5px;">${getCountryFlag(c)} ${c}</span>`).join('');
-                                        
-                                        return `
-                                            <div style="background: #f8f9fa; border: 2px solid ${remaining > 0 ? '#2ecc71' : '#e0e0e0'}; border-radius: 10px; padding: 15px;">
-                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                                    <div>
-                                                        <strong style="color: #667eea; font-size: 16px;">${imp.ref}</strong>
-                                                        ${countriesBadges}
-                                                    </div>
-                                                    <span style="color: #666; font-size: 13px;">${imp.date}</span>
-                                                </div>
-                                                
-                                                <!-- Barre de progression mini -->
-                                                <div style="position: relative; height: 25px; background: #e0e0e0; border-radius: 12px; overflow: hidden; margin-bottom: 10px;">
-                                                    <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${100 - consumedPercent}%; background: #2ecc71;"></div>
-                                                    <div style="position: absolute; right: 0; top: 0; height: 100%; width: ${consumedPercent}%; background: rgba(231, 76, 60, 0.7);"></div>
-                                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); font-size: 11px; z-index: 10;">
-                                                        ${remaining.toFixed(displayUnit)} / ${imported.toFixed(displayUnit)} ${article.unit}
-                                                    </div>
-                                                </div>
-                                                
-                                                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
-                                                    <span>✅ Importé: <strong>${imported.toFixed(displayUnit)}</strong></span>
-                                                    <span>📦 Restant: <strong style="color: #2ecc71;">${remaining.toFixed(displayUnit)}</strong></span>
-                                                    <span>📤 Consommé: <strong style="color: #e74c3c;">${consumed.toFixed(displayUnit)}</strong></span>
-                                                </div>
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
-                            ` : '<p style="color: #999; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px;">Aucune importation enregistrée pour cet article</p>'}
-                            
-                            <!-- Exportations -->
-                            <h3 style="color: #667eea; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-                                <span>📤</span> Exportations ayant consommé cet article (${articleExports.length})
-                            </h3>
-                            
-                            ${articleExports.length > 0 ? `
-                                <div style="display: grid; gap: 10px;">
-                                    ${articleExports.map(exp => {
-                                        const consumed = exp.articlesConsumed ? (exp.articlesConsumed[articleId] || 0) : 0;
-                                        return `
-                                            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; border-radius: 6px;">
-                                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                                    <div>
-                                                        <strong style="color: #856404;">${exp.invoiceRef}</strong>
-                                                        <span style="margin-left: 10px; color: #666; font-size: 13px;">${getCountryFlag(exp.country)} ${exp.country}</span>
-                                                    </div>
-                                                    <div style="text-align: right;">
-                                                        <div style="font-weight: bold; color: #e74c3c;">${consumed.toFixed(displayUnit)} ${article.unit}</div>
-                                                        <div style="font-size: 11px; color: #666;">${exp.date}</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
-                            ` : '<p style="color: #999; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px;">Aucune exportation n\'a encore consommé cet article</p>'}
-                        </div>
-                        
-                        <!-- Pied -->
-                        <div style="background: #f8f9fa; padding: 20px; border-top: 1px solid #e0e0e0; text-align: center;">
-                            <button onclick="closeArticleDetailsModal()" class="btn btn-primary" style="padding: 12px 30px;">
-                                Fermer
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        // Fonctions pour afficher/masquer les détails par type et par article
+        function toggleTypeDetails(typeId) {
+            const detailsDiv = document.getElementById(`type-details-${typeId}`);
+            if (detailsDiv) {
+                detailsDiv.style.display = detailsDiv.style.display === 'none' ? 'block' : 'none';
+            }
         }
         
-        function closeArticleDetailsModal() {
-            const modal = document.getElementById('article-details-modal');
-            if (modal) modal.remove();
+        function toggleArticleDetails(articleId) {
+            event.stopPropagation(); // Empêcher la propagation au parent
+            
+            const detailsDiv = document.getElementById(`article-details-${articleId}`);
+            if (!detailsDiv) return;
+            
+            if (detailsDiv.style.display === 'none') {
+                // Charger et afficher les détails
+                const article = exportArticles.find(a => a.id === articleId);
+                if (!article) return;
+                
+                const articleImports = exportsImports.filter(imp => imp.initial[articleId] > 0);
+                const displayUnit = article.unit === 'kg' ? 2 : 0;
+                
+                let html = '';
+                
+                if (articleImports.length > 0) {
+                    html += '<div style="display: grid; gap: 10px;">';
+                    articleImports.forEach(imp => {
+                        const imported = imp.initial[articleId] || 0;
+                        const remaining = imp.remaining[articleId] || 0;
+                        const consumed = imported - remaining;
+                        const consumedPercent = imported > 0 ? (consumed / imported * 100) : 0;
+                        const countries = imp.countries || (imp.country ? [imp.country] : []);
+                        const countriesBadges = countries.map(c => `<span style="padding: 2px 6px; background: #667eea; color: white; border-radius: 10px; font-size: 10px; margin-left: 3px;">${getCountryFlag(c)} ${c}</span>`).join('');
+                        
+                        html += `
+                            <div style="background: #f8f9fa; border: 1px solid ${remaining > 0 ? '#2ecc71' : '#e0e0e0'}; border-radius: 6px; padding: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div>
+                                        <strong style="color: #667eea; font-size: 13px;">${imp.ref}</strong>
+                                        ${countriesBadges}
+                                    </div>
+                                    <span style="color: #666; font-size: 11px;">${imp.date}</span>
+                                </div>
+                                
+                                <div style="position: relative; height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin-bottom: 6px;">
+                                    <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${100 - consumedPercent}%; background: #2ecc71;"></div>
+                                    <div style="position: absolute; right: 0; top: 0; height: 100%; width: ${consumedPercent}%; background: rgba(231, 76, 60, 0.7);"></div>
+                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); font-size: 10px; z-index: 10;">
+                                        ${remaining.toFixed(displayUnit)} / ${imported.toFixed(displayUnit)}
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666;">
+                                    <span>Importé: ${imported.toFixed(displayUnit)}</span>
+                                    <span style="color: #2ecc71;">Restant: ${remaining.toFixed(displayUnit)}</span>
+                                    <span style="color: #e74c3c;">Consommé: ${consumed.toFixed(displayUnit)}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                } else {
+                    html = '<p style="color: #999; text-align: center; padding: 10px; font-size: 11px;">Aucune importation pour cet article</p>';
+                }
+                
+                const importsDiv = document.getElementById(`article-imports-${articleId}`);
+                if (importsDiv) importsDiv.innerHTML = html;
+                
+                detailsDiv.style.display = 'block';
+            } else {
+                detailsDiv.style.display = 'none';
+            }
         }
+        
         
         
         
