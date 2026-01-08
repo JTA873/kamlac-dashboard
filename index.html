@@ -6654,7 +6654,7 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
         function initializeExportModule() {
             debugLog('🚚 Initialisation module Gestion Export...');
             
-            // Charger les données
+            // Charger d'abord depuis localStorage pour un affichage rapide
             exportsImports = JSON.parse(localStorage.getItem('kamlac_exports_imports')) || [];
             exportsExports = JSON.parse(localStorage.getItem('kamlac_exports_exports')) || [];
             exportArticles = JSON.parse(localStorage.getItem('kamlac_export_articles')) || [
@@ -6665,6 +6665,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             ];
             productCompositions = JSON.parse(localStorage.getItem('kamlac_product_compositions')) || {};
             destinationCountries = JSON.parse(localStorage.getItem('kamlac_destination_countries')) || ['Guinée', 'Gambie'];
+            
+            // Charger depuis Firebase si disponible
+            loadExportDataFromFirebase();
             
             // Initialiser les dates
             const today = new Date().toISOString().split('T')[0];
@@ -6751,6 +6754,153 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             }
         }
         
+        // ========================================
+        // SYNCHRONISATION FIREBASE MODULE EXPORT
+        // ========================================
+        
+        async function loadExportDataFromFirebase() {
+            if (!isFirebaseReady()) {
+                debugLog('⚠️ Firebase non disponible pour charger les données Export');
+                return;
+            }
+            
+            try {
+                // Charger les importations
+                const importsSnapshot = await db.collection('exportsImports').get();
+                if (!importsSnapshot.empty) {
+                    const firebaseImports = [];
+                    importsSnapshot.forEach(doc => {
+                        firebaseImports.push({ ...doc.data(), firebaseId: doc.id });
+                    });
+                    exportsImports = firebaseImports;
+                    localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
+                    debugLog(`✅ ${exportsImports.length} importations chargées depuis Firebase`);
+                }
+                
+                // Charger les exportations
+                const exportsSnapshot = await db.collection('exportsExports').get();
+                if (!exportsSnapshot.empty) {
+                    const firebaseExports = [];
+                    exportsSnapshot.forEach(doc => {
+                        firebaseExports.push({ ...doc.data(), firebaseId: doc.id });
+                    });
+                    exportsExports = firebaseExports;
+                    localStorage.setItem('kamlac_exports_exports', JSON.stringify(exportsExports));
+                    debugLog(`✅ ${exportsExports.length} exportations chargées depuis Firebase`);
+                }
+                
+                // Charger les articles
+                const articlesSnapshot = await db.collection('exportArticles').get();
+                if (!articlesSnapshot.empty) {
+                    const firebaseArticles = [];
+                    articlesSnapshot.forEach(doc => {
+                        firebaseArticles.push({ ...doc.data() });
+                    });
+                    if (firebaseArticles.length > 0) {
+                        exportArticles = firebaseArticles;
+                        localStorage.setItem('kamlac_export_articles', JSON.stringify(exportArticles));
+                        debugLog(`✅ ${exportArticles.length} articles chargés depuis Firebase`);
+                    }
+                }
+                
+                // Charger les pays de destination
+                const countriesDoc = await db.collection('exportSettings').doc('destinationCountries').get();
+                if (countriesDoc.exists) {
+                    const data = countriesDoc.data();
+                    if (data.countries && data.countries.length > 0) {
+                        destinationCountries = data.countries;
+                        localStorage.setItem('kamlac_destination_countries', JSON.stringify(destinationCountries));
+                        debugLog(`✅ ${destinationCountries.length} pays chargés depuis Firebase`);
+                    }
+                }
+                
+                // Charger les compositions
+                const compositionsDoc = await db.collection('exportSettings').doc('productCompositions').get();
+                if (compositionsDoc.exists) {
+                    const data = compositionsDoc.data();
+                    if (data.compositions) {
+                        productCompositions = data.compositions;
+                        localStorage.setItem('kamlac_product_compositions', JSON.stringify(productCompositions));
+                        debugLog(`✅ Compositions chargées depuis Firebase`);
+                    }
+                }
+                
+                // Mettre à jour l'affichage
+                updateExportDashboard();
+                updateExportArticlesList();
+                updateDestinationCountriesDropdowns();
+                
+            } catch (error) {
+                console.error('❌ Erreur chargement données Export depuis Firebase:', error);
+            }
+        }
+        
+        async function saveExportDataToFirebase() {
+            if (!isFirebaseReady()) {
+                debugLog('⚠️ Firebase non disponible - sauvegarde locale uniquement');
+                return false;
+            }
+            
+            try {
+                // Sauvegarder les articles
+                for (const article of exportArticles) {
+                    await db.collection('exportArticles').doc(article.id.toString()).set(article);
+                }
+                
+                // Sauvegarder les pays
+                await db.collection('exportSettings').doc('destinationCountries').set({
+                    countries: destinationCountries,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Sauvegarder les compositions
+                await db.collection('exportSettings').doc('productCompositions').set({
+                    compositions: productCompositions,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                debugLog('✅ Données Export sauvegardées dans Firebase');
+                return true;
+            } catch (error) {
+                console.error('❌ Erreur sauvegarde Firebase Export:', error);
+                return false;
+            }
+        }
+        
+        async function saveExportImportToFirebase(importData) {
+            if (!isFirebaseReady()) return false;
+            
+            try {
+                const docId = importData.firebaseId || importData.id.toString();
+                await db.collection('exportsImports').doc(docId).set({
+                    ...importData,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                debugLog('✅ Importation sauvegardée dans Firebase');
+                return true;
+            } catch (error) {
+                console.error('❌ Erreur sauvegarde importation Firebase:', error);
+                return false;
+            }
+        }
+        
+        async function saveExportExportToFirebase(exportData) {
+            if (!isFirebaseReady()) return false;
+            
+            try {
+                const docId = exportData.firebaseId || exportData.id.toString();
+                await db.collection('exportsExports').doc(docId).set({
+                    ...exportData,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                debugLog('✅ Exportation sauvegardée dans Firebase');
+                return true;
+            } catch (error) {
+                console.error('❌ Erreur sauvegarde exportation Firebase:', error);
+                return false;
+            }
+        }
+        
         // Gestion des Pays de Destination
         function addDestinationCountry() {
             const countryInput = document.getElementById('export-import-new-country');
@@ -6769,6 +6919,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             destinationCountries.push(countryName);
             localStorage.setItem('kamlac_destination_countries', JSON.stringify(destinationCountries));
+            
+            // Sauvegarder dans Firebase
+            saveExportDataToFirebase();
             
             countryInput.value = '';
             updateDestinationCountriesDropdowns();
@@ -6841,6 +6994,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             exportArticles.push(newArticle);
             localStorage.setItem('kamlac_export_articles', JSON.stringify(exportArticles));
             
+            // Sauvegarder dans Firebase
+            saveExportDataToFirebase();
+            
             document.getElementById('export-article-form').reset();
             updateExportArticlesList();
             updateExportImportFields();
@@ -6853,6 +7009,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             exportArticles = exportArticles.filter(a => a.id !== articleId);
             localStorage.setItem('kamlac_export_articles', JSON.stringify(exportArticles));
+            
+            // Sauvegarder dans Firebase
+            saveExportDataToFirebase();
             
             updateExportArticlesList();
             updateExportImportFields();
@@ -7122,6 +7281,9 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             exportsImports.push(importData);
             localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
+            
+            // Sauvegarder dans Firebase
+            saveExportImportToFirebase(importData);
             
             document.getElementById('export-import-message').innerHTML = 
                 '<div style="padding: 10px; background: #d4edda; color: #155724; border-radius: 5px; margin-top: 10px;">✅ Importation enregistrée avec succès!</div>';
@@ -7402,6 +7564,16 @@ Ex: LEP JANUS 18g x 100 | 1500 | correction_positive"
             
             localStorage.setItem('kamlac_exports_imports', JSON.stringify(exportsImports));
             localStorage.setItem('kamlac_exports_exports', JSON.stringify(exportsExports));
+            
+            // Sauvegarder dans Firebase
+            saveExportExportToFirebase(exportData);
+            // Mettre à jour les importations modifiées
+            selectedImportIds.forEach(importId => {
+                const imp = exportsImports.find(i => i.id === importId);
+                if (imp) {
+                    saveExportImportToFirebase(imp);
+                }
+            });
             
             document.getElementById('export-export-message').innerHTML = 
                 '<div style="padding: 10px; background: #d4edda; color: #155724; border-radius: 5px; margin-top: 10px;">✅ Exportation enregistrée avec succès!</div>';
@@ -15946,6 +16118,9 @@ LEP MEADOW CUP 28/24 25kg | 100 | sortie
                 // Marquer le chargement initial comme terminé
                 isInitialLoadComplete = true;
                 isLoadingData = false;
+                
+                // Charger les données du module Export
+                await loadExportDataFromFirebase();
                 
                 // Confirmation finale unique
                 console.log('🎉 Chargement initial terminé - Application prête');
